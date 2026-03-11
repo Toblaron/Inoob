@@ -5,18 +5,26 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  ErrorResponse,
+  GenerateTemplateRequest,
+  HealthStatus,
+  SunoTemplate,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +107,91 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Fetches song metadata from YouTube and uses AI to generate a structured Suno.ai prompt template
+ * @summary Generate a Suno.ai template from a YouTube URL
+ */
+export const getGenerateSunoTemplateUrl = () => {
+  return `/api/generate-template`;
+};
+
+export const generateSunoTemplate = async (
+  generateTemplateRequest: GenerateTemplateRequest,
+  options?: RequestInit,
+): Promise<SunoTemplate> => {
+  return customFetch<SunoTemplate>(getGenerateSunoTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateTemplateRequest),
+  });
+};
+
+export const getGenerateSunoTemplateMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateSunoTemplate>>,
+    TError,
+    { data: BodyType<GenerateTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateSunoTemplate>>,
+  TError,
+  { data: BodyType<GenerateTemplateRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateSunoTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateSunoTemplate>>,
+    { data: BodyType<GenerateTemplateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateSunoTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateSunoTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateSunoTemplate>>
+>;
+export type GenerateSunoTemplateMutationBody =
+  BodyType<GenerateTemplateRequest>;
+export type GenerateSunoTemplateMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate a Suno.ai template from a YouTube URL
+ */
+export const useGenerateSunoTemplate = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateSunoTemplate>>,
+    TError,
+    { data: BodyType<GenerateTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateSunoTemplate>>,
+  TError,
+  { data: BodyType<GenerateTemplateRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateSunoTemplateMutationOptions(options));
+};

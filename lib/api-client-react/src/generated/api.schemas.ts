@@ -8,3 +8,25 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface GenerateTemplateRequest {
+  /** A YouTube video URL */
+  youtubeUrl: string;
+}
+
+export interface SunoTemplate {
+  songTitle: string;
+  artist: string;
+  /** Comma-separated genre and style tags for the Suno style field */
+  styleOfMusic: string;
+  /** Suggested title for the Suno creation */
+  title: string;
+  /** Structured lyrics with metatags like [Verse], [Chorus], [Bridge], etc. */
+  lyrics: string;
+  /** Additional tags for mood, instruments, tempo */
+  tags: string[];
+}
+
+export interface ErrorResponse {
+  error: string;
+}

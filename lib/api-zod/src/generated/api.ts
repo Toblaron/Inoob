@@ -14,3 +14,28 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Fetches song metadata from YouTube and uses AI to generate a structured Suno.ai prompt template
+ * @summary Generate a Suno.ai template from a YouTube URL
+ */
+export const GenerateSunoTemplateBody = zod.object({
+  youtubeUrl: zod.string().describe("A YouTube video URL"),
+});
+
+export const GenerateSunoTemplateResponse = zod.object({
+  songTitle: zod.string(),
+  artist: zod.string(),
+  styleOfMusic: zod
+    .string()
+    .describe("Comma-separated genre and style tags for the Suno style field"),
+  title: zod.string().describe("Suggested title for the Suno creation"),
+  lyrics: zod
+    .string()
+    .describe(
+      "Structured lyrics with metatags like [Verse], [Chorus], [Bridge], etc.",
+    ),
+  tags: zod
+    .array(zod.string())
+    .describe("Additional tags for mood, instruments, tempo"),
+});

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: suno
+    description: Suno template generation
 paths:
   /healthz:
     get:
@@ -24,6 +26,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /generate-template:
+    post:
+      operationId: generateSunoTemplate
+      tags: [suno]
+      summary: Generate a Suno.ai template from a YouTube URL
+      description: Fetches song metadata from YouTube and uses AI to generate a structured Suno.ai prompt template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateTemplateRequest"
+      responses:
+        "200":
+          description: Successfully generated template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SunoTemplate"
+        "400":
+          description: Invalid YouTube URL or request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +66,46 @@ components:
           type: string
       required:
         - status
-
+    GenerateTemplateRequest:
+      type: object
+      properties:
+        youtubeUrl:
+          type: string
+          description: A YouTube video URL
+      required:
+        - youtubeUrl
+    SunoTemplate:
+      type: object
+      properties:
+        songTitle:
+          type: string
+        artist:
+          type: string
+        styleOfMusic:
+          type: string
+          description: Comma-separated genre and style tags for the Suno style field
+        title:
+          type: string
+          description: Suggested title for the Suno creation
+        lyrics:
+          type: string
+          description: Structured lyrics with metatags like [Verse], [Chorus], [Bridge], etc.
+        tags:
+          type: array
+          items:
+            type: string
+          description: Additional tags for mood, instruments, tempo
+      required:
+        - songTitle
+        - artist
+        - styleOfMusic
+        - title
+        - lyrics
+        - tags
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
