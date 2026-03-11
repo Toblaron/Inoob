@@ -9,19 +9,20 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@workspace/db": "workspace:*",
+    "@distube/ytdl-core": "^4.16.12",
     "@workspace/api-zod": "workspace:*",
+    "@workspace/db": "workspace:*",
     "@workspace/integrations-openai-ai-server": "workspace:*",
-    "drizzle-orm": "catalog:",
-    "express": "^5",
     "cookie-parser": "^1.4.7",
-    "cors": "^2"
+    "cors": "^2",
+    "drizzle-orm": "catalog:",
+    "express": "^5"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
-    "@types/express": "^5.0.6",
-    "@types/cors": "^2.8.19",
     "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "catalog:",
     "esbuild": "^0.27.3",
     "tsx": "catalog:"
   }
