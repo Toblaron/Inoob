@@ -77,23 +77,46 @@ async function fetchCaptions(info: ytdl.videoInfo): Promise<string | null> {
   }
 }
 
-async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
-  const info = await ytdl.getInfo(url);
-  const details = info.videoDetails;
-
-  const durationSec = parseInt(details.lengthSeconds, 10);
-
-  const captionText = await fetchCaptions(info);
-
+async function fetchViaOembed(url: string): Promise<VideoMetadata> {
+  const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+  const response = await fetch(oembedUrl);
+  if (!response.ok) {
+    throw new Error("Could not fetch video metadata via oEmbed.");
+  }
+  const data = await response.json() as { title: string; author_name: string };
   return {
-    title: details.title,
-    author: details.author.name,
-    description: details.description ?? "",
-    keywords: details.keywords ?? [],
-    category: (details as Record<string, unknown> & { category?: string }).category ?? "",
-    duration: formatDuration(durationSec),
-    captionText,
+    title: data.title,
+    author: data.author_name,
+    description: "",
+    keywords: [],
+    category: "",
+    duration: "",
+    captionText: null,
   };
+}
+
+async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
+  try {
+    const info = await ytdl.getInfo(url);
+    const details = info.videoDetails;
+
+    const durationSec = parseInt(details.lengthSeconds, 10);
+
+    const captionText = await fetchCaptions(info);
+
+    return {
+      title: details.title,
+      author: details.author.name,
+      description: details.description ?? "",
+      keywords: details.keywords ?? [],
+      category: (details as Record<string, unknown> & { category?: string }).category ?? "",
+      duration: formatDuration(durationSec),
+      captionText,
+    };
+  } catch (ytdlErr) {
+    console.warn("ytdl-core failed, falling back to oEmbed:", ytdlErr);
+    return fetchViaOembed(url);
+  }
 }
 
 function isValidYouTubeUrl(url: string): boolean {
