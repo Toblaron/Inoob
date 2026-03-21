@@ -853,6 +853,313 @@ ${context}`;
   }
 });
 
+// ─── Genre suggestion helpers ─────────────────────────────────────────────────
+
+/** Map of normalised MusicBrainz tag names → our genre label */
+const MB_TO_OUR_GENRE: Record<string, string> = {
+  // Pop
+  "pop": "Pop", "dance-pop": "Dance Pop", "dance pop": "Dance Pop",
+  "indie pop": "Indie Pop", "electropop": "Electropop",
+  "synth-pop": "Synth-Pop", "synthpop": "Synth-Pop", "synth pop": "Synth-Pop",
+  "dream pop": "Dream Pop", "chamber pop": "Chamber Pop", "baroque pop": "Baroque Pop",
+  "britpop": "Britpop", "power pop": "Power Pop", "teen pop": "Teen Pop",
+  "art pop": "Art Pop", "bedroom pop": "Bedroom Pop",
+  "k-pop": "K-Pop", "j-pop": "J-Pop", "kpop": "K-Pop", "jpop": "J-Pop",
+  // Rock
+  "rock": "Rock", "alternative rock": "Alternative Rock", "alt-rock": "Alternative Rock",
+  "indie rock": "Indie Rock", "hard rock": "Hard Rock", "classic rock": "Classic Rock",
+  "punk rock": "Punk", "punk": "Punk", "post-punk": "Post-Punk",
+  "grunge": "Grunge", "shoegaze": "Shoegaze",
+  "psychedelic rock": "Psychedelic Rock", "progressive rock": "Progressive Rock", "prog rock": "Progressive Rock",
+  "garage rock": "Garage Rock", "folk rock": "Folk Rock",
+  "blues-rock": "Blues-Rock", "blues rock": "Blues-Rock",
+  "arena rock": "Arena Rock", "new wave": "New Wave",
+  "emo": "Emo", "post-rock": "Post-Rock", "stoner rock": "Stoner Rock",
+  // Hip-Hop
+  "hip-hop": "Hip-Hop", "hip hop": "Hip-Hop", "rap": "Rap",
+  "trap": "Trap", "drill": "Drill", "boom bap": "Boom Bap",
+  "gangsta rap": "Gangsta Rap", "g-funk": "G-Funk",
+  "conscious hip-hop": "Conscious Hip-Hop", "lo-fi hip-hop": "Lo-Fi Hip-Hop",
+  "grime": "Grime", "cloud rap": "Cloud Rap",
+  "east coast hip-hop": "East Coast", "west coast hip-hop": "West Coast Rap",
+  "jazz rap": "Jazz Rap", "phonk": "Phonk",
+  // R&B / Soul
+  "r&b": "R&B", "rhythm and blues": "R&B",
+  "soul": "Soul", "neo-soul": "Neo-Soul", "neo soul": "Neo-Soul",
+  "funk": "Funk", "disco": "Disco", "motown": "Motown", "gospel": "Gospel",
+  "contemporary r&b": "Contemporary R&B", "psychedelic soul": "Psychedelic Soul",
+  "new jack swing": "New Jack Swing",
+  // Jazz
+  "jazz": "Jazz", "smooth jazz": "Smooth Jazz", "bebop": "Bebop", "swing": "Swing",
+  "jazz fusion": "Jazz Fusion", "big band": "Big Band", "acid jazz": "Acid Jazz",
+  "cool jazz": "Cool Jazz", "modal jazz": "Modal Jazz", "latin jazz": "Latin Jazz",
+  "free jazz": "Free Jazz", "nu jazz": "Nu Jazz",
+  // Metal
+  "metal": "Metal", "heavy metal": "Heavy Metal", "black metal": "Black Metal",
+  "death metal": "Death Metal", "thrash metal": "Thrash Metal",
+  "nu-metal": "Nu Metal", "nu metal": "Nu Metal",
+  "metalcore": "Metalcore", "power metal": "Power Metal",
+  "doom metal": "Doom Metal", "symphonic metal": "Symphonic Metal",
+  "djent": "Djent", "deathcore": "Deathcore",
+  "progressive metal": "Progressive Metal", "folk metal": "Folk Metal",
+  // Country / Folk
+  "country": "Country", "country music": "Country", "americana": "Americana",
+  "bluegrass": "Bluegrass", "folk": "Folk", "indie folk": "Indie Folk",
+  "outlaw country": "Outlaw Country", "country rock": "Country Rock",
+  "country pop": "Country Pop", "alt-country": "Alt-Country",
+  "alternative country": "Alt-Country", "honky tonk": "Honky Tonk",
+  "western swing": "Western Swing",
+  // Classical
+  "classical": "Classical", "orchestral": "Orchestral", "baroque": "Baroque",
+  "chamber music": "Chamber Music", "opera": "Opera",
+  "neoclassical": "Neo-Classical", "neo-classical": "Neo-Classical",
+  "minimalist": "Minimalist", "minimal": "Minimalist", "romantic": "Romantic",
+  "film score": "Film Score", "cinematic": "Cinematic",
+  // World
+  "reggae": "Reggae", "dancehall": "Dancehall", "reggaeton": "Reggaeton",
+  "latin pop": "Latin Pop", "bossa nova": "Bossa Nova", "flamenco": "Flamenco",
+  "salsa": "Salsa", "cumbia": "Cumbia", "afrobeats": "Afrobeats", "afropop": "Afropop",
+  "ska": "Ska", "dub": "Dub", "tropical": "Tropical",
+  // Blues
+  "blues": "Blues", "delta blues": "Delta Blues", "chicago blues": "Chicago Blues",
+  "electric blues": "Electric Blues",
+  // Electronic — House
+  "house": "House", "house music": "House",
+  "deep house": "Deep House", "tech house": "Tech House",
+  "progressive house": "Progressive House", "acid house": "Acid House",
+  "melodic house": "Melodic House", "afro house": "Afro House",
+  "soulful house": "Soulful House", "chicago house": "Chicago House",
+  "tribal house": "Tribal House", "micro house": "Micro House",
+  "nu disco": "Nu Disco",
+  // Electronic — Techno
+  "techno": "Techno", "berlin techno": "Berlin Techno", "detroit techno": "Detroit Techno",
+  "minimal techno": "Minimal Techno", "hard techno": "Hard Techno",
+  "industrial techno": "Industrial Techno", "dub techno": "Dub Techno",
+  "acid techno": "Acid Techno", "hypnotic techno": "Hypnotic Techno",
+  "dark techno": "Dark Techno", "modular techno": "Modular Techno",
+  // Electronic — Trance
+  "trance": "Trance", "progressive trance": "Progressive Trance",
+  "uplifting trance": "Uplifting Trance",
+  "psytrance": "Psytrance", "psy trance": "Psytrance", "psychedelic trance": "Psytrance",
+  "goa trance": "Goa Trance", "tech trance": "Tech Trance",
+  "vocal trance": "Vocal Trance", "future rave": "Future Rave",
+  "dark psy": "Dark Psy", "forest psy": "Forest Psy",
+  // Electronic — DnB / Jungle
+  "drum and bass": "Drum & Bass", "drum & bass": "Drum & Bass", "dnb": "Drum & Bass",
+  "liquid dnb": "Liquid DnB", "liquid drum and bass": "Liquid DnB",
+  "neurofunk": "Neurofunk", "jungle": "Jungle", "darkstep": "Darkstep",
+  "jump up": "Jump Up", "techstep": "Techstep", "drumstep": "Drumstep",
+  // Electronic — Dubstep & Bass
+  "dubstep": "Dubstep", "post-dubstep": "Post-Dubstep",
+  "brostep": "Brostep", "riddim": "Riddim", "tearout": "Tearout",
+  "halfstep": "Halfstep", "deathstep": "Deathstep",
+  "future bass": "Future Bass", "wave": "Wave",
+  // Electronic — Breakbeat
+  "breakbeat": "Breakbeat", "big beat": "Big Beat",
+  "chemical breaks": "Chemical Breaks", "glitch hop": "Glitch Hop",
+  "nu-skool breaks": "Nu-Skool Breaks",
+  // Electronic — Synthwave
+  "synthwave": "Synthwave", "synth wave": "Synthwave",
+  "darksynth": "Darksynth", "outrun": "Outrun", "retrowave": "Retrowave",
+  "chillwave": "Chillwave", "italo disco": "Italo Disco",
+  "hi-nrg": "Hi-NRG", "hi nrg": "Hi-NRG", "futurepop": "Futurepop",
+  "new romanticism": "New Romanticism",
+  // Electronic — Electro / EBM
+  "electro": "Electro", "ebm": "EBM", "electronic body music": "EBM",
+  "industrial": "Industrial", "aggrotech": "Aggrotech",
+  "dark electro": "Dark Electro", "darkwave": "Darkwave",
+  "cold wave": "Cold Wave", "coldwave": "Cold Wave",
+  "power noise": "Power Noise", "post-industrial": "Post-Industrial",
+  // Electronic — EDM
+  "edm": "EDM", "electronic dance music": "EDM",
+  "electro house": "Electro House", "big room": "Big Room",
+  "complextro": "Complextro", "dutch house": "Dutch House",
+  // Electronic — Ambient / IDM
+  "ambient": "Ambient", "dark ambient": "Dark Ambient",
+  "idm": "IDM", "intelligent dance music": "IDM",
+  "glitch": "Glitch", "space music": "Space Music",
+  "drone": "Drone Ambient", "drone ambient": "Drone Ambient",
+  "isolationism": "Isolationism", "microsound": "Microsound",
+  "generative": "Generative", "new age": "New Age",
+  // Electronic — Trip-Hop / Downtempo
+  "trip-hop": "Trip-Hop", "trip hop": "Trip-Hop",
+  "downtempo": "Downtempo", "chillhop": "Chillhop",
+  "lo-fi": "Lo-Fi", "lofi": "Lo-Fi", "chillout": "Chillout",
+  "electronica": "Electronica",
+  // Electronic — Vaporwave / Future Funk
+  "vaporwave": "Vaporwave", "future funk": "Future Funk",
+  "dreampunk": "Dreampunk", "mallsoft": "Mallsoft",
+  "city pop": "City Pop Revival",
+  "vaportrap": "Vaportrap", "hardvapour": "Hardvapour",
+  // Electronic — Hardcore
+  "hardcore": "Hardcore", "gabber": "Gabber", "hardstyle": "Hardstyle",
+  "frenchcore": "Frenchcore", "happy hardcore": "Happy Hardcore",
+  "uk hardcore": "UK Hardcore", "speedcore": "Speedcore",
+  "rawstyle": "Rawstyle", "industrial hardcore": "Industrial Hardcore",
+  // Electronic — UK Garage / Grime
+  "uk garage": "UK Garage", "2-step": "2-Step", "2-step garage": "2-Step",
+  "bassline": "Bassline", "uk bass": "UK Bass",
+  "speed garage": "Speed Garage",
+  // Electronic — Phonk / Hyperpop
+  "memphis phonk": "Memphis Phonk", "slavic phonk": "Slavic Phonk",
+  "drift phonk": "Drift Phonk", "dark phonk": "Dark Phonk",
+  "hyperpop": "Hyperpop", "digicore": "Digicore",
+  // Electronic — Afro
+  "amapiano": "Amapiano", "gqom": "Gqom",
+  "baile funk": "Baile Funk", "kuduro": "Kuduro",
+  "footwork": "Footwork", "juke": "Juke", "kwaito": "Kwaito",
+};
+
+/** Maps matched genre names to an energy level */
+const GENRE_TO_ENERGY: Record<string, string> = {
+  "Ambient": "very chill", "Dark Ambient": "very chill",
+  "Drone Ambient": "very chill", "Space Music": "very chill",
+  "Isolationism": "very chill", "Microsound": "very chill",
+  "Lo-Fi": "chill", "Trip-Hop": "chill", "Downtempo": "chill",
+  "Chillhop": "chill", "Chillwave": "chill", "IDM": "chill",
+  "New Age": "chill", "Nu Jazz": "chill", "Chillout": "chill",
+  "Folk": "chill", "Indie Folk": "chill",
+  "Jazz": "medium", "Smooth Jazz": "medium", "Blues": "medium",
+  "Classical": "medium", "Orchestral": "medium", "Country": "medium",
+  "Pop": "medium", "Rock": "medium", "R&B": "medium",
+  "Soul": "medium", "Neo-Soul": "medium",
+  "Indie Pop": "medium", "Indie Rock": "medium",
+  "Bedroom Pop": "medium", "Dream Pop": "medium",
+  "House": "high", "Trance": "high", "Techno": "high",
+  "Hip-Hop": "high", "Trap": "high", "Funk": "high", "Disco": "high",
+  "Electro": "high", "EBM": "high", "UK Garage": "high",
+  "Grime": "high", "Synth-Pop": "high", "New Wave": "high",
+  "Dance Pop": "high", "Electropop": "high",
+  "Drum & Bass": "intense", "Liquid DnB": "high",
+  "Neurofunk": "intense", "Darkstep": "intense",
+  "Jump Up": "intense", "Jungle": "intense",
+  "Hardstyle": "intense", "Hardcore": "intense",
+  "Gabber": "intense", "Speedcore": "intense",
+  "Industrial Hardcore": "intense", "Frenchcore": "intense",
+  "Psytrance": "intense", "Hard Techno": "intense",
+  "Tearout": "intense", "Deathstep": "intense",
+  "Metal": "intense", "Heavy Metal": "intense",
+  "Black Metal": "intense", "Death Metal": "intense",
+  "Thrash Metal": "intense", "Metalcore": "intense",
+};
+
+/** Maps matched genre names to a tempo */
+const GENRE_TO_TEMPO: Record<string, string> = {
+  "Drum & Bass": "hyper", "Neurofunk": "hyper", "Darkstep": "hyper",
+  "Jungle": "hyper", "Jump Up": "hyper", "Drumstep": "hyper",
+  "Speedcore": "fast", "Gabber": "fast", "Frenchcore": "fast",
+  "Hardcore": "fast", "Industrial Hardcore": "fast", "Hard Techno": "fast",
+  "Hardstyle": "fast", "Psytrance": "fast", "Techno": "fast",
+  "House": "uptempo", "Trance": "uptempo", "Dance Pop": "uptempo",
+  "Electro House": "uptempo", "EDM": "uptempo", "Big Room": "uptempo",
+  "UK Garage": "uptempo", "Breakbeat": "uptempo", "Big Beat": "uptempo",
+  "Hip-Hop": "groove", "Funk": "groove", "R&B": "groove",
+  "Disco": "groove", "Afrobeats": "groove", "Amapiano": "groove",
+  "Footwork": "groove", "Boom Bap": "groove", "Grime": "groove",
+  "Pop": "mid", "Rock": "mid", "Jazz": "mid",
+  "Alternative Rock": "mid", "Indie Rock": "mid",
+  "Soul": "mid", "Country": "mid",
+  "Lo-Fi": "slow", "Downtempo": "slow", "Trip-Hop": "slow",
+  "Ambient": "slow", "IDM": "slow", "Chillhop": "slow",
+  "New Age": "slow", "Chillwave": "slow",
+};
+
+function mapMbTagsToGenres(mbTags: string[]): string[] {
+  const mapped: string[] = [];
+  for (const tag of mbTags) {
+    const key = tag.toLowerCase().trim();
+    const genre = MB_TO_OUR_GENRE[key];
+    if (genre && !mapped.includes(genre)) {
+      mapped.push(genre);
+    }
+  }
+  return mapped.slice(0, 5);
+}
+
+function yearToEra(releaseYear?: string): string | null {
+  if (!releaseYear) return null;
+  const y = parseInt(releaseYear, 10);
+  if (isNaN(y)) return null;
+  if (y < 1960) return "50s";
+  if (y < 1970) return "60s";
+  if (y < 1980) return "70s";
+  if (y < 1990) return "80s";
+  if (y < 2000) return "90s";
+  if (y < 2010) return "2000s";
+  if (y < 2020) return "2010s";
+  return "modern";
+}
+
+function inferEnergy(genres: string[]): string | null {
+  for (const g of genres) {
+    const e = GENRE_TO_ENERGY[g];
+    if (e) return e;
+  }
+  return null;
+}
+
+function inferTempo(genres: string[]): string | null {
+  for (const g of genres) {
+    const t = GENRE_TO_TEMPO[g];
+    if (t) return t;
+  }
+  return null;
+}
+
+/**
+ * GET /api/suno/suggest?url=...
+ * Lightweight endpoint — returns suggested style controls based on YouTube + MusicBrainz metadata.
+ * Does NOT fetch lyrics or call AI.
+ */
+router.get("/suggest", async (req, res) => {
+  const url = req.query.url as string;
+  if (!url || !isValidYouTubeUrl(url)) {
+    res.status(400).json({ error: "Invalid YouTube URL" });
+    return;
+  }
+  try {
+    let cleanTitle = "", cleanArtist = "", durationSec: number | undefined;
+    try {
+      const info = await ytdl.getBasicInfo(url, {
+        requestOptions: { headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" } },
+      });
+      const vd = info.videoDetails;
+      const raw = cleanSongTitle(vd.title ?? "", vd.author?.name ?? "");
+      cleanTitle = raw.cleanTitle;
+      cleanArtist = raw.cleanArtist;
+      durationSec = Number(vd.lengthSeconds) || undefined;
+    } catch {
+      const oembed = await fetchViaOembed(url);
+      const raw = cleanSongTitle(oembed.title, oembed.author);
+      cleanTitle = raw.cleanTitle;
+      cleanArtist = raw.cleanArtist;
+    }
+
+    if (!cleanTitle) {
+      res.json({ genres: [], era: null, energy: null, tempo: null, vocals: null, songTitle: "", artist: cleanArtist, mbTags: [] });
+      return;
+    }
+
+    const mbData = await Promise.race([
+      fetchMusicBrainzData(cleanArtist, cleanTitle, durationSec),
+      new Promise<MusicBrainzData>((resolve) => setTimeout(() => resolve({}), 9000)),
+    ]);
+
+    const mbTags = mbData.genres ?? [];
+    const genres = mapMbTagsToGenres(mbTags);
+    const era = yearToEra(mbData.releaseYear);
+    const energy = inferEnergy(genres);
+    const tempo = inferTempo(genres);
+
+    console.log(`[suggest] ${cleanArtist} - ${cleanTitle} → genres:${genres.join(",")} era:${era} energy:${energy} tempo:${tempo}`);
+
+    res.json({ genres, era, energy, tempo, vocals: null, songTitle: cleanTitle, artist: cleanArtist, mbTags });
+  } catch (err) {
+    console.error("suggest error:", err);
+    res.status(400).json({ error: "Could not fetch suggestions" });
+  }
+});
+
 /**
  * GET /api/suno/youtube-preview?url=...
  * Lightweight endpoint — returns just thumbnail, title, author for the song preview card.

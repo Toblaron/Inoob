@@ -27,6 +27,8 @@ import {
   Smile,
   Star,
   BrainCircuit,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { useGenerateSunoTemplate } from "@workspace/api-client-react";
 import type { SunoTemplate } from "@workspace/api-client-react";
@@ -145,6 +147,17 @@ interface VideoPreview {
   duration: string | null;
 }
 
+interface SuggestedControls {
+  genres: string[];
+  era: string | null;
+  energy: string | null;
+  tempo: string | null;
+  vocals: string | null;
+  songTitle: string;
+  artist: string;
+  mbTags: string[];
+}
+
 interface SharedState {
   youtubeUrl: string;
   template: SunoTemplate;
@@ -255,10 +268,14 @@ export default function Home() {
   const [ratingSaved, setRatingSaved] = useState(false);
   const ratingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [suggestions, setSuggestions] = useState<SuggestedControls | null>(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+
   const lastUrlRef = useRef<string>("");
   const lastOptionsRef = useRef<object>({});
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setHistory(loadHistory());
@@ -310,18 +327,46 @@ export default function Home() {
     setPreviewLoading(false);
   }, []);
 
+  const fetchSuggestions = useCallback(async (url: string) => {
+    const id = extractVideoId(url);
+    if (!id) return;
+    setSuggestLoading(true);
+    setShowStyleControls(true);
+    try {
+      const resp = await fetch(`/api/suno/suggest?url=${encodeURIComponent(url)}`);
+      if (!resp.ok) return;
+      const data = await resp.json() as SuggestedControls;
+      const hasAny = data.genres.length > 0 || data.era || data.energy || data.tempo;
+      if (!hasAny) return;
+      setSuggestions(data);
+      if (data.genres.length > 0) setSelectedGenres(data.genres);
+      if (data.era) setEra(data.era as typeof era);
+      if (data.energy) setEnergyLevel(data.energy as typeof energyLevel);
+      if (data.tempo) setTempo(data.tempo as typeof tempo);
+      setShowStyleControls(true);
+    } catch {}
+    setSuggestLoading(false);
+  }, []);
+
   const urlValue = form.watch("youtubeUrl");
   useEffect(() => {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
     const id = extractVideoId(urlValue ?? "");
     if (!id) {
       setVideoPreview(null);
+      setSuggestions(null);
+      setSuggestLoading(false);
       return;
     }
     setVideoPreview((prev) => prev ?? { title: "", author: "", thumbnail: `https://img.youtube.com/vi/${id}/mqdefault.jpg`, duration: null });
     previewTimerRef.current = setTimeout(() => fetchVideoPreview(urlValue), 800);
-    return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current); };
-  }, [urlValue, fetchVideoPreview]);
+    suggestTimerRef.current = setTimeout(() => fetchSuggestions(urlValue), 900);
+    return () => {
+      if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+      if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+    };
+  }, [urlValue, fetchVideoPreview, fetchSuggestions]);
 
   const addToHistory = (url: string, template: SunoTemplate, opts?: UsedOptions) => {
     const entry: HistoryEntry = {
@@ -815,6 +860,50 @@ export default function Home() {
                 className="overflow-hidden"
               >
                 <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-4 space-y-4">
+                  {/* Suggestion loading indicator */}
+                  {suggestLoading && (
+                    <div className="flex items-center gap-2 text-xs text-zinc-500 animate-pulse">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      Detecting style from MusicBrainz…
+                    </div>
+                  )}
+
+                  {/* Suggestion applied banner */}
+                  {!suggestLoading && suggestions && (
+                    <div className="flex items-start justify-between gap-3 px-3 py-2.5 rounded-xl bg-primary/8 border border-primary/20">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-primary leading-tight">
+                            Suggested from MusicBrainz
+                          </p>
+                          <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug truncate">
+                            {[
+                              suggestions.genres.length > 0 ? suggestions.genres.join(", ") : null,
+                              suggestions.era ? `era: ${suggestions.era}` : null,
+                              suggestions.energy ? `energy: ${suggestions.energy}` : null,
+                              suggestions.tempo ? `tempo: ${suggestions.tempo}` : null,
+                            ].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSuggestions(null);
+                          setSelectedGenres([]);
+                          setEra("auto");
+                          setEnergyLevel("auto");
+                          setTempo(null);
+                        }}
+                        className="shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors p-0.5"
+                        title="Clear suggestions"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+
                   <p className="text-[11px] text-zinc-500 font-medium tracking-widest uppercase">Style preferences — guide the AI output</p>
 
                   {/* Row 1: Vocal + Energy side by side */}
