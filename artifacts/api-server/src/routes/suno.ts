@@ -395,16 +395,19 @@ IF neither is provided:
 - Parentheses ( ) = performance feel, emotional direction, ad-libs, background interjections
 - Plain text = actual lyric lines (never put lyrics inside brackets)
 
-Target up to 4900 characters. Fill the space with rich production detail and complete song sections.
-**HARD LIMIT: 4900 characters. Do not exceed.**
+**CHARACTER REQUIREMENT — MANDATORY:**
+- MINIMUM: 4,900 characters. You MUST reach at least 4,900 characters. If your draft is shorter, expand every section with more production cues, instrument articulation tags, performance direction lines, ad-lib variants, and additional song sections until you reach 4,900.
+- MAXIMUM: 4,999 characters. Hard cap. Do not exceed 4,999 characters.
+- Before finalising, count your characters mentally. If under 4,900, keep adding production detail, bracketed cue lines, and performance direction. Never submit under 4,900.
+- Fill spare space with: additional [instrument cue] lines, more (performance direction) parentheticals, extra ad-lib variants in choruses, an extra breakdown section, extended outro, or richer articulation in existing headers.
 
-=== SECTION 3: negativePrompt (150-200 chars) ===
+=== SECTION 3: negativePrompt (180-199 chars) ===
 What Suno should NOT generate. Rules:
 - Comma-separated, NO spaces after commas
 - List specific genres, instruments, styles, vocal types, and production qualities that clash with this song
 - Be specific: not just "rap" but also "trap hi-hats" or "808 slides" if inappropriate
-- Target 150-200 characters exactly
-- Example: "generic,lo-fi,acoustic folk,country twang,trap hi-hats,drill 808s,heavy metal,jazz solos,orchestral strings,piano ballad,choir,happy pop,reggae,ukulele,vaporwave,spoken word"
+- MINIMUM 180 characters, MAXIMUM 199 characters. Count carefully — expand with more comma-separated exclusion terms if short.
+- Example: "generic,lo-fi,acoustic folk,country twang,trap hi-hats,drill 808s,heavy metal,jazz solos,orchestral strings,piano ballad,choir,happy pop,reggae,ukulele,vaporwave,spoken word,pitch correction"
 
 === QUALITY RULES ===
 - No asterisks (*) anywhere in output
@@ -564,7 +567,7 @@ ${context}`;
       artist: metadata.cleanArtist || metadata.author,
       styleOfMusic: aiResult.styleOfMusic,
       title: aiResult.title,
-      lyrics: trimToCharLimit(aiResult.lyrics, 4900),
+      lyrics: trimToCharLimit(aiResult.lyrics, 4999),
       negativePrompt: aiResult.negativePrompt,
       tags: [],
     });
