@@ -24,6 +24,18 @@ export interface GenerateTemplateRequest {
   genreNudge?: string;
   /** Selected genre tags to incorporate into the style prompt */
   genres?: string[];
+  /** Mood/vibe tags (e.g. Dark, Nostalgic, Euphoric) */
+  moods?: string[];
+  /** Featured instrument hints (e.g. Piano, Guitar, Synth) */
+  instruments?: string[];
+  /** Generation mode — faithful cover or creative inspiration */
+  mode?: "cover" | "inspired";
+  /** Target BPM range */
+  tempo?: "slow" | "mid" | "uptempo" | "fast";
+  /** Tags to explicitly exclude from the negative prompt */
+  excludeTags?: string[];
+  /** Which variation to generate (1 or 2) */
+  variationIndex?: number;
 }
 
 export interface SunoTemplate {

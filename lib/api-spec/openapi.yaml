@@ -95,6 +95,32 @@ components:
           items:
             type: string
           description: Selected genre tags to incorporate into the style prompt
+        moods:
+          type: array
+          items:
+            type: string
+          description: Mood/vibe tags (e.g. Dark, Nostalgic, Euphoric)
+        instruments:
+          type: array
+          items:
+            type: string
+          description: Featured instrument hints (e.g. Piano, Guitar, Synth)
+        mode:
+          type: string
+          enum: [cover, inspired]
+          description: Generation mode — faithful cover or creative inspiration
+        tempo:
+          type: string
+          enum: [slow, mid, uptempo, fast]
+          description: Target BPM range
+        excludeTags:
+          type: array
+          items:
+            type: string
+          description: Tags to explicitly exclude from the negative prompt
+        variationIndex:
+          type: integer
+          description: Which variation to generate (1 or 2). When 2, AI takes a fresh creative angle.
       required:
         - youtubeUrl
     SunoTemplate:

@@ -27,6 +27,12 @@ export const GenerateSunoTemplateBody = zod.object({
   era: zod.enum(["auto", "70s", "80s", "90s", "2000s", "modern"]).optional().describe("Target musical era or decade"),
   genreNudge: zod.string().optional().describe("Optional genre or style override"),
   genres: zod.array(zod.string()).optional().describe("Selected genre tags to incorporate into the style prompt"),
+  moods: zod.array(zod.string()).optional().describe("Mood/vibe tags"),
+  instruments: zod.array(zod.string()).optional().describe("Featured instrument hints"),
+  mode: zod.enum(["cover", "inspired"]).optional().describe("Generation mode"),
+  tempo: zod.enum(["slow", "mid", "uptempo", "fast"]).optional().describe("Target BPM range"),
+  excludeTags: zod.array(zod.string()).optional().describe("Tags to explicitly exclude"),
+  variationIndex: zod.number().optional().describe("Which variation to generate (1 or 2)"),
 });
 
 export const GenerateSunoTemplateResponse = zod.object({

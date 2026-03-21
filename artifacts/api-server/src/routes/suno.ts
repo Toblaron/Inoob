@@ -422,10 +422,21 @@ function buildStyleControls(opts: {
   era?: string;
   genreNudge?: string;
   genres?: string[];
+  moods?: string[];
+  instruments?: string[];
+  tempo?: string;
+  excludeTags?: string[];
+  variationIndex?: number;
 }): string {
   const lines: string[] = [];
   if (opts.genres && opts.genres.length > 0) {
     lines.push(`USER PREFERENCE — Selected genres: ${opts.genres.join(", ")}. These are the core genre(s) the user wants. Make them prominent in Section 1 and structure the template around these genre conventions.`);
+  }
+  if (opts.moods && opts.moods.length > 0) {
+    lines.push(`USER PREFERENCE — Mood/atmosphere: ${opts.moods.join(", ")}. Embed this emotional quality throughout Section 1 style tags and in the lyrical tone and arrangement description.`);
+  }
+  if (opts.instruments && opts.instruments.length > 0) {
+    lines.push(`USER PREFERENCE — Featured instruments: ${opts.instruments.join(", ")}. Highlight these in Section 1 and include them in the production header of Section 2.`);
   }
   if (opts.vocalGender && opts.vocalGender !== "auto") {
     lines.push(`USER PREFERENCE — Vocal gender: ${opts.vocalGender}. Use a ${opts.vocalGender} vocalist.`);
@@ -437,6 +448,15 @@ function buildStyleControls(opts: {
       high: "high-energy, intense — loud dynamics, explosive choruses, dense arrangement, driving momentum",
     };
     lines.push(`USER PREFERENCE — Energy level: ${energyMap[opts.energyLevel] ?? opts.energyLevel}.`);
+  }
+  if (opts.tempo) {
+    const tempoMap: Record<string, string> = {
+      slow: "slow tempo, under 80 BPM — languid, spacious phrasing",
+      mid: "mid tempo, 80–110 BPM — steady groove, comfortable pace",
+      uptempo: "up-tempo, 110–130 BPM — driving energy, danceable",
+      fast: "fast tempo, 130+ BPM — high-octane, frenetic, adrenaline",
+    };
+    lines.push(`USER PREFERENCE — Tempo: ${tempoMap[opts.tempo] ?? opts.tempo}. Include a BPM indicator in the style tags.`);
   }
   if (opts.era && opts.era !== "auto") {
     const eraMap: Record<string, string> = {
@@ -451,6 +471,12 @@ function buildStyleControls(opts: {
   if (opts.genreNudge && opts.genreNudge.trim()) {
     lines.push(`USER PREFERENCE — Genre/style nudge: "${opts.genreNudge.trim()}". Incorporate this into the style prompt.`);
   }
+  if (opts.excludeTags && opts.excludeTags.length > 0) {
+    lines.push(`USER EXCLUSION TAGS — The user explicitly wants to EXCLUDE these from the output. Add them prominently to Section 3 (Negative Prompt): ${opts.excludeTags.join(", ")}.`);
+  }
+  if (opts.variationIndex === 2) {
+    lines.push(`VARIATION MODE — This is Variation 2. Take a fresh creative angle: choose different instrumentation, structural approach, and style adjectives from what you would typically pick first. Surprise the user with an unexpected but valid interpretation.`);
+  }
   return lines.length > 0 ? "\n\nUSER STYLE PREFERENCES (apply these to Section 1 and Section 2 header):\n" + lines.join("\n") : "";
 }
 
@@ -462,7 +488,7 @@ router.post("/generate-template", async (req, res) => {
       return;
     }
 
-    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres } = parsed.data;
+    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex } = parsed.data;
 
     if (!isValidYouTubeUrl(youtubeUrl)) {
       res.status(400).json({ error: "Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link." });
@@ -489,7 +515,7 @@ router.post("/generate-template", async (req, res) => {
     }
 
     const context = buildPromptContext(metadata);
-    const styleControls = buildStyleControls({ vocalGender, energyLevel, era, genreNudge, genres });
+    const styleControls = buildStyleControls({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex });
 
     const lyricsInstruction =
       metadata.lyricsSource === "api"
@@ -500,7 +526,13 @@ router.post("/generate-template", async (req, res) => {
           ? "YouTube captions (approximate) are provided — clean them up and structure with Suno metatags."
           : "No lyrics source available — use your knowledge of this song or write thematic placeholder lyrics.";
 
-    const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}${styleControls}
+    const modeInstruction = mode === "cover"
+      ? "\n\nGENERATION MODE: AI Cover — Reconstruct this song as faithfully as Suno allows. Keep the original genre, tempo, instrumentation, structure, vocal style, and lyrics as close to the original recording as possible. Prioritise accuracy over creativity."
+      : mode === "inspired"
+      ? "\n\nGENERATION MODE: Inspired By — Use this song as creative springboard only. Keep the emotional core but freely reimagine the genre, instrumentation, and arrangement in an unexpected direction. The output should feel clearly distinct from the original. Be bold and inventive."
+      : "";
+
+    const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}${modeInstruction}${styleControls}
 
 ${context}`;
 
@@ -542,6 +574,37 @@ ${context}`;
     console.error("Error generating template:", err);
     const message = err instanceof Error ? err.message : "An unexpected error occurred";
     res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * GET /api/suno/youtube-preview?url=...
+ * Lightweight endpoint — returns just thumbnail, title, author for the song preview card.
+ * Does NOT fetch lyrics or call AI.
+ */
+router.get("/youtube-preview", async (req, res) => {
+  const url = req.query.url as string;
+  if (!url || !isValidYouTubeUrl(url)) {
+    res.status(400).json({ error: "Invalid YouTube URL" });
+    return;
+  }
+  try {
+    const info = await ytdl.getBasicInfo(url, {
+      requestOptions: { headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" } },
+    });
+    const vd = info.videoDetails;
+    const thumb = vd.thumbnails?.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? null;
+    const { cleanTitle, cleanArtist } = cleanSongTitle(vd.title ?? "", vd.author?.name ?? "");
+    res.json({
+      title: vd.title ?? "Unknown Title",
+      cleanTitle,
+      author: cleanArtist || vd.author?.name || "Unknown Artist",
+      thumbnail: thumb,
+      duration: vd.lengthSeconds ? formatDuration(Number(vd.lengthSeconds)) : null,
+    });
+  } catch (err) {
+    console.error("youtube-preview error:", err);
+    res.status(400).json({ error: "Could not fetch video info" });
   }
 });
 

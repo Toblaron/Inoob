@@ -20,12 +20,14 @@ interface TemplateResultProps {
   template: SunoTemplate;
   regeneratingSection: string | null;
   onRegenerateSection: (section: keyof SunoTemplate) => void;
+  compact?: boolean;
 }
 
 export function TemplateResult({
   template,
   regeneratingSection,
   onRegenerateSection,
+  compact = false,
 }: TemplateResultProps) {
   const { copy } = useCopyToClipboard();
 
