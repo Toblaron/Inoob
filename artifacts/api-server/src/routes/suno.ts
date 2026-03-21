@@ -12,13 +12,104 @@ interface VideoMetadata {
   keywords: string[];
   category: string;
   duration: string;
+  /** Raw captions/transcript from YouTube */
   captionText: string | null;
+  /** Authentic lyrics from a lyrics API */
+  lyricsText: string | null;
+  /** Cleaned song title (without YouTube suffixes) for API searches */
+  cleanTitle: string;
+  /** Cleaned artist name for API searches */
+  cleanArtist: string;
+  lyricsSource: "api" | "captions" | "none";
 }
 
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Strips common YouTube title suffixes to get a clean song title for lyrics lookup.
+ * e.g. "Never Gonna Give You Up (Official Video) (4K Remaster)" → "Never Gonna Give You Up"
+ */
+function cleanSongTitle(rawTitle: string, artistName: string): { cleanTitle: string; cleanArtist: string } {
+  let title = rawTitle.trim();
+  let artist = artistName.trim();
+
+  // If the title starts with "Artist - Song", split them
+  const dashIdx = title.indexOf(" - ");
+  if (dashIdx > 0) {
+    const leftPart = title.slice(0, dashIdx).trim();
+    const rightPart = title.slice(dashIdx + 3).trim();
+    // Check if leftPart looks like an artist name (not a sentence)
+    if (leftPart.split(" ").length <= 5) {
+      artist = leftPart;
+      title = rightPart;
+    }
+  }
+
+  // Remove bracketed/parenthesized YouTube-specific suffixes
+  const suffixPatterns = [
+    /\s*\(official\s+(music\s+)?video\)/gi,
+    /\s*\(official\s+audio\)/gi,
+    /\s*\(lyric\s+video\)/gi,
+    /\s*\(lyrics?\s+video\)/gi,
+    /\s*\(official\s+lyrics?\)/gi,
+    /\s*\(official\s+visuali[sz]er\)/gi,
+    /\s*\[official\s+(music\s+)?video\]/gi,
+    /\s*\(4k(\s+remaster(ed)?)?\)/gi,
+    /\s*\(remaster(ed)?(\s+\d{4})?\)/gi,
+    /\s*\(\d{4}\s+remaster(ed)?\)/gi,
+    /\s*\(hd\)/gi,
+    /\s*\(hq\)/gi,
+    /\s*\(audio\)/gi,
+    /\s*\(visuali[sz]er\)/gi,
+    /\s*\(live\s+(at\s+\w+)?\)/gi,
+    /\s*\(explicit\)/gi,
+    /\s*\(clean\)/gi,
+    /\s*\(radio\s+edit\)/gi,
+    /\s*\(single\)/gi,
+    /\s*\(album\s+version\)/gi,
+    /\s*-\s*(ft|feat)\.?\s+[^([\n]+/gi,
+    /\s*\(ft\.?\s+[^)]+\)/gi,
+    /\s*\(feat\.?\s+[^)]+\)/gi,
+  ];
+
+  for (const pattern of suffixPatterns) {
+    title = title.replace(pattern, "");
+  }
+
+  return { cleanTitle: title.trim(), cleanArtist: artist.trim() };
+}
+
+/**
+ * Fetch lyrics from the free lyrics.ovh API.
+ * API: GET https://api.lyrics.ovh/v1/{artist}/{title}
+ * Returns { lyrics: string } or { error: string }
+ */
+async function fetchLyricsFromAPI(artist: string, title: string): Promise<string | null> {
+  try {
+    const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "SunoTemplateGenerator/1.0" },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!resp.ok) return null;
+
+    const data = await resp.json() as { lyrics?: string; error?: string };
+    if (!data.lyrics || data.error) return null;
+
+    const lyrics = data.lyrics
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .trim();
+
+    return lyrics.length > 50 ? lyrics : null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchCaptions(info: ytdl.videoInfo): Promise<string | null> {
@@ -38,6 +129,7 @@ async function fetchCaptions(info: ytdl.videoInfo): Promise<string | null> {
 
     if (!tracks || tracks.length === 0) return null;
 
+    // Prefer manual (non-ASR) English captions, then any English, then first available
     const enTrack =
       tracks.find((t) => t.languageCode === "en" && t.kind !== "asr") ??
       tracks.find((t) => t.languageCode === "en") ??
@@ -84,6 +176,7 @@ async function fetchViaOembed(url: string): Promise<VideoMetadata> {
     throw new Error("Could not fetch video metadata via oEmbed.");
   }
   const data = await response.json() as { title: string; author_name: string };
+  const { cleanTitle, cleanArtist } = cleanSongTitle(data.title, data.author_name);
   return {
     title: data.title,
     author: data.author_name,
@@ -92,18 +185,24 @@ async function fetchViaOembed(url: string): Promise<VideoMetadata> {
     category: "",
     duration: "",
     captionText: null,
+    lyricsText: null,
+    cleanTitle,
+    cleanArtist,
+    lyricsSource: "none",
   };
 }
 
 async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
+  let baseMetadata: Omit<VideoMetadata, "lyricsText" | "lyricsSource">;
+
   try {
     const info = await ytdl.getInfo(url);
     const details = info.videoDetails;
-
     const durationSec = parseInt(details.lengthSeconds, 10);
     const captionText = await fetchCaptions(info);
+    const { cleanTitle, cleanArtist } = cleanSongTitle(details.title, details.author.name);
 
-    return {
+    baseMetadata = {
       title: details.title,
       author: details.author.name,
       description: details.description ?? "",
@@ -111,11 +210,31 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
       category: (details as unknown as { category?: string }).category ?? "",
       duration: formatDuration(durationSec),
       captionText,
+      cleanTitle,
+      cleanArtist,
     };
   } catch (ytdlErr) {
     console.warn("ytdl-core failed, falling back to oEmbed:", ytdlErr);
-    return fetchViaOembed(url);
+    const oembed = await fetchViaOembed(url);
+    return oembed;
   }
+
+  // Try to get authentic lyrics from lyrics.ovh API
+  console.log(`Fetching lyrics for: "${baseMetadata.cleanArtist}" - "${baseMetadata.cleanTitle}"`);
+  const lyricsText = await fetchLyricsFromAPI(baseMetadata.cleanArtist, baseMetadata.cleanTitle);
+
+  if (lyricsText) {
+    console.log(`Lyrics found via API (${lyricsText.length} chars)`);
+    return { ...baseMetadata, lyricsText, lyricsSource: "api" };
+  }
+
+  if (baseMetadata.captionText) {
+    console.log(`No API lyrics found, using YouTube captions (${baseMetadata.captionText.length} chars)`);
+    return { ...baseMetadata, lyricsText: null, lyricsSource: "captions" };
+  }
+
+  console.log("No lyrics or captions found, relying on AI knowledge");
+  return { ...baseMetadata, lyricsText: null, lyricsSource: "none" };
 }
 
 function isValidYouTubeUrl(url: string): boolean {
@@ -140,22 +259,31 @@ function buildPromptContext(metadata: VideoMetadata): string {
 
   parts.push(`Song: "${metadata.title}"`);
   parts.push(`Artist/Channel: ${metadata.author}`);
+  parts.push(`Cleaned Title (for template): "${metadata.cleanTitle}"`);
+  parts.push(`Cleaned Artist (for template): "${metadata.cleanArtist}"`);
   if (metadata.duration) parts.push(`Duration: ${metadata.duration}`);
   if (metadata.category) parts.push(`YouTube Category: ${metadata.category}`);
   if (metadata.keywords.length > 0) {
     parts.push(`YouTube Tags: ${metadata.keywords.join(", ")}`);
   }
   if (metadata.description) {
-    const desc = metadata.description.length > 2000
-      ? metadata.description.slice(0, 2000) + "..."
+    const desc = metadata.description.length > 1500
+      ? metadata.description.slice(0, 1500) + "..."
       : metadata.description;
     parts.push(`Video Description:\n${desc}`);
   }
-  if (metadata.captionText) {
+
+  // Lyrics take priority: API lyrics > captions > nothing
+  if (metadata.lyricsSource === "api" && metadata.lyricsText) {
+    const lyrics = metadata.lyricsText.length > 5000
+      ? metadata.lyricsText.slice(0, 5000) + "\n[... lyrics truncated ...]"
+      : metadata.lyricsText;
+    parts.push(`AUTHENTIC LYRICS (from lyrics database — use these verbatim):\n${lyrics}`);
+  } else if (metadata.lyricsSource === "captions" && metadata.captionText) {
     const captions = metadata.captionText.length > 4000
       ? metadata.captionText.slice(0, 4000) + "..."
       : metadata.captionText;
-    parts.push(`Transcript/Lyrics from captions:\n${captions}`);
+    parts.push(`YouTube Captions/Transcript (approximate lyrics — clean up errors):\n${captions}`);
   }
 
   return parts.join("\n\n");
@@ -180,9 +308,9 @@ The Suno "Style of Music" field. Rules:
 - Example format: "1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman Production, 113 BPM, B minor, warm baritone male lead with soulful phrasing, bright gated reverb snare, punchy four-on-the-floor kick, syncopated bassline, shimmering DX7 synth stabs, catchy pop hooks, analog warmth, club-friendly, radio-polished production"
 
 === SECTION 2: lyrics (~5000 chars, target 4900-4999) ===
-The Suno "Lyrics" field. This is NOT just lyrics — it is a full production metadata + song structure block. Rules:
+The Suno "Lyrics" field. This is a FULL PRODUCTION METADATA + LYRICS block.
 
-HEADER BLOCK (production metadata, always first):
+HEADER BLOCK (production metadata, always first — before any lyrics):
 [Produced by AI - Song Genre Description]
 [Mix: describe stereo field, frequency zones, panning]
 [Synthesis: list all key synths/instruments and their roles]
@@ -194,34 +322,48 @@ HEADER BLOCK (production metadata, always first):
 [Key: musical key]
 [BPM: exact BPM]
 
-SONG STRUCTURE (after header):
-Use these section markers with descriptions: [Intro - brief description], [Verse 1 - brief description], [Pre-Chorus - brief description], [Chorus - brief description], [Bridge - brief description], [Drop - brief description], [Breakdown - brief description], [Outro - brief description]
+LYRICS HANDLING — depends on what was provided:
 
-Bracket conventions:
-- Square brackets [ ] = structural markers and production/instrument directions
+IF "AUTHENTIC LYRICS" are provided in context:
+- These are the REAL lyrics from a professional database. Use them verbatim — do not paraphrase or invent.
+- Structure them with Suno section markers: [Intro - description], [Verse 1 - description], [Pre-Chorus - description], [Chorus - description], [Verse 2 - description], [Bridge - description], [Outro - description]
+- After each section header, add 2-3 production direction lines in square brackets, then the actual lyric lines, then 1-2 parenthetical performance lines
+- Example of a correctly formatted verse:
+  [Verse 1 - tight groove, synth stabs, held-back energy]
+  [bass holds root, hat 16ths, synth stabs offbeats]
+  [vocal dry and forward, plate reverb 1.2s at -18dB]
+  We're no strangers to love
+  You know the rules and so do I
+  (confident and sincere, no affectation)
+
+IF "YouTube Captions/Transcript" are provided:
+- These are approximate auto-generated captions. Clean them up (fix obvious errors, proper capitalization) and structure them with section markers.
+- Fill in any missing parts using your knowledge of the song.
+
+IF neither is provided:
+- Use your knowledge of the song to write accurate lyrics, or write thematic placeholder lyrics capturing the mood.
+
+Bracket conventions in lyrics:
+- Square brackets [ ] = structural markers and production/instrument directions  
 - Parentheses ( ) = performance feel and emotional directions
+- Actual lyric lines = plain text (no brackets)
 
-Within each section, alternate between:
-- [square bracket lines] describing specific instruments, sounds, and production elements
-- (parenthetical lines) describing how it feels or the performance quality
+Target 4900-4999 characters total. Write enough sections and detail to reach the target.
 
-If you have real lyrics from captions, USE THEM and structure them with the metatags. If not, write thematic placeholder lyrics that capture the song's mood.
-
-Target 4900-4999 characters total for this field. Write enough sections and detail to hit this target.
-
-=== SECTION 3: negativePrompt (90-199 chars) ===
+=== SECTION 3: negativePrompt (150-200 chars) ===
 What Suno should NOT generate. Rules:
 - Comma-separated, NO spaces after commas
 - List genres, instruments, styles, vocal types that clash with this song
-- Target 90-199 characters exactly
-- Example: "generic,lo-fi,acoustic guitar,country,jazz,spoken word,rap vocals,orchestral strings,piano ballad,choir,happy pop,folk,ukulele"
+- Target 150-200 characters exactly
+- Example: "generic,lo-fi,acoustic guitar,country,jazz improvisation,spoken word,rap vocals,orchestral strings,piano ballad,choir,happy pop,reggae,folk,ukulele,clean electric guitar"
 
 === QUALITY RULES ===
 - No asterisks (*) anywhere in output
 - Pure English only
 - No banned themes: no cyberpunk, neon, ghost-in-machine, tech metaphors
 - No placeholder text or [INSERT X HERE] patterns
-- Every detail should be specific and music-production accurate`;
+- Every detail should be specific and music-production accurate
+- The "title" field should be a clean, creative Suno title like "Never Gonna Give You Up (1987 Hi-NRG Reimagining)"`;
 
 router.post("/generate-template", async (req, res) => {
   try {
@@ -248,9 +390,15 @@ router.post("/generate-template", async (req, res) => {
     }
 
     const context = buildPromptContext(metadata);
-    const hasCaptions = !!metadata.captionText;
 
-    const userMessage = `Create a Suno.ai template for this song. ${hasCaptions ? "Real lyrics/transcript from captions are provided — use them as the basis for the lyrics section, structured with Suno metatags." : "No captions available — use your knowledge of this song and write thematic placeholder lyrics."}
+    const lyricsInstruction =
+      metadata.lyricsSource === "api"
+        ? "AUTHENTIC LYRICS from a professional database are provided — use them VERBATIM, structured with Suno metatags."
+        : metadata.lyricsSource === "captions"
+          ? "YouTube captions (approximate) are provided — clean them up and structure with Suno metatags."
+          : "No lyrics source available — use your knowledge of this song or write thematic placeholder lyrics.";
+
+    const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}
 
 ${context}`;
 
@@ -279,7 +427,7 @@ ${context}`;
 
     const template = GenerateSunoTemplateResponse.parse({
       songTitle: metadata.title,
-      artist: metadata.author,
+      artist: metadata.cleanArtist || metadata.author,
       styleOfMusic: aiResult.styleOfMusic,
       title: aiResult.title,
       lyrics: aiResult.lyrics,
