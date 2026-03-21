@@ -367,7 +367,14 @@ SECTION FORMATTING RULES:
 6. Add ad-lib parentheses to choruses and hooks: (yeah!), (oh-oh), (come on), (let's go) — these humanise the vocal
 7. Use vowel elongation for emotional moments: e.g. "go-o-o-one", "sta-a-ay", "hea-ea-eart" — signals the AI to stretch the syllable
 8. Add instrument/effect cue tags within sections: [808s kick in], [staccato Piano fills], [Guitar solo], [legato Strings swell], [Synth drop], [Beat drops out], [Glitch Percussion], [Filter sweep opens]
-9. End the song with [Fade Out] on the penultimate line and [End] on the final line
+9. You may add sound-effect atmosphere tags where they serve the song's narrative: [Applause], [Crowd noise], [Rain], [Phone ringing], [Distant sirens] — use sparingly and only when they add meaning
+10. Emoji cues (experimental — Suno v4.5 responds to them): use 1-2 max per section, only in section headers, paired with text direction:
+    - 🔥 = heightened passion, aggression, or climactic intensity
+    - ☕ = relaxed, narrative, storytelling tone
+    - 🔊 = echo, spacious reverb, atmospheric
+    - 🎶 = melodic or harmonic emphasis
+    Only use emoji when they reinforce what the text direction already says. Never use emoji as the sole cue.
+11. End the song with [Fade Out] on the penultimate line and [End] on the final line (or [Fade to End] as a combined tag for a slow fade-out ending)
 
 LYRICS HANDLING — depends on what was provided:
 
