@@ -12,6 +12,16 @@ export interface HealthStatus {
 export interface GenerateTemplateRequest {
   /** A YouTube video URL */
   youtubeUrl: string;
+  /** Optional manually provided lyrics to use instead of fetching from APIs */
+  manualLyrics?: string;
+  /** Preferred vocal gender for the style prompt */
+  vocalGender?: "auto" | "male" | "female";
+  /** Energy level of the track */
+  energyLevel?: "chill" | "medium" | "high";
+  /** Target musical era or decade */
+  era?: "auto" | "70s" | "80s" | "90s" | "2000s" | "modern";
+  /** Optional genre or style override */
+  genreNudge?: string;
 }
 
 export interface SunoTemplate {

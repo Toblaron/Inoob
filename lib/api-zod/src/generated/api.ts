@@ -21,6 +21,11 @@ export const HealthCheckResponse = zod.object({
  */
 export const GenerateSunoTemplateBody = zod.object({
   youtubeUrl: zod.string().describe("A YouTube video URL"),
+  manualLyrics: zod.string().optional().describe("Optional manually provided lyrics to use instead of fetching from APIs"),
+  vocalGender: zod.enum(["auto", "male", "female"]).optional().describe("Preferred vocal gender for the style prompt"),
+  energyLevel: zod.enum(["chill", "medium", "high"]).optional().describe("Energy level of the track"),
+  era: zod.enum(["auto", "70s", "80s", "90s", "2000s", "modern"]).optional().describe("Target musical era or decade"),
+  genreNudge: zod.string().optional().describe("Optional genre or style override"),
 });
 
 export const GenerateSunoTemplateResponse = zod.object({

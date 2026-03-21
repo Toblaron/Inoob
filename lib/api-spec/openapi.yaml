@@ -72,6 +72,24 @@ components:
         youtubeUrl:
           type: string
           description: A YouTube video URL
+        manualLyrics:
+          type: string
+          description: Optional manually provided lyrics to use instead of fetching from APIs
+        vocalGender:
+          type: string
+          enum: [auto, male, female]
+          description: Preferred vocal gender for the style prompt
+        energyLevel:
+          type: string
+          enum: [chill, medium, high]
+          description: Energy level of the track
+        era:
+          type: string
+          enum: [auto, "70s", "80s", "90s", "2000s", modern]
+          description: Target musical era or decade
+        genreNudge:
+          type: string
+          description: Optional genre or style override (e.g. "more trap", "jazz influence")
       required:
         - youtubeUrl
     SunoTemplate:

@@ -416,6 +416,40 @@ What Suno should NOT generate. Rules:
 - When in doubt, be MORE specific, not less`;
 
 
+function buildStyleControls(opts: {
+  vocalGender?: string;
+  energyLevel?: string;
+  era?: string;
+  genreNudge?: string;
+}): string {
+  const lines: string[] = [];
+  if (opts.vocalGender && opts.vocalGender !== "auto") {
+    lines.push(`USER PREFERENCE — Vocal gender: ${opts.vocalGender}. Use a ${opts.vocalGender} vocalist.`);
+  }
+  if (opts.energyLevel && opts.energyLevel !== "auto") {
+    const energyMap: Record<string, string> = {
+      chill: "chill, relaxed, low-energy — quiet dynamics, intimate delivery, sparse arrangement",
+      medium: "medium energy — balanced dynamics, moderate intensity, clear arrangement",
+      high: "high-energy, intense — loud dynamics, explosive choruses, dense arrangement, driving momentum",
+    };
+    lines.push(`USER PREFERENCE — Energy level: ${energyMap[opts.energyLevel] ?? opts.energyLevel}.`);
+  }
+  if (opts.era && opts.era !== "auto") {
+    const eraMap: Record<string, string> = {
+      "70s": "1970s — analog warmth, tape saturation, lush orchestration, vinyl grain",
+      "80s": "1980s — gated reverb drums, synth-pop, DX7 keys, bright compressed production",
+      "90s": "1990s — grunge, alt-rock, or golden-era hip-hop depending on genre; punchy transients",
+      "2000s": "2000s — digital clarity, glossy pop production, early EDM influence",
+      modern: "modern/contemporary — hyper-clean production, wide stereo, streaming-optimized loudness",
+    };
+    lines.push(`USER PREFERENCE — Era: ${eraMap[opts.era] ?? opts.era}. Make the style reflect this era's production aesthetics.`);
+  }
+  if (opts.genreNudge && opts.genreNudge.trim()) {
+    lines.push(`USER PREFERENCE — Genre/style nudge: "${opts.genreNudge.trim()}". Incorporate this into the style prompt.`);
+  }
+  return lines.length > 0 ? "\n\nUSER STYLE PREFERENCES (apply these to Section 1 and Section 2 header):\n" + lines.join("\n") : "";
+}
+
 router.post("/generate-template", async (req, res) => {
   try {
     const parsed = GenerateSunoTemplateBody.safeParse(req.body);
@@ -424,7 +458,7 @@ router.post("/generate-template", async (req, res) => {
       return;
     }
 
-    const { youtubeUrl } = parsed.data;
+    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge } = parsed.data;
 
     if (!isValidYouTubeUrl(youtubeUrl)) {
       res.status(400).json({ error: "Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link." });
@@ -440,16 +474,29 @@ router.post("/generate-template", async (req, res) => {
       return;
     }
 
+    // Override lyrics with user-provided lyrics if supplied
+    if (manualLyrics && manualLyrics.trim().length > 20) {
+      console.log(`Using manually provided lyrics (${manualLyrics.trim().length} chars)`);
+      metadata = {
+        ...metadata,
+        lyricsText: manualLyrics.trim(),
+        lyricsSource: "api",
+      };
+    }
+
     const context = buildPromptContext(metadata);
+    const styleControls = buildStyleControls({ vocalGender, energyLevel, era, genreNudge });
 
     const lyricsInstruction =
       metadata.lyricsSource === "api"
-        ? "AUTHENTIC LYRICS from a professional database are provided — use them VERBATIM, structured with Suno metatags."
+        ? manualLyrics && manualLyrics.trim().length > 20
+          ? "USER-PROVIDED LYRICS are given — use them VERBATIM, structured with Suno metatags."
+          : "AUTHENTIC LYRICS from a professional database are provided — use them VERBATIM, structured with Suno metatags."
         : metadata.lyricsSource === "captions"
           ? "YouTube captions (approximate) are provided — clean them up and structure with Suno metatags."
           : "No lyrics source available — use your knowledge of this song or write thematic placeholder lyrics.";
 
-    const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}
+    const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}${styleControls}
 
 ${context}`;
 
