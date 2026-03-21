@@ -24,3 +24,8 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+GENIUS_API_TOKEN = "k1i7U80SDY5aCDyygYlHtAyH9wwaWGq96MTkruOz1A50tN8d711XjQhnP8WkYfm0"

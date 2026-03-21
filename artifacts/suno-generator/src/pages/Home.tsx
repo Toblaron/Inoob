@@ -34,6 +34,7 @@ import { useGenerateSunoTemplate } from "@workspace/api-client-react";
 import type { SunoTemplate } from "@workspace/api-client-react";
 import { TemplateResult } from "@/components/TemplateResult";
 import { LoadingEq } from "@/components/LoadingEq";
+import { ExampleGallery } from "@/components/ExampleGallery";
 import { cn } from "@/lib/utils";
 
 const HISTORY_KEY = "suno-template-history";
@@ -117,6 +118,103 @@ const GENRE_CATEGORIES: GenreCategory[] = [
 
 const ALL_GENRES = GENRE_CATEGORIES.flatMap((c) => c.genres);
 const ALL_ERAS = ["50s", "60s", "70s", "80s", "90s", "2000s", "2010s", "modern"] as const;
+
+interface CreativePreset {
+  id: string;
+  label: string;
+  emoji: string;
+  description: string;
+  settings: {
+    mode?: "cover" | "inspired";
+    energyLevel?: "auto" | "very chill" | "chill" | "medium" | "high" | "intense";
+    tempo?: "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper" | null;
+    selectedMoods?: string[];
+    selectedInstruments?: string[];
+    genreNudge?: string;
+    excludeTags?: string[];
+  };
+}
+
+const CREATIVE_PRESETS: CreativePreset[] = [
+  {
+    id: "faithful-cover",
+    label: "Faithful Cover",
+    emoji: "🎯",
+    description: "Recreate the original as closely as possible",
+    settings: { mode: "cover", energyLevel: "auto", genreNudge: "" },
+  },
+  {
+    id: "lofi-study",
+    label: "Lo-Fi Study",
+    emoji: "📚",
+    description: "Chill tape-warped lo-fi version",
+    settings: { mode: "inspired", energyLevel: "chill", tempo: "slow", selectedMoods: ["Nostalgic", "Dreamy"], selectedInstruments: ["Piano", "Guitar"], genreNudge: "lo-fi hip-hop, vinyl crackle, tape saturation, bedroom recording" },
+  },
+  {
+    id: "epic-orchestral",
+    label: "Epic Orchestral",
+    emoji: "🎻",
+    description: "Grand cinematic orchestral reimagining",
+    settings: { mode: "inspired", energyLevel: "intense", selectedMoods: ["Cinematic", "Triumphant"], selectedInstruments: ["Strings", "Brass", "Choir"], genreNudge: "epic orchestral, Hans Zimmer-style, cinematic score, sweeping strings" },
+  },
+  {
+    id: "festival-edm",
+    label: "Festival EDM",
+    emoji: "⚡",
+    description: "High-energy electronic festival version",
+    settings: { mode: "inspired", energyLevel: "intense", tempo: "fast", selectedMoods: ["Euphoric"], genreNudge: "progressive house, festival EDM, big room, massive drop, stadium anthem" },
+  },
+  {
+    id: "dark-brooding",
+    label: "Dark & Brooding",
+    emoji: "🌑",
+    description: "Dark atmospheric cinematic reimagining",
+    settings: { mode: "inspired", energyLevel: "medium", tempo: "slow", selectedMoods: ["Dark", "Mysterious", "Haunted"], genreNudge: "dark ambient, post-punk, cold wave, film noir, brooding atmosphere" },
+  },
+  {
+    id: "jazz-lounge",
+    label: "Jazz Lounge",
+    emoji: "🎷",
+    description: "Smooth late-night jazz reimagining",
+    settings: { mode: "inspired", energyLevel: "chill", tempo: "groove", selectedMoods: ["Romantic", "Nostalgic"], selectedInstruments: ["Piano", "Saxophone", "Bass"], genreNudge: "jazz lounge, bossa nova, late-night smoky bar, brushed drums" },
+  },
+];
+
+const ARTIST_STYLES_KEY = "suno-artist-styles";
+
+interface ArtistStyle {
+  genres?: string[];
+  era?: string;
+  energy?: string;
+  tempo?: string;
+  moods?: string[];
+  instruments?: string[];
+}
+
+function loadArtistStyles(): Record<string, ArtistStyle> {
+  try {
+    const raw = localStorage.getItem(ARTIST_STYLES_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, ArtistStyle>) : {};
+  } catch { return {}; }
+}
+
+function saveArtistStyle(artist: string, style: ArtistStyle) {
+  try {
+    const all = loadArtistStyles();
+    const key = artist.toLowerCase().trim();
+    all[key] = style;
+    const keys = Object.keys(all);
+    if (keys.length > 50) delete all[keys[0]];
+    localStorage.setItem(ARTIST_STYLES_KEY, JSON.stringify(all));
+  } catch {}
+}
+
+function getArtistStyle(artist: string): ArtistStyle | null {
+  try {
+    const all = loadArtistStyles();
+    return all[artist.toLowerCase().trim()] ?? null;
+  } catch { return null; }
+}
 const ALL_ENERGIES = ["very chill", "chill", "medium", "high", "intense"] as const;
 const ALL_TEMPOS = ["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"] as const;
 const ALL_VOCALS = ["male", "female", "mixed", "duet", "no vocals"] as const;
@@ -261,6 +359,9 @@ export default function Home() {
   const [selectedVariation, setSelectedVariation] = useState<"A" | "B" | null>(null);
   const [showVariations, setShowVariations] = useState(false);
 
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [artistMemoryBanner, setArtistMemoryBanner] = useState<string | null>(null);
+
   const [shareToast, setShareToast] = useState<"idle" | "copied">("idle");
   const [clipboardToast, setClipboardToast] = useState(false);
   const [templateRating, setTemplateRating] = useState<number | null>(null);
@@ -322,10 +423,24 @@ export default function Home() {
       if (resp.ok) {
         const data = await resp.json() as VideoPreview & { cleanTitle?: string };
         setVideoPreview({ ...data, thumbnail: thumb });
-        // Once we have clean title + artist, fire the suggest call with them directly
         const artist = data.author ?? "";
         const title = data.cleanTitle ?? data.title ?? "";
-        if (artist && title) fetchSuggestionsForSong(title, artist);
+        if (artist && title) {
+          // Check per-artist memory first — show it as a "remembered" banner
+          const saved = getArtistStyle(artist);
+          if (saved && (saved.genres?.length || saved.era)) {
+            if (saved.genres?.length) setSelectedGenres(saved.genres);
+            if (saved.era) setEra(saved.era as typeof era);
+            if (saved.energy) setEnergyLevel(saved.energy as typeof energyLevel);
+            if (saved.tempo) setTempo(saved.tempo as typeof tempo);
+            if (saved.moods?.length) setSelectedMoods(saved.moods);
+            if (saved.instruments?.length) setSelectedInstruments(saved.instruments);
+            setArtistMemoryBanner(artist);
+            setShowStyleControls(true);
+            setTimeout(() => setArtistMemoryBanner(null), 5000);
+          }
+          fetchSuggestionsForSong(title, artist);
+        }
       }
     } catch {}
     setPreviewLoading(false);
@@ -506,6 +621,23 @@ export default function Home() {
     if (!showStyleControls) setShowStyleControls(true);
   };
 
+  const applyPreset = (preset: CreativePreset) => {
+    if (activePreset === preset.id) {
+      setActivePreset(null);
+      return;
+    }
+    setActivePreset(preset.id);
+    const s = preset.settings;
+    if (s.mode !== undefined) setMode(s.mode);
+    if (s.energyLevel !== undefined) setEnergyLevel(s.energyLevel);
+    if (s.tempo !== undefined) setTempo(s.tempo ?? null);
+    if (s.selectedMoods !== undefined) setSelectedMoods(s.selectedMoods);
+    if (s.selectedInstruments !== undefined) setSelectedInstruments(s.selectedInstruments);
+    if (s.genreNudge !== undefined) setGenreNudge(s.genreNudge);
+    if (s.excludeTags !== undefined) setExcludeTags(s.excludeTags);
+    if (!showStyleControls) setShowStyleControls(true);
+  };
+
   const handleShareTemplate = () => {
     if (!currentTemplate || !lastUrlRef.current) return;
     const encoded = encodeShareState({ youtubeUrl: lastUrlRef.current, template: currentTemplate });
@@ -545,6 +677,17 @@ export default function Home() {
         onSuccess: (data) => {
           setCurrentTemplate(data);
           addToHistory(values.youtubeUrl, data, usedOpts);
+          // Persist style settings to per-artist memory
+          if (data.artist && (selectedGenres.length > 0 || era !== "auto" || energyLevel !== "auto")) {
+            saveArtistStyle(data.artist, {
+              genres: selectedGenres.length > 0 ? selectedGenres : undefined,
+              era: era !== "auto" ? era : undefined,
+              energy: energyLevel !== "auto" ? energyLevel : undefined,
+              tempo: tempo ?? undefined,
+              moods: selectedMoods.length > 0 ? selectedMoods : undefined,
+              instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
+            });
+          }
         },
         onError: (err) => {
           setApiError((err as { data?: { error?: string }; message?: string })?.data?.error ?? (err as Error)?.message ?? "Something went wrong");
@@ -718,6 +861,29 @@ export default function Home() {
             )}
           </div>
 
+          {/* Creative direction presets */}
+          <div className="space-y-1.5">
+            <p className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider pl-0.5">Creative Direction</p>
+            <div className="flex flex-wrap gap-2">
+              {CREATIVE_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  title={preset.description}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                    activePreset === preset.id
+                      ? "bg-secondary/25 border-secondary/60 text-secondary shadow-sm shadow-secondary/20"
+                      : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+                  )}
+                >
+                  <span>{preset.emoji}</span> {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* URL input row */}
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-3 relative">
             <div className="relative flex-1 group">
@@ -868,11 +1034,19 @@ export default function Home() {
                 className="overflow-hidden"
               >
                 <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-4 space-y-4">
+                  {/* Artist memory banner */}
+                  {artistMemoryBanner && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-400">
+                      <BrainCircuit className="w-3.5 h-3.5 shrink-0" />
+                      <span>Loaded your saved style for <strong>{artistMemoryBanner}</strong></span>
+                    </div>
+                  )}
+
                   {/* Suggestion loading indicator */}
                   {suggestLoading && (
                     <div className="flex items-center gap-2 text-xs text-zinc-500 animate-pulse">
                       <Sparkles className="w-3.5 h-3.5 text-primary" />
-                      Detecting style from MusicBrainz…
+                      AI is analyzing genre, era, and energy…
                     </div>
                   )}
 
@@ -883,7 +1057,7 @@ export default function Home() {
                         <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-primary leading-tight">
-                            Suggested from MusicBrainz
+                            Auto-detected style
                           </p>
                           <p className="text-[11px] text-zinc-400 mt-0.5 leading-snug truncate">
                             {[
@@ -1268,6 +1442,18 @@ export default function Home() {
           </AnimatePresence>
         </motion.div>
       </div>
+
+      {/* Example gallery — shown only when nothing has been generated yet */}
+      {!currentTemplate && !isLoading && (
+        <div className="relative z-10 flex justify-center px-4">
+          <ExampleGallery
+            onSelect={(url) => {
+              form.setValue("youtubeUrl", url);
+              form.clearErrors("youtubeUrl");
+            }}
+          />
+        </div>
+      )}
 
       {/* Results Area */}
       <div className="w-full relative z-10 flex-1 flex flex-col justify-start">

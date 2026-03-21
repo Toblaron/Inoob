@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import {
@@ -11,10 +12,27 @@ import {
   Download,
   ExternalLink,
   Loader2,
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import type { SunoTemplate } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
+
+const ANTI_CLICHE_WORDS = [
+  "pulsating", "ethereal tapestry", "sonic journey", "haunting melody",
+  "sonic landscape", "musical tapestry", "immersive experience", "captivating",
+  "mesmerizing", "transcendent", "otherworldly", "hypnotic", "ethereal",
+  "lush tapestry", "sonic palette", "evocative", "ineffable", "sumptuous",
+  "gossamer", "shimmering tapestry", "wistful reverie",
+];
+
+function detectAntiCliches(text: string): string[] {
+  const lower = text.toLowerCase();
+  return ANTI_CLICHE_WORDS.filter((w) => lower.includes(w.toLowerCase()));
+}
 
 interface TemplateResultProps {
   template: SunoTemplate;
@@ -30,6 +48,17 @@ export function TemplateResult({
   compact = false,
 }: TemplateResultProps) {
   const { copy } = useCopyToClipboard();
+  const [validatorExpanded, setValidatorExpanded] = useState(false);
+  const [openSunoCopied, setOpenSunoCopied] = useState(false);
+
+  const antiCliches = detectAntiCliches(template.styleOfMusic + " " + template.lyrics);
+
+  const handleOpenSuno = () => {
+    copy(template.styleOfMusic, "Style prompt copied! Paste it into Suno's Style field.");
+    setOpenSunoCopied(true);
+    setTimeout(() => setOpenSunoCopied(false), 3000);
+    window.open("https://suno.com/create", "_blank");
+  };
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -122,16 +151,20 @@ export function TemplateResult({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {/* Open Suno */}
-          <a
-            href="https://suno.com/create"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white transition-all"
+          {/* Open Suno — copies style prompt then opens suno.com */}
+          <button
+            onClick={handleOpenSuno}
+            title="Copies the Style Prompt to your clipboard, then opens Suno.ai"
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm border transition-all",
+              openSunoCopied
+                ? "bg-green-500/15 border-green-500/40 text-green-400"
+                : "bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white"
+            )}
           >
-            <ExternalLink className="w-4 h-4" />
-            Open Suno
-          </a>
+            {openSunoCopied ? <Check className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
+            {openSunoCopied ? "Style copied!" : "Open Suno"}
+          </button>
           {/* Export */}
           <button
             onClick={exportAsTxt}
@@ -150,6 +183,37 @@ export function TemplateResult({
           </button>
         </div>
       </motion.div>
+
+      {/* Anti-cliché validator */}
+      {antiCliches.length > 0 && !compact && (
+        <motion.div variants={itemVariants} className="bg-yellow-500/8 border border-yellow-500/25 rounded-2xl overflow-hidden">
+          <button
+            onClick={() => setValidatorExpanded((v) => !v)}
+            className="w-full flex items-center justify-between gap-3 px-5 py-3.5 text-left hover:bg-yellow-500/10 transition-colors"
+          >
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
+              <span className="text-sm font-semibold text-yellow-300">
+                {antiCliches.length} overused word{antiCliches.length > 1 ? "s" : ""} detected in the style prompt
+              </span>
+              <span className="text-xs text-yellow-500/70 hidden sm:inline">— consider regenerating</span>
+            </div>
+            {validatorExpanded ? <ChevronUp className="w-4 h-4 text-yellow-500" /> : <ChevronDown className="w-4 h-4 text-yellow-500" />}
+          </button>
+          {validatorExpanded && (
+            <div className="px-5 pb-4 space-y-2">
+              <p className="text-xs text-yellow-600/80">These words are known to produce generic, less specific Suno output. Click the regenerate button on the Style section to get a new version.</p>
+              <div className="flex flex-wrap gap-1.5">
+                {antiCliches.map((w) => (
+                  <span key={w} className="text-xs px-2.5 py-1 rounded-full bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 font-mono">
+                    "{w}"
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Top row: Style + Title/NegativePrompt */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

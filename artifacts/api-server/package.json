@@ -16,7 +16,8 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",
-    "express": "^5"
+    "express": "^5",
+    "node-html-parser": "^7.1.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
