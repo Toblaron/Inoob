@@ -442,6 +442,7 @@ function buildStyleControls(opts: {
   tempo?: string;
   excludeTags?: string[];
   variationIndex?: number;
+  feedbackContext?: string;
 }): string {
   const lines: string[] = [];
   if (opts.genres && opts.genres.length > 0) {
@@ -507,6 +508,9 @@ function buildStyleControls(opts: {
   if (opts.variationIndex === 2) {
     lines.push(`VARIATION MODE — This is Variation 2. Take a fresh creative angle: choose different instrumentation, structural approach, and style adjectives from what you would typically pick first. Surprise the user with an unexpected but valid interpretation.`);
   }
+  if (opts.feedbackContext && opts.feedbackContext.trim()) {
+    lines.push(`USER LEARNING SIGNAL — The user has rated past templates and their feedback is: ${opts.feedbackContext.trim()} Use this to bias your creative choices (lean toward liked characteristics, avoid disliked ones) unless they directly contradict other explicit preferences.`);
+  }
   return lines.length > 0 ? "\n\nUSER STYLE PREFERENCES (apply these to Section 1 and Section 2 header):\n" + lines.join("\n") : "";
 }
 
@@ -518,7 +522,7 @@ router.post("/generate-template", async (req, res) => {
       return;
     }
 
-    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex } = parsed.data;
+    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext } = parsed.data;
 
     if (!isValidYouTubeUrl(youtubeUrl)) {
       res.status(400).json({ error: "Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link." });
@@ -545,7 +549,7 @@ router.post("/generate-template", async (req, res) => {
     }
 
     const context = buildPromptContext(metadata);
-    const styleControls = buildStyleControls({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex });
+    const styleControls = buildStyleControls({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex, feedbackContext });
 
     const lyricsInstruction =
       metadata.lyricsSource === "user-override"

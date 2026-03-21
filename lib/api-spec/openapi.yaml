@@ -121,6 +121,9 @@ components:
         variationIndex:
           type: integer
           description: Which variation to generate (1 or 2). When 2, AI takes a fresh creative angle.
+        feedbackContext:
+          type: string
+          description: Learning context derived from the user's past template ratings
       required:
         - youtubeUrl
     SunoTemplate:

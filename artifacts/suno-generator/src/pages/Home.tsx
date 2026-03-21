@@ -25,6 +25,9 @@ import {
   Ban,
   Gauge,
   Smile,
+  ThumbsUp,
+  ThumbsDown,
+  BrainCircuit,
 } from "lucide-react";
 import { useGenerateSunoTemplate } from "@workspace/api-client-react";
 import type { SunoTemplate } from "@workspace/api-client-react";
@@ -103,11 +106,23 @@ const ALL_ENERGIES = ["very chill", "chill", "medium", "high", "intense"] as con
 const ALL_TEMPOS = ["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"] as const;
 const ALL_VOCALS = ["male", "female", "mixed", "duet", "no vocals"] as const;
 
+interface UsedOptions {
+  genres?: string[];
+  moods?: string[];
+  instruments?: string[];
+  vocalGender?: string;
+  energyLevel?: string;
+  era?: string;
+  tempo?: string;
+}
+
 interface HistoryEntry {
   id: string;
   timestamp: number;
   youtubeUrl: string;
   template: SunoTemplate;
+  rating?: "liked" | "disliked" | null;
+  usedOptions?: UsedOptions;
 }
 
 interface VideoPreview {
@@ -222,6 +237,9 @@ export default function Home() {
 
   const [shareToast, setShareToast] = useState<"idle" | "copied">("idle");
   const [clipboardToast, setClipboardToast] = useState(false);
+  const [templateRating, setTemplateRating] = useState<"liked" | "disliked" | null>(null);
+  const [ratingSaved, setRatingSaved] = useState(false);
+  const ratingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lastUrlRef = useRef<string>("");
   const lastOptionsRef = useRef<object>({});
@@ -291,18 +309,96 @@ export default function Home() {
     return () => { if (previewTimerRef.current) clearTimeout(previewTimerRef.current); };
   }, [urlValue, fetchVideoPreview]);
 
-  const addToHistory = (url: string, template: SunoTemplate) => {
+  const addToHistory = (url: string, template: SunoTemplate, opts?: UsedOptions) => {
     const entry: HistoryEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       timestamp: Date.now(),
       youtubeUrl: url,
       template,
+      rating: null,
+      usedOptions: opts,
     };
     setHistory((prev) => {
       const next = [entry, ...prev.filter((e) => e.youtubeUrl !== url)].slice(0, MAX_HISTORY);
       saveHistory(next);
       return next;
     });
+  };
+
+  const rateCurrentTemplate = (rating: "liked" | "disliked") => {
+    const newRating = templateRating === rating ? null : rating;
+    setTemplateRating(newRating);
+    setHistory((prev) => {
+      if (prev.length === 0) return prev;
+      const next = prev.map((e, i) =>
+        i === 0
+          ? { ...e, rating: newRating, usedOptions: e.usedOptions ?? extractUsedOptions() }
+          : e
+      );
+      saveHistory(next);
+      return next;
+    });
+    if (ratingTimerRef.current) clearTimeout(ratingTimerRef.current);
+    setRatingSaved(true);
+    ratingTimerRef.current = setTimeout(() => setRatingSaved(false), 2000);
+  };
+
+  const extractUsedOptions = (): UsedOptions => ({
+    genres: selectedGenres.length > 0 ? selectedGenres : undefined,
+    moods: selectedMoods.length > 0 ? selectedMoods : undefined,
+    instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
+    vocalGender: vocalGender !== "auto" ? vocalGender : undefined,
+    energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
+    era: era !== "auto" ? era : undefined,
+    tempo: tempo ?? undefined,
+  });
+
+  const buildFeedbackContext = (): string | undefined => {
+    const rated = history.filter((e) => e.rating === "liked" || e.rating === "disliked");
+    if (rated.length < 2) return undefined;
+
+    const liked = rated.filter((e) => e.rating === "liked");
+    const disliked = rated.filter((e) => e.rating === "disliked");
+
+    const countMap = <T extends string>(entries: HistoryEntry[], field: keyof UsedOptions): Map<T, number> => {
+      const map = new Map<T, number>();
+      entries.forEach((e) => {
+        const vals = e.usedOptions?.[field] as T[] | undefined;
+        vals?.forEach((v) => map.set(v, (map.get(v) ?? 0) + 1));
+      });
+      return map;
+    };
+
+    const topN = <T extends string>(map: Map<T, number>, n = 4): T[] =>
+      [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([k]) => k);
+
+    const parts: string[] = [];
+
+    if (liked.length > 0) {
+      const g = topN(countMap<string>(liked, "genres"));
+      const m = topN(countMap<string>(liked, "moods"));
+      const inst = topN(countMap<string>(liked, "instruments"));
+      const segments: string[] = [];
+      if (g.length) segments.push(`genres: ${g.join(", ")}`);
+      if (m.length) segments.push(`moods: ${m.join(", ")}`);
+      if (inst.length) segments.push(`instruments: ${inst.join(", ")}`);
+      if (segments.length) parts.push(`LIKED (lean toward these): ${segments.join("; ")}`);
+    }
+
+    if (disliked.length > 0) {
+      const g = topN(countMap<string>(disliked, "genres"));
+      const m = topN(countMap<string>(disliked, "moods"));
+      const inst = topN(countMap<string>(disliked, "instruments"));
+      const segments: string[] = [];
+      if (g.length) segments.push(`genres: ${g.join(", ")}`);
+      if (m.length) segments.push(`moods: ${m.join(", ")}`);
+      if (inst.length) segments.push(`instruments: ${inst.join(", ")}`);
+      if (segments.length) parts.push(`DISLIKED (avoid or deprioritise these): ${segments.join("; ")}`);
+    }
+
+    return parts.length > 0
+      ? `User feedback from ${rated.length} past ratings — ${parts.join(". ")}.`
+      : undefined;
   };
 
   function toggleSet<T extends string>(prev: T[], value: T, max: number): T[] {
@@ -323,6 +419,7 @@ export default function Home() {
     mode: mode ?? undefined,
     tempo: tempo ?? undefined,
     excludeTags: excludeTags.length > 0 ? excludeTags : undefined,
+    feedbackContext: buildFeedbackContext(),
   });
 
   const handleSurpriseMe = () => {
@@ -354,20 +451,32 @@ export default function Home() {
   };
 
   const onSubmit = (values: FormValues) => {
+    const opts = buildOptions();
     lastUrlRef.current = values.youtubeUrl;
-    lastOptionsRef.current = buildOptions();
+    lastOptionsRef.current = opts;
     setApiError(null);
     setRegeneratingSection(null);
     setShowVariations(false);
     setVariationA(null);
     setVariationB(null);
     setSelectedVariation(null);
+    setTemplateRating(null);
+    setRatingSaved(false);
+    const usedOpts: UsedOptions = {
+      genres: selectedGenres.length > 0 ? selectedGenres : undefined,
+      moods: selectedMoods.length > 0 ? selectedMoods : undefined,
+      instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
+      vocalGender: vocalGender !== "auto" ? vocalGender : undefined,
+      energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
+      era: era !== "auto" ? era : undefined,
+      tempo: tempo ?? undefined,
+    };
     mainMutation.mutate(
-      { data: { youtubeUrl: values.youtubeUrl, ...buildOptions() } },
+      { data: { youtubeUrl: values.youtubeUrl, ...opts } },
       {
         onSuccess: (data) => {
           setCurrentTemplate(data);
-          addToHistory(values.youtubeUrl, data);
+          addToHistory(values.youtubeUrl, data, usedOpts);
         },
         onError: (err) => {
           setApiError((err as { data?: { error?: string }; message?: string })?.data?.error ?? (err as Error)?.message ?? "Something went wrong");
@@ -1156,6 +1265,49 @@ export default function Home() {
                 regeneratingSection={regeneratingSection}
                 onRegenerateSection={handleRegenerateSection}
               />
+
+              {/* Rating bar */}
+              <div className="flex items-center justify-center gap-3 mt-5 py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.07] max-w-6xl mx-auto">
+                <span className="text-xs text-zinc-400 mr-1">Rate this template:</span>
+                <button
+                  type="button"
+                  onClick={() => rateCurrentTemplate("liked")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                    templateRating === "liked"
+                      ? "bg-green-500/20 border-green-500/40 text-green-400"
+                      : "bg-white/5 border-white/10 text-zinc-300 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-400"
+                  )}
+                >
+                  <ThumbsUp className="w-3.5 h-3.5" /> Good
+                </button>
+                <button
+                  type="button"
+                  onClick={() => rateCurrentTemplate("disliked")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                    templateRating === "disliked"
+                      ? "bg-red-500/20 border-red-500/40 text-red-400"
+                      : "bg-white/5 border-white/10 text-zinc-300 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400"
+                  )}
+                >
+                  <ThumbsDown className="w-3.5 h-3.5" /> Not great
+                </button>
+                {ratingSaved && (
+                  <span className="flex items-center gap-1 text-xs text-zinc-400 ml-1">
+                    <Check className="w-3 h-3 text-green-400" /> Saved
+                  </span>
+                )}
+                {(() => {
+                  const ratedCount = history.filter((e) => e.rating === "liked" || e.rating === "disliked").length;
+                  if (ratedCount < 2) return null;
+                  return (
+                    <span className="flex items-center gap-1 text-xs text-violet-400 ml-auto">
+                      <BrainCircuit className="w-3 h-3" /> Learning from {ratedCount} ratings
+                    </span>
+                  );
+                })()}
+              </div>
             </motion.div>
           ) : null}
         </AnimatePresence>

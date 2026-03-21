@@ -36,6 +36,8 @@ export interface GenerateTemplateRequest {
   excludeTags?: string[];
   /** Which variation to generate (1 or 2) */
   variationIndex?: number;
+  /** Learning context derived from the user's past template ratings */
+  feedbackContext?: string;
 }
 
 export interface SunoTemplate {

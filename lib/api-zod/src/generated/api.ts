@@ -33,6 +33,7 @@ export const GenerateSunoTemplateBody = zod.object({
   tempo: zod.enum(["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"]).optional().describe("Target BPM range"),
   excludeTags: zod.array(zod.string()).optional().describe("Tags to explicitly exclude"),
   variationIndex: zod.number().optional().describe("Which variation to generate (1 or 2)"),
+  feedbackContext: zod.string().optional().describe("Learning context derived from the user's past template ratings"),
 });
 
 export const GenerateSunoTemplateResponse = zod.object({
