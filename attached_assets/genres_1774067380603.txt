@@ -1,0 +1,3244 @@
+# Comprehensive Music Genres and Subgenres
+
+## Classical Music
+- Early Music
+  - Medieval Music (c. 500–1400)
+    - Gregorian Chant
+    - Motet
+    - Madrigal
+    - Ricercar
+  - Renaissance Music (c. 1400–1600)
+    - Mass
+    - Motet
+    - Madrigal
+    - Ricercar
+- Common Practice Period
+  - Baroque Music (c. 1600–1750)
+    - Canon
+    - Cantata
+    - Chaconne
+    - Concerto Grosso
+    - Fugue
+    - Opera
+    - Oratorio
+    - Suite
+    - Toccata
+  - Classical Period (c. 1730–1820)
+    - Ballade
+    - Concerto
+    - Étude
+    - Fantasia
+    - Lied
+    - Mass
+    - March
+    - Nocturne
+    - Opera
+    - Rhapsody
+    - Sonata
+    - String Quartet
+    - Symphonic Poem
+    - Symphony
+  - Romantic Music (c. 1800–1910)
+    - Ballade
+    - Concerto
+    - Étude
+    - Fantasia
+    - Lied
+    - Mass
+    - March
+    - Nocturne
+    - Opera
+    - Rhapsody
+    - Sonata
+    - String Quartet
+    - Symphonic Poem
+    - Symphony
+- Modernist, 20th/21st Century Music
+  - Ballade
+  - Concerto
+  - Étude
+  - Fantasia
+  - Lied
+  - Mass
+  - March
+  - Nocturne
+  - Opera
+  - Rhapsody
+  - Sonata
+  - String Quartet
+  - Symphonic Poem
+  - Symphony
+- Forms and Textures
+  - Binary Form
+  - Ternary Form
+  - Strophic Form
+  - Rondo Form
+  - Sonata Form
+  - Arch Form
+  - Cyclic Form
+- Tonality
+  - Major Tonality (Major Scale)
+  - Minor Tonality (Minor Scale)
+  - Modal Music (Mode)
+  - Polytonality
+  - Atonality
+- Schools and Composers
+  - Notre-Dame School
+  - Franco-Flemish School
+  - First Viennese School
+  - Second Viennese School
+  - The Five
+
+## Popular Music
+- Alternative
+  - Art Punk
+  - Alternative Rock
+  - Britpunk
+  - College Rock
+  - Crossover Thrash
+  - Crust Punk
+  - Emotional Hardcore (Emo/Emocore)
+  - Experimental Rock
+  - Folk Punk
+  - Goth/Gothic Rock
+  - Grunge
+  - Hardcore Punk
+  - Hard Rock
+  - Indie Rock
+  - Lo-fi
+  - Musique Concrète
+  - New Wave
+  - Progressive Rock
+  - Punk
+  - Shoegaze
+  - Steampunk
+- Blues
+  - Acoustic Blues
+  - African Blues
+  - Blues Rock
+  - Blues Shouter
+  - British Blues
+  - Canadian Blues
+  - Chicago Blues
+  - Classic Blues
+  - Classic Female Blues
+  - Contemporary Blues
+  - Contemporary R&B
+  - Country Blues
+  - Dark Blues
+  - Delta Blues
+  - Detroit Blues
+  - Doom Blues
+  - Electric Blues
+  - Folk Blues
+  - Gospel Blues
+  - Harmonica Blues
+  - Hill Country Blues
+  - Hokum Blues
+  - Jazz Blues
+  - Jump Blues
+  - Kansas City Blues
+  - Louisiana Blues
+  - Memphis Blues
+  - Modern Blues
+  - New Orleans Blues
+  - NY Blues
+  - Piano Blues
+  - Piedmont Blues
+  - Punk Blues
+  - Ragtime Blues
+  - Rhythm Blues
+  - Soul Blues
+  - St. Louis Blues
+  - Swamp Blues
+  - Texas Blues
+  - Urban Blues
+  - Vaudeville
+  - West Coast Blues
+  - Zydeco
+- Children's Music
+  - Lullabies
+  - Sing-Along
+  - Stories
+- Comedy
+  - Novelty
+  - Parody Music
+  - Stand-up Comedy
+  - Vaudeville
+- Commercial
+  - Jingles
+  - TV Themes
+- Country
+  - Alternative Country
+  - Americana
+  - Australian Country
+  - Bakersfield Sound
+  - Bluegrass
+    - Progressive Bluegrass
+    - Reactionary Bluegrass
+  - Blues Country
+  - Cajun Fiddle Tunes
+  - Christian Country
+  - Classic Country
+  - Close Harmony
+  - Contemporary Bluegrass
+  - Contemporary Country
+  - Country Gospel
+  - Country Pop
+  - Country Rap
+  - Country Rock
+  - Country Soul
+  - Cowboy/Western
+  - Cowpunk
+  - Dansband
+  - Honky Tonk
+  - Franco-Country
+  - Gulf and Western
+  - Hellbilly Music
+  - Instrumental Country
+  - Lubbock Sound
+  - Nashville Sound
+  - Neotraditional Country
+  - Outlaw Country
+  - Progressive Country
+  - Psychobilly/Punkabilly
+  - Red Dirt
+  - Sertanejo
+  - Texas Country
+  - Traditional Bluegrass
+  - Traditional Country
+  - Truck-Driving Country
+  - Urban Cowboy
+  - Western Swing
+  - Zydeco
+- Easy Listening
+  - Background
+  - Bop
+  - Elevator
+  - Furniture
+  - Lounge
+  - Middle of the Road
+  - Swing
+- Folk Music
+  - American Folk Revival
+  - Anti-Folk
+  - British Folk Revival
+  - Contemporary Folk
+  - Filk Music
+  - Freak Folk
+  - Indie Folk
+  - Industrial Folk
+  - Neofolk
+  - Progressive Folk
+  - Psychedelic Folk
+  - Sung Poetry
+  - Techno-Folk
+- Hip-Hop/Rap
+  - Alternative Rap
+  - Avant-Garde Rap
+  - Bounce
+  - Chap Hop
+  - Christian Hip Hop
+  - Conscious Hip Hop
+  - Country-Rap
+  - Crunkcore
+  - Cumbia Rap
+  - Dirty South
+  - East Coast
+    - Brick City Club
+    - Hardcore Hip Hop
+    - Mafioso Rap
+    - New Jersey Hip Hop
+  - Freestyle Rap
+  - G-Funk
+  - Gangsta Rap
+  - Golden Age Hip Hop
+  - Grime
+  - Hardcore Rap
+  - Hip-Hop
+  - Hip Pop
+  - Horrorcore
+  - Hyphy
+  - Industrial Hip Hop
+  - Instrumental Hip Hop
+  - Jazz Rap
+  - Latin Rap
+  - Low Bap
+  - Lyrical Hip Hop
+  - Merenrap
+  - Midwest Hip Hop
+    - Chicago Hip Hop
+    - Detroit Hip Hop
+    - St. Louis Hip Hop
+    - Twin Cities Hip Hop
+  - Motswako
+  - Nerdcore
+  - New Jack Swing
+  - New School Hip Hop
+  - Old School Rap
+  - Rap
+  - Trap
+  - Turntablism
+  - Underground Rap
+  - West Coast Rap
+- Holiday
+  - Chanukah
+  - Christmas
+    - Children’s Christmas
+    - Classic Christmas
+    - Classical Christmas
+    - Comedy Christmas
+    - Jazz Christmas
+    - Modern Christmas
+    - Pop Christmas
+    - R&B Christmas
+    - Religious Christmas
+    - Rock Christmas
+  - Easter
+  - Halloween
+  - Other Holiday
+  - Thanksgiving
+- Indie Pop
+- Industrial
+  - Aggrotech
+  - Coldwave
+  - Cybergrind
+  - Dark Electro
+  - Death Industrial
+  - Electro-Industrial
+  - Electronic Body Music (EBM)
+    - Futurepop
+  - Industrial Metal
+    - Neue Deutsche Härte
+  - Industrial Rock
+  - Noise
+    - Japanoise
+    - Power Electronics
+    - Power Noise
+  - Witch House
+- Inspirational/Christian & Gospel
+  - CCM (Contemporary Christian Music)
+  - Christian Metal
+  - Christian Pop
+  - Christian Rap
+  - Christian Rock
+  - Classic Christian
+  - Contemporary Gospel
+  - Gospel
+  - Praise & Worship
+  - Qawwali
+  - Southern Gospel
+  - Traditional Gospel
+- Instrumental
+  - March (Marching Band)
+- J-Pop
+  - J-Rock
+  - J-Synth
+  - J-Ska
+  - J-Punk
+- Jazz
+  - Acid Jazz
+  - Afro-Cuban Jazz
+  - Avant-Garde Jazz
+  - Bebop
+  - Big Band
+  - Blue Note Jazz
+  - British Dance Band Jazz
+  - Cape Jazz
+  - Chamber Jazz
+  - Contemporary Jazz
+  - Continental Jazz
+  - Cool Jazz
+  - Crossover Jazz
+  - Dark Jazz
+  - Dixieland
+  - Early Jazz
+  - Electro Swing Jazz
+  - Ethio-Jazz
+  - Ethno-Jazz
+  - European Free Jazz
+  - Free Funk
+  - Free Jazz
+  - Fusion
+  - Gypsy Jazz
+  - Hard Bop
+  - Indo Jazz
+  - Jazz Blues
+  - Jazz-Funk
+  - Jazz-Fusion
+  - Jazz Rap
+  - Jazz Rock
+  - Latin Jazz
+  - Modal Jazz
+  - Moombahton
+  - New Orleans Jazz
+  - Nu Jazz
+  - Post-Bop
+  - Smooth Jazz
+  - Soul Jazz
+  - Swing Jazz
+  - Third Stream Jazz
+  - Trad Jazz
+  - Vocal Jazz
+  - West Coast Jazz
+- Latin
+  - Alternativo & Rock Latino
+  - Argentine Tango
+  - Bachata
+  - Baithak Gana
+  - Baladas y Boleros
+  - Bolero
+  - Bossa Nova
+  - Brazilian
+    - Axé
+    - Bossa Nova
+    - Brazilian Rock
+    - Brega
+    - Choro
+    - Forró
+    - Frevo
+    - Funk Carioca
+    - Lambada
+    - Maracatu
+    - Música Popular Brasileira (MPB)
+    - Música Sertaneja
+    - Pagode
+    - Samba
+    - Samba Rock
+    - Tecnobrega
+    - Tropicalia
+    - Zouk-Lambada
+  - Chicha
+  - Criolla
+  - Contemporary Latin
+  - Cumbia
+  - Flamenco/Spanish Flamenco
+  - Huayno
+  - Joropo
+  - Latin Jazz
+  - Mambo
+  - Mariachi
+  - Merengue Típico
+  - Nuevo Flamenco
+  - Pop Latino
+  - Portuguese Fado
+  - Punta
+  - Punta Rock
+  - Ranchera
+  - Raíces
+  - Reggaeton y Hip-Hop
+  - Regional Mexicano
+  - Salsa y Tropical
+  - Soca
+  - Son
+  - Tejano
+  - Timba
+  - Twoubadou
+  - Vallenato
+  - Zouk
+- Metal (Heavy and Extreme)
+  - Avantgarde Metal
+  - Black Metal
+  - Death Metal
+  - Deathcore
+  - Djent
+  - Doom Metal
+  - Drone Metal
+  - Folk Metal
+  - Glam Metal
+  - Groove Metal
+  - Grindcore
+  - Hair Metal
+  - Hardcore Metal
+  - Heavy Metal
+  - Industrial Metal
+  - Kawaii Metal
+  - Math Metal
+  - Metalcore
+  - Modern Metal
+  - Neoclassical Metal
+  - New Wave of British Heavy Metal (NWOBHM)
+  - Nu Metal
+  - Pagan Metal
+  - Pirate Metal
+  - Post Hardcore
+  - Post Metal
+  - Power Metal
+  - Progressive Metal
+  - Sludge Metal
+  - Speed Metal
+  - Stoner Metal
+  - Symphonic Metal
+  - Technical Death Metal
+  - Thrash Metal
+  - Viking Metal
+- New Age
+  - Environmental
+  - Healing
+  - Meditation
+  - Nature
+  - Relaxation
+  - Travel
+- Pop
+  - Adult Contemporary
+  - Arab Pop
+  - Baroque Pop
+  - Britpop
+  - Bubblegum Pop
+  - Chamber Pop
+  - Chanson
+  - Christian Pop
+  - Classical Crossover
+  - Dance Pop
+  - Dream Pop
+  - Electro Pop
+  - Europop
+    - Austropop
+    - Balkan Pop
+    - French Pop
+    - Latin Pop
+    - Laïkó
+    - Nederpop
+    - Russian Pop
+  - Iranian Pop
+  - Jangle Pop
+  - Latin Ballad
+  - Levenslied
+  - Louisiana Swamp Pop
+  - Mexican Pop
+  - Motorpop
+  - New Romanticism
+  - Orchestral Pop
+  - Pop Rap
+  - Popera
+  - Pop/Rock
+  - Pop Punk
+  - Power Pop
+  - Psychedelic Pop
+  - Schlager
+  - Soft Rock
+  - Sophisti-Pop
+  - Space Age Pop
+  - Sunshine Pop
+  - Surf Pop
+  - Synthpop
+  - Teen Pop
+  - Traditional Pop
+  - Turkish Pop
+  - Vispop
+  - Wonky Pop
+- R&B/Soul
+  - Beach Music
+  - Contemporary R&B
+  - Disco
+  - Doo Wop
+  - Funk
+  - Modern Soul
+  - Motown
+  - Neo-Soul
+  - Northern Soul
+  - Psychedelic Soul
+  - Quiet Storm
+  - Soul
+  - Soul Blues
+  - Southern Soul
+- Reggae
+  - 2-Tone
+  - Dancehall
+  - Dub
+  - Lovers Rock
+  - Ragga
+  - Raggamuffin
+  - Reggae Fusion
+  - Reggae en Español
+    - Reggae 110
+    - Reggae Bultrón
+    - Romantic Flow
+    - Spanish Reggae
+  - Roots Reggae
+  - Rocksteady
+  - Ska
+- Rock
+  - Acid Rock
+  - Adult Alternative
+  - Adult-Oriented Rock
+  - Afro Punk
+  - Alternative Rock
+  - American Traditional Rock
+  - Anatolian Rock
+  - Arena Rock
+  - Art Rock
+  - Blues-Rock
+  - British Invasion
+  - Cock Rock
+  - Death Metal/Black Metal
+  - Doom Metal
+  - Emo Rock
+  - Folk Rock
+  - GarageMaggie
+- **Mag**
+- **Mage**
+- **Magic**
+- **Magical**
+- **Magna**
+- **Magnet**
+- **Magnificent**
+- **Magu**
+- **Mahler**
+- **Mai**
+- **Maiden**
+- **Mail**
+- **Main**
+- **Mainstream**
+- **Majestic**
+- **Major**
+- **Mak**
+- **Make**
+- **Makina**
+- **Mako**
+- **Mal**
+- **Malagueña**
+- **Malawian**
+- **Malay**
+- **Malaysian**
+- **Malaysian Pop**
+- **Malaysian Rock**
+- **Mall**
+- **Mallsoft**
+- **Malt**
+- **Mama**
+- **Mambo**
+- **Man**
+- **Mana**
+- **Manchester**
+- **Mandarin**
+- **Mandé**
+- **Mando**
+- **Mandolin**
+- **Mandopop**
+- **Mane**
+- **Manga**
+- **Mango**
+- **Mania**
+- **Manic**
+- **Manner**
+- **Mano**
+- **Manouche**
+- **Mansion**
+- **Manta**
+- **Mantle**
+- **Mantra**
+- **Manual**
+- **Manz**
+- **Map**
+- **Maple**
+- **Mar**
+- **Mara**
+- **Maracatu**
+- **March**
+- **Marching**
+- **Marching Band**
+- **Mardi**
+- **Marea**
+- **Marginal**
+- **Mari**
+- **Maria**
+- **Mariachi**
+- **Marie**
+- **Marina**
+- **Marine**
+- **Mario**
+- **Mark**
+- **Market**
+- **Maroon**
+- **Marquee**
+- **Marrabenta**
+- **Mars**
+- **Marsh**
+- **Martial**
+- **Martin**
+- **Mas**
+- **Mash**
+- **Mashup**
+- **Mask**
+- **Mason**
+- **Mass**
+- **Massive**
+- **Master**
+- **Mat**
+- **Match**
+- **Mate**
+- **Math**
+- **Math Metal**
+- **Math Pop**
+- **Math Rock**
+- **Matinee**
+- **Matrix**
+- **Matt**
+- **Matter**
+- **Mau**
+- **Maudlin**
+- **Maverick**
+- **Maw**
+- **Max**
+- **Maxi**
+- **May**
+- **Maya**
+- **Mayan**
+- **Maze**
+- **Mbalax**
+- **Mbaqanga**
+- **Mbube**
+- **Mc**
+- **Mccartney**
+- **Mck**
+- **Me**
+- **Mead**
+- **Meadow**
+- **Mean**
+- **Meat**
+- **Mecca**
+- **Med**
+- **Mede**
+- **Media**
+- **Medieval**
+- **Medieval Folk**
+- **Medieval Metal**
+- **Medieval Rock**
+- **Meditate**
+- **Meditation**
+- **Mediterranean**
+- **Medium**
+- **Meet**
+- **Mek**
+- **Mel**
+- **Melancholia**
+- **Melancholic**
+- **Melancholy**
+- **Mellow**
+- **Mellow House**
+- **Mellow Pop**
+- **Mellow Rock**
+- **Melodic**
+- **Melodic Death Metal**
+- **Melodic Hardcore**
+- **Melodic House**
+- **Melodic Metal**
+- **Melodic Pop**
+- **Melodic Rock**
+- **Melodic Techno**
+- **Melodic Trance**
+- **Melody**
+- **Melon**
+- **Melt**
+- **Melting**
+- **Mem**
+- **Meme**
+- **Memphis**
+- **Memphis Blues**
+- **Memphis Rap**
+- **Memphis Soul**
+- **Men**
+- **Mend**
+- **Mental**
+- **Mer**
+- **Mercy**
+- **Merenge**
+- **Merenrap**
+- **Meridian**
+- **Mersey**
+- **Merseybeat**
+- **Mesh**
+- **Mess**
+- **Message**
+- **Messiah**
+- **Meta**
+- **Metal**
+- **Metalcore**
+- **Metallic**
+- **Metallica**
+- **Metaphor**
+- **Meter**
+- **Meth**
+- **Mexican**
+- **Mexican Folk**
+- **Mexican Pop**
+- **Mexican Rock**
+- **Mexican Son**
+- **Mexico**
+- **Mez**
+- **Mezzo**
+- **MIA**
+- **Miami**
+- **Miami Bass**
+- **Mic**
+- **Mice**
+- **Micro**
+- **Microhouse**
+- **Micronesian**
+- **Microsound**
+- **Microtonal**
+- **Mid**
+- **Middle**
+- **Middle Eastern**
+- **Middle Eastern Pop**
+- **Middle Eastern Rock**
+- **MIDI**
+- **Midnight**
+- **Midtempo**
+- **Midwest**
+- **Midwest Emo**
+- **Midwest Hip Hop**
+- **Mighty**
+- **Mike**
+- **Mil**
+- **Mild**
+- **Mile**
+- **Miles**
+- **Military**
+- **Milk**
+- **Mill**
+- **Million**
+- **Milo**
+- **Milt**
+- **Mimic**
+- **Min**
+- **Mind**
+- **Mine**
+- **Miner**
+- **Minimal**
+- **Minimal House**
+- **Minimal Pop**
+- **Minimal Rock**
+- **Minimal Techno**
+- **Minimal Wave**
+- **Minimalism**
+- **Minimalist**
+- **Mink**
+- **Minor**
+- **Mint**
+- **Minus**
+- **Minute**
+- **Mir**
+- **Miracle**
+- **Mirage**
+- **Mirror**
+- **Miss**
+- **Mission**
+- **Mist**
+- **Mister**
+- **Misty**
+- **Mite**
+- **Mitt**
+- **Mix**
+- **Mixed**
+- **Mixer**
+- **Mixtape**
+- **Mo**
+- **Moan**
+- **Mob**
+- **Mobile**
+- **Moby**
+- **Moc**
+- **Mock**
+- **Mod**
+- **Mode**
+- **Modern**
+- **Modern Blues**
+- **Modern Classical**
+- **Modern Country**
+- **Modern Folk**
+- **Modern Jazz**
+- **Modern Metal**
+- **Modern Pop**
+- **Modern R&B**
+- **Modern Rock**
+- **Modern Soul**
+- **Modinha**
+- **Moe**
+- **Mogul**
+- **Mojo**
+- **Mold**
+- **Moldavian**
+- **Moldavian Folk**
+- **Mole**
+- **Molly**
+- **Mom**
+- **Moment**
+- **Mon**
+- **Mona**
+- **Monastic**
+- **Monday**
+- **Money**
+- **Mongolian**
+- **Mongolian Folk**
+- **Monk**
+- **Mono**
+- **Monsoon**
+- **Monster**
+- **Mont**
+- **Monta**
+- **Monte**
+- **Month**
+- **Montuno**
+- **Monument**
+- **Moo**
+- **Mood**
+- **Moody**
+- **Moog**
+- **Moon**
+- **Moonlight**
+- **Moor**
+- **Moose**
+- **Moot**
+- **Mope**
+- **Mopoke**
+- **Mor**
+- **Mora**
+- **Moravian**
+- **Moravian Folk**
+- **More**
+- **Morning**
+- **Moroccan**
+- **Moroccan Folk**
+- **Moroccan Gnawa**
+- **Moroccan Pop**
+- **Morocco**
+- **Morris**
+- **Mortal**
+- **Mosaic**
+- **Moscow**
+- **Mosh**
+- **Moss**
+- **Most**
+- **Mot**
+- **Mote**
+- **Motel**
+- **Motet**
+- **Moth**
+- **Mother**
+- **Motion**
+- **Motive**
+- **Motown**
+- **Mott**
+- **Mount**
+- **Mountain**
+- **Mouse**
+- **Mouth**
+- **Move**
+- **Movement**
+- **Movie**
+- **Mox**
+- **Moxie**
+- **Moz**
+- **Mozart**
+- **Mp3**
+- **Mud**
+- **Mudd**
+- **Muddy**
+- **Muffle**
+- **Mug**
+- **Mule**
+- **Multi**
+- **Multicultural**
+- **Mum**
+- **Mumble**
+- **Mumble Rap**
+- **Mummer**
+- **Munch**
+- **Mundane**
+- **Munich**
+- **Munk**
+- **Muppets**
+- **Mural**
+- **Murga**
+- **Murk**
+- **Murphy**
+- **Muse**
+- **Museum**
+- **Mush**
+- **Mushroom**
+- **Music Hall**
+- **Musical**
+- **Musique**
+- **Musique Concrète**
+- **Muss**
+- **Must**
+- **Mustang**
+- **Mute**
+- **Muted**
+- **Muzak**
+- **Muzhik**
+- **Mystic**
+- **Mystical**
+- **Myth**
+- **Mythic**
+- **N-Pop**
+- **Naber**
+- **Naga**
+- **Nail**
+- **Naked**
+- **Nana**
+- **Nano**
+- **Nap**
+- **Narc**
+- **Narrative**
+- **Narrow**
+- **Nashville**
+- **Nashville Sound**
+- **Nasty**
+- **Nat**
+- **Nation**
+- **National**
+- **Native**
+- **Native American**
+- **Nato**
+- **Natural**
+- **Nature**
+- **Nautical**
+- **Navajo**
+- **Naw**
+- **Nazi**
+- **Neat**
+- **Nebula**
+- **Neck**
+- **Needle**
+- **Nefertiti**
+- **Negro**
+- **Negro Spiritual**
+- **Neo**
+- **Neo Folk**
+- **Neo Jazz**
+- **Neo Pop**
+- **Neo Psychedelia**
+- **Neo Soul**
+- **Neo Swing**
+- **Neo Trad**
+- **Neoclassical**
+- **Neoclassical Metal**
+- **Neofolk**
+- **Neon**
+- **Neon Pop**
+- **Neon Rock**
+- **Nepalese**
+- **Nerve**
+- **Nervous**
+- **Ness**
+- **Nest**
+- **Net**
+- **Netherlands**
+- **Network**
+- **Neue**
+- **Neue Deutsche Härte**
+- **Never**
+- **New**
+- **New Age**
+- **New Beat**
+- **New Jack**
+- **New Jack Swing**
+- **New Jazz**
+- **New Metal**
+- **New Orleans**
+- **New Orleans Blues**
+- **New Orleans Jazz**
+- **New Pop**
+- **New Rave**
+- **New Romantic**
+- **New School**
+- **New Wave**
+- **New Weird America**
+- **New York**
+- **New York Blues**
+- **New York Hip Hop**
+- **New York House**
+- **New York Rock**
+- **Newborn**
+- **Newfie**
+- **News**
+- **Next**
+- **Nexus**
+- **Nice**
+- **Nick**
+- **Nickel**
+- **Nifty**
+- **Night**
+- **Nightcore**
+- **Nightmare**
+- **Nile**
+- **Ninja**
+- **Nip**
+- **Nirvana**
+- **Nite**
+- **Nix**
+- **No**
+- **No Wave**
+- **Noble**
+- **Nobody**
+- **Nocturnal**
+- **Nocturne**
+- **Nod**
+- **Noh**
+- **Noise**
+- **Noise Pop**
+- **Noise Rock**
+- **Nomad**
+- **Nomadic**
+- **Nona**
+- **Nonet**
+- **Nonsense**
+- **Noodle**
+- **Nook**
+- **Noon**
+- **Nordic**
+- **Nordic Folk**
+- **Nordic Pop**
+- **Nordic Rock**
+- **Nore**
+- **Norm**
+- **Normal**
+- **Norse**
+- **North**
+- **Northern**
+- **Northern Soul**
+- **Nortec**
+- **Norteño**
+- **Northwest**
+- **Nose**
+- **Nostalgia**
+- **Nostalgic**
+- **Not**
+- **Note**
+- **Nothing**
+- **Nova**
+- **Novel**
+- **Novelty**
+- **Now**
+- **Nox**
+- **Nu**
+- **Nu Disco**
+- **Nu Folk**
+- **Nu Jazz**
+- **Nu Metal**
+- **Nu R&B**
+- **Nu Soul**
+- **Nude**
+- **Nudge**
+- **Nugget**
+- **Nuke**
+- **Null**
+- **Numb**
+- **Number**
+- **Nun**
+- **Nursery**
+- **Nut**
+- **Nylon**
+- **Nymph**
+- **O-Pop**
+- **Oak**
+- **Oasis**
+- **Oaxacan**
+- **Obi**
+- **Oblivion**
+- **Oboe**
+- **Obscure**
+- **Occult**
+- **Ocean**
+- **Oceanic**
+- **Octave**
+- **Odd**
+- **Ode**
+- **Odyssey**
+- **Off**
+- **Offbeat**
+- **Office**
+- **Offshore**
+- **Og**
+- **Oh**
+- **Ohio**
+- **Oil**
+- **Ojibwe**
+- **Ok**
+- **Oklahoma**
+- **Old**
+- **Old School**
+- **Old School Hip Hop**
+- **Old School Rap**
+- **Old Time**
+- **Oldie**
+- **Oldies**
+- **Olive**
+- **Olm**
+- **Olympic**
+- **Om**
+- **Omen**
+- **On**
+- **Once**
+- **One**
+- **Onet**
+- **Oni**
+- **Onkyo**
+- **Onyx**
+- **Oom**
+- **Oompah**
+- **Ooze**
+- **Op**
+- **Opal**
+- **Open**
+- **Opera**
+- **Operatic**
+- **Operatic Pop**
+- **Operetta**
+- **Opi**
+- **Opinion**
+- **Opium**
+- **Opry**
+- **Optic**
+- **Option**
+- **Opus**
+- **Or**
+- **Oral**
+- **Orange**
+- **Oratorio**
+- **Orbit**
+- **Orbital**
+- **Orca**
+- **Orchard**
+- **Orchestral**
+- **Orchestral Pop**
+- **Orchestral Rock**
+- **Orchestrion**
+- **Organ**
+- **Organic**
+- **Organum**
+- **Orgasm**
+- **Ori**
+- **Orient**
+- **Oriental**
+- **Origin**
+- **Original**
+- **Ork**
+- **Orleans**
+- **Ornament**
+- **Orphan**
+- **Orthodox**
+- **Osaka**
+- **Oscar**
+- **Ost**
+- **Other**
+- **Otto**
+- **Ou**
+- **Oud**
+- **Ounce**
+- **Our**
+- **Out**
+- **Outback**
+- **Outcast**
+- **Outer**
+- **Outlaw**
+- **Outlaw Country**
+- **Outlet**
+- **Outrage**
+- **Outrun**
+- **Outside**
+- **Ovation**
+- **Over**
+- **Overdrive**
+- **Overt**
+- **Overtone**
+- **Ovid**
+- **Owl**
+- **Own**
+- **Ox**
+- **Oxford**
+- **Oxy**
+- **Oye**
+- **Oz**
+- **Ozone**
+- **P-Funk**
+- **P-Pop**
+- **Pa**
+- **Pace**
+- **Pacific**
+- **Pacific Islander**
+- **Pack**
+- **Pad**
+- **Paddy**
+- **Pagan**
+- **Pagan Metal**
+- **Pagan Rock**
+- **Page**
+- **Pageant**
+- **Pah**
+- **Pain**
+- **Paint**
+- **Pair**
+- **Pajama**
+- **Pal**
+- **Pala**
+- **Palace**
+- **Pale**
+- **Palm**
+- **Palm-Wine**
+- **Palma**
+- **Palo**
+- **Pam**
+- **Pampas**
+- **Pan**
+- **Pan Flute**
+- **Pan-African**
+- **Pan-American**
+- **Pan-Asian**
+- **Pan-Pipe**
+- **Panda**
+- **Pandora**
+- **Pang**
+- **Panic**
+- **Pansori**
+- **Panth**
+- **Panther**
+- **Panto**
+- **Pants**
+- **Papa**
+- **Paper**
+- **Papua**
+- **Par**
+- **Parade**
+- **Paradise**
+- **Paradiso**
+- **Paragon**
+- **Parallel**
+- **Parang**
+- **Paranoia**
+- **Paranoid**
+- **Parasite**
+- **Parch**
+- **Pard**
+- **Pardon**
+- **Parent**
+- **Paris**
+- **Parisian**
+- **Park**
+- **Parker**
+- **Parlour**
+- **Parody**
+- **Parrot**
+- **Part**
+- **Party**
+- **Party Rap**
+- **Party Rock**
+- **Pas**
+- **Paso**
+- **Paso Doble**
+- **Pass**
+- **Passage**
+- **Passion**
+- **Passive**
+- **Past**
+- **Pasta**
+- **Paste**
+- **Pastel**
+- **Pastor**
+- **Pastoral**
+- **Pat**
+- **Patch**
+- **Path**
+- **Patience**
+- **Patriotic**
+- **Patron**
+- **Pattern**
+- **Patti**
+- **Paul**
+- **Pause**
+- **Pavane**
+- **Pave**
+- **Paw**
+- **Pax**
+- **Pay**
+- **Paz**
+- **Peace**
+- **Peach**
+- **Peak**
+- **Peal**
+- **Pearl**
+- **Peasant**
+- **Peat**
+- **Peck**
+- **Pecos**
+- **Pedal**
+- **Pee**
+- **Pee Wee**
+- **Peek**
+- **Peel**
+- **Peer**
+- **Peg**
+- **Pelt**
+- **Pen**
+- **Pence**
+- **Pender**
+- **Pendulum**
+- **Peng**
+- **Penitentiary**
+- **Penn**
+- **Penny**
+- **Pent**
+- **Pentatonic**
+- **Pep**
+- **Pepper**
+- **Per**
+- **Perc**
+- **Perch**
+- **Percussion**
+- **Perfect**
+- **Performance**
+- **Performer**
+- **Perfume**
+- **Period**
+- **Perk**
+- **Perl**
+- **Perm**
+- **Persian**
+- **Persian Classical**
+- **Persian Pop**
+- **Person**
+- **Peru**
+- **Peruvian**
+- **Peruvian Cumbia**
+- **Peruvian Folk**
+- **Pest**
+- **Pet**
+- **Pete**
+- **Petty**
+- **Pew**
+- **Phantom**
+- **Phat**
+- **Phase**
+- **Phat Bass**
+- **Phi**
+- **Philadelphia**
+- **Philadelphia Soul**
+- **Philharmonic**
+- **Philly**
+- **Philosopher**
+- **Phish**
+- **Phobia**
+- **Phoenix**
+- **Phon**
+- **Phone**
+- **Phonk**
+- **Phony**
+- **Photo**
+- **Phrase**
+- **Phrygian**
+- **Phys**
+- **Physical**
+- **Piano**
+- **Piano Blues**
+- **Piano House**
+- **Piano Jazz**
+- **Piano Pop**
+- **Piano Rock**
+- **Pick**
+- **Picket**
+- **Pickin**
+- **Picture**
+- **Pie**
+- **Piece**
+- **Piedmont**
+- **Piedmont Blues**
+- **Pier**
+- **Pierce**
+- **Pig**
+- **Pigeon**
+- **Pike**
+- **Pila**
+- **Pile**
+- **Pimp**
+- **Pin**
+- **Pinch**
+- **Pine**
+- **Ping**
+- **Pink**
+- **Pino**
+- **Pint**
+- **Pioneer**
+- **Pipe**
+- **Pipe Band**
+- **Piper**
+- **Pirate**
+- **Pirate Metal**
+- **Piss**
+- **Pit**
+- **Pitch**
+- **Pity**
+- **Pix**
+- **Pixel**
+- **Pixie**
+- **Place**
+- **Placid**
+- **Plague**
+- **Plain**
+- **Plains**
+- **Plan**
+- **Plane**
+- **Planet**
+- **Plank**
+- **Plant**
+- **Platinum**
+- **Play**
+- **Player**
+- **Playful**
+- **Plaza**
+- **Plea**
+- **Please**
+- **Pledge**
+- **Plink**
+- **Plo**
+- **Plot**
+- **Plow**
+- **Plug**
+- **Plum**
+- **Plumb**
+- **Plume**
+- **Plunderphonics**
+- **Plus**
+- **Plush**
+- **Ply**
+- **Poc**
+- **Pocket**
+- **Pod**
+- **Poe**
+- **Poem**
+- **Poet**
+- **Poetic**
+- **Poetry**
+- **Point**
+- **Poison**
+- **Poke**
+- **Pol**
+- **Poland**
+- **Polar**
+- **Polar Area**
+- **Pole**
+- **Police**
+- **Polish**
+- **Polish Folk**
+- **Polish Hip Hop**
+- **Polish Pop**
+- **Polish Rock**
+- **Polka**
+- **Polka Dot**
+- **Poll**
+- **Polly**
+- **Polo**
+- **Poly**
+- **Polyphony**
+- **Polyrhythm**
+- **Polynesian**
+- **Polynesian Pop**
+- **Pomp**
+- **Pompeii**
+- **Pond**
+- **Pong**
+- **Pony**
+- **Poo**
+- **Pool**
+- **Poor**
+- **Pop**
+- **Pop Ballad**
+- **Pop Blues**
+- **Pop Country**
+- **Pop Dance**
+- **Pop Folk**
+- **Pop Funk**
+- **Pop House**
+- **Pop Jazz**
+- **Pop Metal**
+- **Pop Punk**
+- **Pop Rap**
+- **Pop Reggae**
+- **Pop Rock**
+- **Pop Soul**
+- **Popcorn**
+- **Pope**
+- **Popera**
+- **Poppy**
+- **Porch**
+- **Pork**
+- **Porn**
+- **Porno**
+- **Pornocore**
+- **Port**
+- **Portal**
+- **Porter**
+- **Portland**
+- **Portrait**
+- **Portuguese**
+- **Portuguese Fado**
+- **Portuguese Folk**
+- **Portuguese Pop**
+- **Portuguese Rock**
+- **Pose**
+- **Posh**
+- **Position**
+- **Positive**
+- **Posse**
+- **Post**
+- **Post Disco**
+- **Post Grunge**
+- **Post Hardcore**
+- **Post Metal**
+- **Post Punk**
+- **Post Rock**
+- **Postal**
+- **Pot**
+- **Potion**
+- **Pound**
+- **Pout**
+- **Powa**
+- **Power**
+- **Power Ballad**
+- **Power Blues**
+- **Power Electronics**
+- **Power Metal**
+- **Power Pop**
+- **Power Rock**
+- **Powwow**
+- **Pox**
+- **Prairie**
+- **Praise**
+- **Prana**
+- **Prank**
+- **Prawn**
+- **Pray**
+- **Prayer**
+- **Pre**
+- **Precious**
+- **Prelude**
+- **Prep**
+- **Press**
+- **Pressure**
+- **Pretty**
+- **Prez**
+- **Price**
+- **Pride**
+- **Priest**
+- **Prima**
+- **Prime**
+- **Primitive**
+- **Primo**
+- **Prince**
+- **Princess**
+- **Print**
+- **Prison**
+- **Private**
+- **Prize**
+- **Pro**
+- **Probe**
+- **Process**
+- **Prodigy**
+- **Producer**
+- **Product**
+- **Prog**
+- **Prog Folk**
+- **Prog House**
+- **Prog Metal**
+- **Prog Pop**
+- **Prog Rock**
+- **Program**
+- **Progressive**
+- **Progressive Bluegrass**
+- **Progressive Country**
+- **Progressive Electronic**
+- **Progressive Folk**
+- **Progressive House**
+- **Progressive Jazz**
+- **Progressive Metal**
+- **Progressive Pop**
+- **Progressive Rock**
+- **Progressive Trance**
+- **Prokofiev**
+- **Prom**
+- **Promo**
+- **Prong**
+- **Prop**
+- **Prophet**
+- **Prose**
+- **Prost**
+- **Protest**
+- **Proton**
+- **Proud**
+- **Prove**
+- **Provence**
+- **Prowl**
+- **Proxy**
+- **Psalm**
+- **Pso**
+- **Psy**
+- **Psy Trance**
+- **Psy-Prog**
+- **Psybreaks**
+- **Psych**
+- **Psych Folk**
+- **Psych Pop**
+- **Psych Rock**
+- **Psyche**
+- **Psychedelia**
+- **Psychedelic**
+- **Psychedelic Folk**
+- **Psychedelic Pop**
+- **Psychedelic Rock**
+- **Psychedelic Soul**
+- **Psychedelic Trance**
+- **Psychobilly**
+- **Psychopop**
+- **Psychosis**
+- **Psychotropic**
+- **Pub**
+- **Public**
+- **Puff**
+- **Pug**
+- **Pule**
+- **Pull**
+- **Pulse**
+- **Puma**
+- **Pump**
+- **Punch**
+- **Punk**
+- **Punk Blues**
+- **Punk Folk**
+- **Punk Funk**
+- **Punk Jazz**
+- **Punk Metal**
+- **Punk Pop**
+- **Punk Rap**
+- **Punk Rock**
+- **Punta**
+- **Punta Rock**
+- **Pup**
+- **Puppy**
+- **Pure**
+- **Purge**
+- **Purple**
+- **Purpose**
+- **Purr**
+- **Push**
+- **Put**
+- **Q-Pop**
+- **Qawwali**
+- **Quack**
+- **Quad**
+- **Quake**
+- **Quantum**
+- **Quartet**
+- **Quartz**
+- **Quasi**
+- **Que**
+- **Quebec**
+- **Queen**
+- **Quest**
+- **Quick**
+- **Quiet**
+- **Quiet Storm**
+- **Quill**
+- **Quint**
+- **Quintet**
+- **Quirk**
+- **Quirky**
+- **Quit**
+- **Quiz**
+- **Quota**
+- **Quote**
+- **R&B**
+- **Ra**
+- **Rab**
+- **Rabbit**
+- **Race**
+- **Racial**
+- **Rack**
+- **Rad**
+- **Radar**
+- **Radical**
+- **Radio**
+- **Rage**
+- **Ragg**
+- **Ragga**
+- **Ragga Jungle**
+- **Ragga Metal**
+- **Ragga Pop**
+- **Raggamuffin**
+- **Raggacore**
+- **Raging**
+- **Rags**
+- **Ragtime**
+- **Ragtime Blues**
+- **Rah**
+- **Raid**
+- **Rail**
+- **Rain**
+- **Rainbow**
+- **Rainy**
+- **Raise**
+- **Raja**
+- **Rake**
+- **Rally**
+- **Ram**
+- **Rama**
+- **Ramble**
+- **Rambo**
+- **Ramm**
+- **Ramp**
+- **Ran**
+- **Ranch**
+- **Ranchera**
+- **Rand**
+- **Random**
+- **Rang**
+- **Range**
+- **Ranger**
+- **Rank**
+- **Rant**
+- **Rap**
+- **Rap Metal**
+- **Rap Pop**
+- **Rap Rock**
+- **Rap Soul**
+- **Rapcore**
+- **Rapid**
+- **Rapper**
+- **Rapture**
+- **Rare**
+- **Rasta**
+- **Rasta Road**
+- **Rasta Rock**
+- **Rat**
+- **Rattle**
+- **Rave**
+- **Rave Punk**
+- **Rave Rock**
+- **Raven**
+- **Raw**
+- **Rawk**
+- **Ray**
+- **Raza**
+- **Razor**
+- **Rca**
+- **Reach**
+- **React**
+- **Ready**
+- **Reaggae**
+- **Real**
+- **Reality**
+- **Realm**
+- **Reap**
+- **Rear**
+- **Reason**
+- **Rebel**
+- **Rebirth**
+- **Recall**
+- **Recital**
+- **Record**
+- **Red**
+- **Red Dirt**
+- **Red Hot**
+- **Redemption**
+- **Redneck**
+- **Reef**
+- **Reel**
+- **Ref**
+- **Reference**
+- **Reflection**
+- **Reflex**
+- **Reform**
+- **Refrain**
+- **Refuge**
+- **Reg**
+- **Regal**
+- **Reggae**
+- **Reggae Fusion**
+- **Reggae Pop**
+- **Reggae Rock**
+- **Reggaeton**
+- **Region**
+- **Regional**
+- **Regret**
+- **Reina**
+- **Reissue**
+- **Reject**
+- **Rejoice**
+- **Relapse**
+- **Relax**
+- **Relaxation**
+- **Relay**
+- **Release**
+- **Relic**
+- **Relief**
+- **Religion**
+- **Religious**
+- **Reload**
+- **Reluctant**
+- **Rem**
+- **Remain**
+- **Remedy**
+- **Remember**
+- **Remix**
+- **Remote**
+- **Renaissance**
+- **Rend**
+- **Render**
+- **Renegade**
+- **Renew**
+- **Rent**
+- **Repair**
+- **Repeat**
+- **Replay**
+- **Report**
+- **Repose**
+- **Request**
+- **Requiem**
+- **Rescue**
+- **Resin**
+- **Resist**
+- **Resolution**
+- **Resolve**
+- **Resonance**
+- **Resort**
+- **Rest**
+- **Retro**
+- **Retro Funk**
+- **Retro Pop**
+- **Retro Rock**
+- **Retro Soul**
+- **Return**
+- **Reunion**
+- **Rev**
+- **Reveal**
+- **Revel**
+- **Revenge**
+- **Reverb**
+- **Reverse**
+- **Revival**
+- **Revolt**
+- **Revolution**
+- **Rewind**
+- **Rex**
+- **Rey**
+- **Rhapsody**
+- **Rhea**
+- **Rhetoric**
+- **Rhi**
+- **Rhino**
+- **Rho**
+- **Rhodes**
+- **Rhyme**
+- **Rhythm**
+- **Rhythm & Blues**
+- **Rhythm and Blues**
+- **Rhythmic**
+- **Ria**
+- **Rib**
+- **Rice**
+- **Rich**
+- **Rick**
+- **Rico**
+- **Rid**
+- **Riddim**
+- **Ride**
+- **Rider**
+- **Riff**
+- **Rift**
+- **Rig**
+- **Right**
+- **Rill**
+- **Rim**
+- **Rin**
+- **Ring**
+- **Rio**
+- **Riot ข
+- **Rip**
+- **Ripple**
+- **Rise**
+- **Rising**
+- **Risk**
+- **Rite**
+- **Rito**
+- **Ritter**
+- **Riva**
+- **River**
+- **Riverside**
+- **Riz**
+- **Road**
+- **Roadhouse**
+- **Roadman**
+- **Roam**
+- **Roar**
+- **Rob**
+- **Robe**
+- **Robin**
+- **Robot**
+- **Rock**
+- **Rock & Roll**
+- **Rock 'n' Roll**
+- **Rock Blues**
+- **Rock Folk**
+- **Rock Funk**
+- **Rock Jazz**
+- **Rock Opera**
+- **Rock Pop**
+- **Rock Rap**
+- **Rock Reggae**
+- **Rock Soul**
+- **Rock Steady**
+- **Rockabilly**
+- **Rockers**
+- **Rocket**
+- **Rockin**
+- **Rocksteady**
+- **Rococo**
+- **Rod**
+- **Rodeo**
+- **Roe**
+- **Rogue**
+- **Roi**
+- **Role**
+- **Roll**
+- **Roller**
+- **Rolling**
+- **Rom**
+- **Roma**
+- **Romance**
+- **Romantic**
+- **Romantic Flow**
+- **Romanticism**
+- **Romp**
+- **Rondo**
+- **Roo**
+- **Roof**
+- **Rook**
+- **Room**
+- **Roost**
+- **Root**
+- **Roots**
+- **Roots Reggae**
+- **Roots Rock**
+- **Rope**
+- **Rory**
+- **Ros**
+- **Rose**
+- **Rasta**
+- **Rost**
+- **Rota**
+- **Rote**
+- **Roto**
+- **Rough**
+- **Round**
+- **Rouse**
+- **Roux**
+- **Rove**
+- **Row**
+- **Rowdy**
+- **Rox**
+- **Roy**
+- **Royal**
+- **Rub**
+- **Rubber**
+- **Rubble**
+- **Ruby**
+- **Rude**
+- **Rudeboy**
+- **Rue**
+- **Ruff**
+- **Rugged**
+- **Ruin**
+- **Rule**
+- **Rumba**
+- **Rumble**
+- **Run**
+- **Rune**
+- **Runner**
+- **Rush**
+- **Rust**
+- **Rustic**
+- **Rusty**
+- **Ruth**
+- **Rye**
+- **S-Pop**
+- **Saba**
+- **Sabbath**
+- **Sable**
+- **Sabor**
+- **Sacred**
+- **Sacred Harp**
+- **Sad**
+- **Sadcore**
+- **Saddle**
+- **Sade**
+- **Safe**
+- **Saga**
+- **Sage**
+- **Sail**
+- **Saint**
+- **Sake**
+- **Sakura**
+- **Sal**
+- **Salsa**
+- **Salsa Romantica**
+- **Salt**
+- **Salty**
+- **Sam**
+- **Samba**
+- **Samba Rock**
+- **Sambar**
+- **Samoan**
+- **Sample**
+- **Sampler**
+- **San**
+- **Sana**
+- **Sanctuary**
+- **Sand**
+- **Sanding**
+- **Sando**
+- **Sang**
+- **Sango**
+- **Sank**
+- **Sanskrit**
+- **Santa**
+- **Sao**
+- **Sap**
+- **Sape**
+- **Sappy**
+- **Sara**
+- **Sard**
+- **Sardana**
+- **Sari**
+- **Sark**
+- **Sass**
+- **Sassy**
+- **Sat**
+- **Satanic**
+- **Satie**
+- **Satin**
+- **Satire**
+- **Sativa**
+- **Saucy**
+- **Savage**
+- **Savant**
+- **Save**
+- **Savoy**
+- **Saw**
+- **Sawt**
+- **Sax**
+- **Saxophone**
+- **Say**
+- **Scab**
+- **Scale**
+- **Scamp**
+- **Scan**
+- **Scape**
+- **Scar**
+- **Scare**
+- **Scat**
+- **Scatter**
+- **Scene**
+- **Scent**
+- **Sceptre**
+- **Schlager**
+- **School**
+- **Schooner**
+- **Schtick**
+- **Sci-Fi**
+- **Science**
+- **Scoop**
+- **Scope**
+- **Score**
+- **Scorn**
+- **Scot**
+- **Scotch**
+- **Scottish**
+- **Scottish Folk**
+- **Scottish Pop**
+- **Scottish Rock**
+- **Scout**
+- **Scramble**
+- **Scrap**
+- **Scrape**
+- **Scratch**
+- **Scream**
+- **Screamo**
+- **Screen**
+- **Screw**
+- **Scrub**
+- **Scum**
+- **Sea**
+- **Seam**
+- **Search**
+- **Season**
+- **Seat**
+- **Seattle**
+- **Second**
+- **Secret**
+- **Section**
+- **Secular**
+- **Seda**
+- **Seduction**
+- **See**
+- **Seed**
+- **Seek**
+- **Seem**
+- **Sega**
+- **Seggae**
+- **Segue**
+- **Seis**
+- **Seize**
+- **Select**
+- **Self**
+- **Semba**
+- **Semi**
+- **Sen**
+- **Send**
+- **Sense**
+- **Sensi**
+- **Sentimental**
+- **Seny**
+- **Seoul**
+- **Sepia**
+- **Sept**
+- **Septet**
+- **Serbian**
+- **Serbian Folk**
+- **Serbian Pop**
+- **Serbian Rock**
+- **Serenade**
+- **Serene**
+- **Serenity**
+- **Serge**
+- **Series**
+- **Serious**
+- **Sertanejo**
+- **Serve**
+- **Session**
+- **Set**
+- **Settle**
+- **Seven**
+- **Seventies**
+- **Sew**
+- **Sex**
+- **Sextet**
+- **Sexy**
+- **Sey**
+- **Shack**
+- **Shade**
+- **Shadow**
+- **Shady**
+- **Shake**
+- **Shaker**
+- **Shaky**
+- **Shall**
+- **Shallow**
+- **Sham**
+- **Shaman**
+- **Shamanic**
+- **Shame**
+- **Shan**
+- **Shanghai**
+- **Shank**
+- **Shape**
+- **Share**
+- **Shark**
+- **Sharp**
+- **Shatter**
+- **Shaw**
+- **She**
+- **Shed**
+- **Sheen**
+- **Sheep**
+- **Sheer**
+- **Sheet**
+- **Shell**
+- **Shelter**
+- **Sher**
+- **Sherbet**
+- **Sherry**
+- **Shift**
+- **Shimmer**
+- **Shine**
+- **Shiny**
+- **Ship**
+- **Shire**
+- **Shirt**
+- **Sho**
+- **Shock**
+- **Shoe**
+- **Shoegaze**
+- **Shoegazer**
+- **Shona**
+- **Shop**
+- **Shore**
+- **Short**
+- **Shot**
+- **Shout**
+- **Show**
+- **Showtune**
+- **Shred**
+- **Shriek**
+- **Shrill**
+- **Shrine**
+- **Shroom**
+- **Shroud**
+- **Shrug**
+- **Shu**
+- **Shush**
+- **Shy**
+- **Si**
+- **Sia**
+- **Siberian**
+- **Sicilian**
+- **Sick**
+- **Side**
+- **Sidestep**
+- **Sie**
+- **Sigh**
+- **Sight**
+- **Sign**
+- **Signal**
+- **Sikh**
+- **Sila**
+- **Silence**
+- **Silent**
+- **Silk**
+- **Silly**
+- **Silo**
+- **Silver**
+- **Sim**
+- **Simple**
+- **Sin**
+- **Since**
+- **Sine**
+- **Sing**
+- **Singer**
+- **Singer-Songwriter**
+- **Singing**
+- **Single**
+- **Sink**
+- **Sino**
+- **Sip**
+- **Sir**
+- **Sire**
+- **Siren**
+- **Sis**
+- **Sissy**
+- **Sit**
+- **Sitar**
+- **Site**
+- **Six**
+- **Sixties**
+- **Size**
+- **Ska**
+- **Ska Jazz**
+- **Ska Punk**
+- **Ska Rock**
+- **Skank**
+- **Skate**
+- **Skate Punk**
+- **Ske**
+- **Skeet**
+- **Skeleton**
+- **Sketch**
+- **Ski**
+- **Skid**
+- **Skill**
+- **Skillet**
+- **Skin**
+- **Skinny**
+- **Skip**
+- **Skirt**
+- **Skool**
+- **Skull**
+- **Sky**
+- **Skylark**
+- **Slack**
+- **Slack Key**
+- **Slam**
+- **Slang**
+- **Slap**
+- **Slap House**
+- **Slash**
+- **Slate**
+- **Slaughter**
+- **Slave**
+- **Slavic**
+- **Slavic Folk**
+- **Sleaze**
+- **Sleazy**
+- **Sleep**
+- **Sleeper**
+- **Sleepy**
+- **Sleight**
+- **Slick**
+- **Slide**
+- **Slim**
+- **Slime**
+- **Sling**
+- **Slip**
+- **Slo**
+- **Sloan**
+- **Slop**
+- **Slope**
+- **Sloth**
+- **Slow**
+- **Slow Blues**
+- **Slow Burn**
+- **Slow Core**
+- **Slow Dance**
+- **Slow Jam**
+- **Slow Pop**
+- **Slow Rock**
+- **Sludge**
+- **Sludge Metal**
+- **Slug**
+- **Slum**
+- **Slump**
+- **Slush**
+- **Sly**
+- **Smack**
+- **Small**
+- **Smart**
+- **Smash**
+- **Smear**
+- **Smile**
+- **Smith**
+- **Smitten**
+- **Smoke**
+- **Smokey**
+- **Smokin**
+- **Smooth**
+- **Smooth Jazz**
+- **Smooth Pop**
+- **Smooth Rock**
+- **Smooth Soul**
+- **Smudge**
+- **Snag**
+- **Snake**
+- **Snap**
+- **Snare**
+- **Sneak**
+- **Sneaky**
+- **Snip**
+- **Sno**
+- **Snow**
+- **So**
+- **So-Cal**
+- **Soap**
+- **Soar**
+- **Sob**
+- **Sober**
+- **Soca**
+- **Social**
+- **Society**
+- **Soda**
+- **Soft**
+- **Soft House**
+- **Soft Pop**
+- **Soft Rock**
+- **Soft Soul**
+- **Soho**
+- **Soil**
+- **Sol**
+- **Solar**
+- **Sold**
+- **Sole**
+- **Solid**
+- **Solo**
+- **Solstice**
+- **Solution**
+- **Solve**
+- **Som**
+- **Soma**
+- **Somalian**
+- **Some**
+- **Son**
+- **Son Cubano**
+- **Son Jarocho**
+- **Son Montuno**
+- **Sonata**
+- **Song**
+- **Songbook**
+- **Songwriter**
+- **Sonic**
+- **Sonora**
+- **Sons**
+- **Soot**
+- **Sooth**
+- **Soothe**
+- **Sophisticated**
+- **Sophisti-Pop**
+- **Sore**
+- **Sorrow**
+- **Sorry**
+- **Sort**
+- **Sot**
+- **Soul**
+- **Soul Blues**
+- **Soul Funk**
+- **Soul Jazz**
+- **Soul Pop**
+- **Soul Rock**
+- **Soulful**
+- **Soulful House**
+- **Sound**
+- **Sound Art**
+- **Sound Collage**
+- **Soundscape**
+- **Soundtrack**
+- **Soup**
+- **Sour**
+- **Source**
+- **South**
+- **South African**
+- **South African Jazz**
+- **South African Pop**
+- **South American**
+- **South Asian**
+- **South Coast**
+- **South Pacific**
+- **South Side**
+- **Southern**
+- **Southern Blues**
+- **Southern Gospel**
+- **Southern Hip Hop**
+- **Southern Metal**
+- **Southern Pop**
+- **Southern Rock**
+- **Southern Soul**
+- **Southwest**
+- **Soviet**
+- **Sow**
+- **Sox**
+- **Spa**
+- **Space**
+- **Space Age**
+- **Space Age Pop**
+- **Space Disco**
+- **Space Folk**
+- **Space Jazz**
+- **Space Pop**
+- **Space Rock**
+- **Spacey**
+- **Spaghetti**
+- **Spaghetti Western**
+- **Span**
+- **Spanish**
+- **Spanish Folk**
+- **Spanish Pop**
+- **Spanish Reggae**
+- **Spanish Rock**
+- **Spank**
+- **Spark**
+- **Sparkle**
+- **Sparrow**
+- **Spartan**
+- **Spasm**
+- **Spaz**
+- **Spazz**
+- **Spazzcore**
+- **Speak**
+- **Spear**
+- **Special**
+- **Specter**
+- **Spectra**
+- **Spectral**
+- **Spectrum**
+- **Speech**
+- **Speed**
+- **Speed Garage**
+- **Speed Metal**
+- **Speedcore**
+- **Spell**
+- **Spend**
+- **Sphere**
+- **Spice**
+- **Spider**
+- **Spike**
+- **Spin**
+- **Spinal**
+- **Spindle**
+- **Spine**
+- **Spinning**
+- **Spiral**
+- **Spirit**
+- **Spiritual**
+- **Spiritual Jazz**
+- **Spit**
+- **Splash**
+- **Split**
+- **Spoke**
+- **Spoken**
+- **Spoken Word**
+- **Sponge**
+- **Spooky**
+- **Spoon**
+- **Sport**
+- **Spot**
+- **Spray**
+- **Spread**
+- **Spring**
+- **Sprint**
+- **Spruce**
+- **Spy**
+- **Squad**
+- **Square**
+- **Squat**
+- **Squeak**
+- **Squeeze**
+- **Squid**
+- **St**
+- **St. Louis**
+- **Stab**
+- **Stack**
+- **Stadium**
+- **Staff**
+- **Stage**
+- **Stain**
+- **Stair**
+- **Stake**
+- **Stale**
+- **Stalk**
+- **Stamp**
+- **Stand**
+- **Standard**
+- **Star**
+- **Stardust**
+- **Stare**
+- **Stark**
+- **Start**
+- **Starz**
+- **State**
+- **Static**
+- **Station**
+- **Statue**
+- **Status**
+- **Stay**
+- **Steady**
+- **Steal**
+- **Steam**
+- **Steampunk**
+- **Steel**
+- **Steel Band**
+- **Steel Drum**
+- **Steel Guitar**
+- **Steep**
+- **Steer**
+- **Stein**
+- **Stem**
+- **Step**
+- **Steppin**
+- **Stereo**
+- **Steve**
+- **Stevie**
+- **Stick**
+- **Sticky**
+- **Stiff**
+- **Still**
+- **Sting**
+- **Stinger**
+- **Stink**
+- **Stir**
+- **Stock**
+- **Stoke**
+- **Stomp**
+- **Stone**
+- **Stoner**
+- **Stoner Metal**
+- **Stoner Rock**
+- **Stop**
+- **Store**
+- **Storm**
+- **Stormy**
+- **Story**
+- **Storytelling**
+- **Stout**
+- **Straight**
+- **Strain**
+- **Strand**
+- **Strange**
+- **Stranger**
+- **Strap**
+- **Strata**
+- **Strath**
+- **Straw**
+- **Stray**
+- **Stream**
+- **Street**
+- **Street Punk**
+- **Street Rap**
+- **Stress**
+- **Stretch**
+- **Stride**
+- **Stride Piano**
+- **Strike**
+- **String**
+- **String Band**
+- **String Quartet**
+- **Strings**
+- **Strip**
+- **Stripe**
+- **Stroke**
+- **Stroll**
+- **Strong**
+- **Strum**
+- **Strung**
+- **Stuck**
+- **Study**
+- **Stuff**
+- **Stumble**
+- **Stump**
+- **Stun**
+- **Stunt**
+- **Stutter**
+- **Style**
+- **Sub**
+- **Suburban**
+- **Succulent**
+- **Suck**
+- **Sud**
+- **Sudden**
+- **Suede**
+- **Sugar**
+- **Sugar Pop**
+- **Sugary**
+- **Suite**
+- **Sulk**
+- **Sultan**
+- **Sum**
+- **Summer**
+- **Summit**
+- **Sun**
+- **Sun Ra**
+- **Sunday**
+- **Sung**
+- **Sunk**
+- **Sunny**
+- **Sunset**
+- **Sunshine**
+- **Sunshine Pop**
+- **Super**
+- **Superhero**
+- **Superior**
+- **Supper**
+- **Supreme**
+- **Surf**
+- **Surf Pop**
+- **Surf Rock**
+- **Surge**
+- **Surreal**
+- **Surrealism**
+- **Surround**
+- **Survival**
+- **Sushi**
+- **Suspension**
+- **Sustain**
+- **Swag**
+- **Swagger**
+- **Swallow**
+- **Swamp**
+- **Swamp Blues**
+- **Swamp Pop**
+- **Swamp Rock**
+- **Swan**
+- **Swarm**
+- **Swash**
+- **Swear**
+- **Sweat**
+- **Sweaty**
+- **Swede**
+- **Swedish**
+- **Swedish Folk**
+- **Swedish Hip Hop**
+- **Swedish Pop**
+- **Swedish Rock**
+- **Sweep**
+- **Sweet**
+- **Sweet Soul**
+- **Swell**
+- **Swift**
+- **Swim**
+- **Swing**
+- **Swing House**
+- **Swing Jazz**
+- **Swingbeat**
+- **Swiss**
+- **Switch**
+- **Sword**
+- **Syd**
+- **Sylph**
+- **Symbol**
+- **Symbolic**
+- **Sympathy**
+- **Symphonic**
+- **Symphonic Metal**
+- **Symphonic Rock**
+- **Symphony**
+- **Syn**
+- **Sync**
+- **Synch**
+- **Synclavier**
+- **Syndicate**
+- **Synergy**
+- **Synesthesia**
+- **Synth**
+- **Synth Bass**
+- **Synth Funk**
+- **Synth Jazz**
+- **Synth Metal**
+- **Synth Pop**
+- **Synth Punk**
+- **Synth Rock**
+- **Synth Soul**
+- **Synth Wave**
+- **Synthcore**
+- **Synthesizer**
+- **Synthetic**
+- **Synthpop**
+- **Synthpunk**
+- **Synthwave**
+- **Syrup**
+- **System**
+- **T-Pop**
+- **Tab**
+- **Table**
+- **Tabla**
+- **Taco**
+- **Tact**
+- **Tag**
+- **Tail**
+- **Taiwanese**
+- **Taiwanese Pop**
+- **Taiwanese Rock**
+- **Take**
+- **Tale**
+- **Talent**
+- **Talk**
+- **Talk Box**
+- **Talking**
+- **Tall**
+- **Tally**
+- **Talon**
+- **Tambourine**
+- **Tamil**
+- **Tamil Pop**
+- **Tampa**
+- **Tan**
+- **Tandem**
+- **Tang**
+- **Tango**
+- **Tank**
+- **Tanzanian**
+- **Tape**
+- **Tape Music**
+- **Tapestry**
+- **Tar**
+- **Tarantella**
+- **Tare**
+- **Target**
+- **Tarnish**
+- **Tart**
+- **Taste**
+- **Tasty**
+- **Tat**
+- **Tattoo**
+- **Tau**
+- **Taurus**
+- **Tavern**
+- **Tax**
+- **Taxi**
+- **Tea**
+- **Teach**
+- **Team**
+- **Tear**
+- **Tease**
+- **Tech**
+- **Tech House**
+- **Tech Metal**
+- **Tech Step**
+- **Tech Trance**
+- **Techno**
+- **Techno Brega**
+- **Techno Folk**
+- **Techno Pop**
+- **Techno Rock**
+- **Techno Soul**
+- **Technobrega**
+- **Technopop**
+- **Ted**
+- **Teen**
+- **Teen Pop**
+- **Teenage**
+- **Teeth**
+- **Tek**
+- **Tekno**
+- **Tel**
+- **Tele**
+- **Telephone**
+- **Telescope**
+- **Tell**
+- **Temper**
+- **Temple**
+- **Tempo**
+- **Tempt**
+- **Ten**
+- **Tender**
+- **Tennessee**
+- **Tense**
+- **Tent**
+- **Tequila**
+- **Term**
+- **Terror**
+- **Terrorcore**
+- **Terry**
+- **Test**
+- **Texas**
+- **Texas Blues**
+- **Texas Country**
+- **Texas Rock**
+- **Text**
+- **Texture**
+- **Thai**
+- **Thai Folk**
+- **Thai Pop**
+- **Thai Rock**
+- **Thames**
+- **Thank**
+- **Thanks**
+- **Thar**
+- **That**
+- **Thaw**
+- **Theater**
+- **Theatre**
+- **Theme**
+- **Then**
+- **Theory**
+- **Theremin**
+- **Thermal**
+- **These**
+- **Thick**
+- **Thief**
+- **Thigh**
+- **Thin**
+- **Thing**
+- **Think**
+- **Third**
+- **Third Stream**
+- **Thirst**
+- **Thirteen**
+- **Thirty**
+- **This**
+- **Thistle**
+- **Thong**
+- **Thor**
+- **Thorn**
+- **Those**
+- **Thought**
+- **Thrash**
+- **Thrash Metal**
+- **Thread**
+- **Threat**
+- **Three**
+- **Threshold**
+- **Throat**
+- **Throb**
+- **Throne**
+- **Throw**
+- **Thug**
+- **Thump**
+- **Thunder**
+- **Thursday**
+- **Ti**
+- **Tibetan**
+- **Tick**
+- **Tide**
+- **Tie**
+- **Tiger**
+- **Tight**
+- **Tile**
+- **Tim**
+- **Timba**
+- **Time**
+- **Time Lord**
+- **Timeless**
+- **Tin**
+- **Ting**
+- **Tinkle**
+- **Tinsel**
+- **Tip**
+- **Tire**
+- **Titan**
+- **Titanium**
+- **Title**
+- **Toad**
+- **Toast**
+- **Toe**
+- **Together**
+- **Tokyo**
+- **Toll**
+- **Tom**
+- **Tomb**
+- **Tomorrow**
+- **Tone**
+- **Tonic**
+- **Tonight**
+- **Tonk**
+- **Too**
+- **Tool**
+- **Toot**
+- **Top**
+- **Torch**
+- **Torch Song**
+- **Tornado**
+- **Toronto**
+- **Tort**
+- **Torture**
+- **Toss**
+- **Tot**
+- **Total**
+- **Touch**
+- **Tough**
+- **Tour**
+- **Tow**
+- **Tower**
+- **Town**
+- **Toy**
+- **Toytown**
+- **Trace**
+- **Track**
+- **Trade**
+- **Trad**
+- **Trade**
+- **Tradition**
+- **Traditional**
+- **Traditional Blues**
+- **Traditional Country**
+- **Traditional Folk**
+- **Traditional Jazz**
+- **Traditional Pop**
+- **Traditional Rock**
+- **Traffic**
+- **Trail**
+- **Train**
+- **Trance**
+- **Trance Pop**
+- **Trance Rock**
+- **Trancecore**
+- **Trans**
+- **Transatlantic**
+- **Trash**
+- **Trash Metal**
+- **Trash Pop**
+- **Trash Rock**
+- **Travel**
+- **Traveler**
+- **Travelling**
+- **Tread**
+- **Treasure**
+- **Treat**
+- **Tree**
+- **Trek**
+- **Trend**
+- **Tribe**
+- **Tribal**
+- **Tribal Ambient**
+- **Tribal House**
+- **Tribute**
+- **Trick**
+- **Trickle**
+- **Trill**
+- **Trilogy**
+- **Trim**
+- **Trip**
+- **Trip Hop**
+- **Triple**
+- **Tripod**
+- **Triumph**
+- **Tro**
+- **Trobairitz**
+- **Trombone**
+- **Troop**
+- **Trop**
+- **Tropic**
+- **Tropical**
+- **Tropical House**
+- **Tropicalia**
+- **Tropicalismo**
+- **Trot**
+- **Troubadour**
+- **Trouble**
+- **Trousers**
+- **Trout**
+- **Trove**
+- **Truck**
+- **True**
+- **Trumpet**
+- **Trunk**
+- **Trust**
+- **Truth**
+- **Try**
+- **Tuba**
+- **Tube**
+- **Tuck**
+- **Tuesday**
+- **Tuff**
+- **Tug**
+- **Tulip**
+- **Tumble**
+- **Tune**
+- **Tunnel**
+- **Tup**
+- **Turbo**
+- **Turbofolk**
+- **Turf**
+- **Turk**
+- **Turkish**
+- **Turkish Folk**
+- **Turkish Pop**
+- **Turkish Rock**
+- **Turn**
+- **Turntable**
+- **Turntablism**
+- **Turtle**
+- **Tush**
+- **Tusk**
+- **Tut**
+- **Tutu**
+- **Tux**
+- **Tuxedo**
+- **Twang**
+- **Twangy**
+- **Tweak**
+- **Twelve**
+- **Twenty**
+- **Twerk**
+- **Twice**
+- **Twilight**
+- **Twin**
+- **Twist**
+- **Two**
+- **Tyme**
+- **Type**
+- **Typhoon**
+- **Tyrant**
+- **U-Pop**
+- **Uber**
+- **Udu**
+- **Ugandan**
+- **Ukulele**
+- **Ultimate**
+- **Ultra**
+- **Um**
+- **Umbrella**
+- **Un**
+- **Uncle**
+- **Undead**
+- **Under**
+- **Underground**
+- **Underground Hip Hop**
+- **Underground Rap**
+- **Underwater**
+- **Undo**
+- **Uneasy**
+- **Unfold**
+- **Union**
+- **Unique**
+- **Unit**
+- **United**
+- **Unity**
+- **Universal**
+- **Universe**
+- **Unknown**
+- **Unplugged**
+- **Unreal**
+- **Unrest**
+- **Unsung**
+- **Untamed**
+- **Until**
+- **Untold**
+- **Up**
+- **Upbeat**
+- **Uplift**
+- **Uplifting**
+- **Uplifting Trance**
+- **Upper**
+- **Upright**
+- **Upside**
+- **Upstairs**
+- **Uptempo**
+- **Uptown**
+- **Ur**
+- **Urban**
+- **Urban Blues**
+- **Urban Cowboy**
+- **Urban Folk**
+- **Urban Jazz**
+- **Urban Pop**
+- **Urban Rock**
+- **Urban Soul**
+- **Urchin**
+- **Urgent**
+- **Urn**
+- **Us**
+- **Use**
+- **Utah**
+- **Utopia**
+- **Uzi**
+- **V-Pop**
+- **Vacation**
+- **Vacuum**
+- **Vague**
+- **Vain**
+- **Val**
+- **Vale**
+- **Valentine**
+- **Valley**
+- **Valor**
+- **Valve**
+- **Van**
+- **Vanguard**
+- **Vanilla**
+- **Vapor**
+- **Vapor Trap**
+- **Vaporhop**
+- **Vaporwave**
+- **Varnish**
+- **Vast**
+- **Vat**
+- **Vault**
+- **Ve**
+- **Veil**
+- **Vein**
+- **Velvet**
+- **Velveteen**
+- **Vengeance**
+- **Venom**
+- **Vent**
+- **Venus**
+- **Verb**
+- **Verbal**
+- **Verdi**
+- **Vernal**
+- **Verse**
+- **Version**
+- **Vertigo**
+- **Very**
+- **Vesper**
+- **Vest**
+- **Vet**
+- **Vibe**
+- **Vibes**
+- **Vibrant**
+- **Vibration**
+- **Vice**
+- **Vicious**
+- **Victim**
+- **Victor**
+- **Victory**
+- **Video**
+- **Vienna**
+- **Viennese**
+- **Vietnamese

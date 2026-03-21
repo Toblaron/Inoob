@@ -421,8 +421,12 @@ function buildStyleControls(opts: {
   energyLevel?: string;
   era?: string;
   genreNudge?: string;
+  genres?: string[];
 }): string {
   const lines: string[] = [];
+  if (opts.genres && opts.genres.length > 0) {
+    lines.push(`USER PREFERENCE — Selected genres: ${opts.genres.join(", ")}. These are the core genre(s) the user wants. Make them prominent in Section 1 and structure the template around these genre conventions.`);
+  }
   if (opts.vocalGender && opts.vocalGender !== "auto") {
     lines.push(`USER PREFERENCE — Vocal gender: ${opts.vocalGender}. Use a ${opts.vocalGender} vocalist.`);
   }
@@ -458,7 +462,7 @@ router.post("/generate-template", async (req, res) => {
       return;
     }
 
-    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge } = parsed.data;
+    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres } = parsed.data;
 
     if (!isValidYouTubeUrl(youtubeUrl)) {
       res.status(400).json({ error: "Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link." });
@@ -485,7 +489,7 @@ router.post("/generate-template", async (req, res) => {
     }
 
     const context = buildPromptContext(metadata);
-    const styleControls = buildStyleControls({ vocalGender, energyLevel, era, genreNudge });
+    const styleControls = buildStyleControls({ vocalGender, energyLevel, era, genreNudge, genres });
 
     const lyricsInstruction =
       metadata.lyricsSource === "api"

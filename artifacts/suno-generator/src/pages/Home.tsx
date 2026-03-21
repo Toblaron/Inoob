@@ -15,6 +15,7 @@ import {
   FileText,
   History,
   Trash2,
+  Tags,
 } from "lucide-react";
 import { useGenerateSunoTemplate } from "@workspace/api-client-react";
 import type { SunoTemplate } from "@workspace/api-client-react";
@@ -24,6 +25,64 @@ import { cn } from "@/lib/utils";
 
 const HISTORY_KEY = "suno-template-history";
 const MAX_HISTORY = 10;
+
+const MAX_GENRES = 5;
+
+interface GenreCategory {
+  label: string;
+  genres: string[];
+}
+
+const GENRE_CATEGORIES: GenreCategory[] = [
+  {
+    label: "Pop",
+    genres: ["Pop", "Dance Pop", "Indie Pop", "Electropop", "Synth-Pop", "Dream Pop", "Chamber Pop", "Baroque Pop", "Britpop", "Power Pop", "Teen Pop", "Art Pop", "Bedroom Pop", "Chillout Pop"],
+  },
+  {
+    label: "Rock",
+    genres: ["Rock", "Alternative Rock", "Indie Rock", "Hard Rock", "Classic Rock", "Punk", "Post-Punk", "Grunge", "Shoegaze", "Psychedelic Rock", "Progressive Rock", "Garage Rock", "Folk Rock", "Blues-Rock", "Arena Rock", "New Wave", "Emo", "Post-Rock", "Stoner Rock"],
+  },
+  {
+    label: "Electronic",
+    genres: ["Electronic", "House", "Deep House", "Tech House", "Techno", "Ambient", "Synthwave", "Lo-Fi", "Drum & Bass", "Dubstep", "EDM", "Trance", "IDM", "Industrial", "Vaporwave", "Chillwave", "Future Bass", "Glitch Hop", "Electro", "Breakbeat"],
+  },
+  {
+    label: "Hip-Hop",
+    genres: ["Hip-Hop", "Trap", "Rap", "Drill", "Boom Bap", "Gangsta Rap", "G-Funk", "Conscious Hip-Hop", "Lo-Fi Hip-Hop", "Grime", "Cloud Rap", "East Coast", "West Coast Rap", "Golden Age Hip Hop", "Jazz Rap", "Phonk"],
+  },
+  {
+    label: "R&B / Soul",
+    genres: ["R&B", "Soul", "Neo-Soul", "Funk", "Disco", "Motown", "Gospel", "Contemporary R&B", "Quiet Storm", "Psychedelic Soul", "New Jack Swing"],
+  },
+  {
+    label: "Jazz",
+    genres: ["Jazz", "Smooth Jazz", "Bebop", "Swing", "Jazz Fusion", "Big Band", "Acid Jazz", "Cool Jazz", "Modal Jazz", "Latin Jazz", "Free Jazz", "Nu Jazz"],
+  },
+  {
+    label: "Metal",
+    genres: ["Metal", "Heavy Metal", "Black Metal", "Death Metal", "Thrash Metal", "Nu Metal", "Metalcore", "Power Metal", "Doom Metal", "Symphonic Metal", "Groove Metal", "Djent", "Deathcore", "Progressive Metal", "Folk Metal"],
+  },
+  {
+    label: "Country / Folk",
+    genres: ["Country", "Americana", "Bluegrass", "Folk", "Indie Folk", "Outlaw Country", "Country Rock", "Country Pop", "Contemporary Folk", "Alt-Country", "Honky Tonk", "Western Swing"],
+  },
+  {
+    label: "Classical",
+    genres: ["Classical", "Orchestral", "Baroque", "Cinematic", "Film Score", "Chamber Music", "Opera", "Neo-Classical", "Minimalist", "Romantic"],
+  },
+  {
+    label: "World / Other",
+    genres: ["K-Pop", "Afrobeats", "Reggae", "Dancehall", "Reggaeton", "Latin Pop", "Bossa Nova", "Flamenco", "Salsa", "Cumbia", "Afropop", "Afro-Cuban", "J-Pop", "Tropical", "Ska", "Dub"],
+  },
+  {
+    label: "Blues",
+    genres: ["Blues", "Delta Blues", "Chicago Blues", "Electric Blues", "Soul Blues", "Blues Rock", "Jump Blues", "Swamp Blues"],
+  },
+  {
+    label: "New Age / Ambient",
+    genres: ["New Age", "Ambient", "Meditation", "Healing", "Nature Sounds", "Dark Ambient", "Space Music"],
+  },
+];
 
 interface HistoryEntry {
   id: string;
@@ -78,6 +137,8 @@ export default function Home() {
   const [energyLevel, setEnergyLevel] = useState<"auto" | "chill" | "medium" | "high">("auto");
   const [era, setEra] = useState<"auto" | "70s" | "80s" | "90s" | "2000s" | "modern">("auto");
   const [genreNudge, setGenreNudge] = useState("");
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [expandedGenreCategory, setExpandedGenreCategory] = useState<string | null>(null);
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -103,12 +164,21 @@ export default function Home() {
     });
   };
 
+  const toggleGenre = (genre: string) => {
+    setSelectedGenres((prev) => {
+      if (prev.includes(genre)) return prev.filter((g) => g !== genre);
+      if (prev.length >= MAX_GENRES) return prev;
+      return [...prev, genre];
+    });
+  };
+
   const buildOptions = () => ({
     manualLyrics: manualLyrics.trim() || undefined,
     vocalGender: vocalGender !== "auto" ? vocalGender : undefined,
     energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
     era: era !== "auto" ? era : undefined,
     genreNudge: genreNudge.trim() || undefined,
+    genres: selectedGenres.length > 0 ? selectedGenres : undefined,
   });
 
   const onSubmit = (values: FormValues) => {
@@ -263,7 +333,7 @@ export default function Home() {
               icon={<Zap className="w-3.5 h-3.5" />}
               label="Style Controls"
               activeCount={
-                [vocalGender !== "auto", energyLevel !== "auto", era !== "auto", genreNudge.trim().length > 0].filter(Boolean).length
+                [vocalGender !== "auto", energyLevel !== "auto", era !== "auto", genreNudge.trim().length > 0, selectedGenres.length > 0].filter(Boolean).length
               }
             />
             <ExpandToggle
@@ -341,10 +411,103 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* Genre Picker */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+                        <Tags className="w-4 h-4 text-secondary" /> Genres
+                        <span className="text-xs text-zinc-500 font-normal">(up to {MAX_GENRES})</span>
+                      </label>
+                      {selectedGenres.length > 0 && (
+                        <button
+                          onClick={() => setSelectedGenres([])}
+                          className="text-xs text-zinc-500 hover:text-destructive transition-colors"
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Selected genres badge row */}
+                    {selectedGenres.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
+                        {selectedGenres.map((g) => (
+                          <button
+                            key={g}
+                            onClick={() => toggleGenre(g)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30 hover:bg-destructive/20 hover:text-destructive hover:border-destructive/30 transition-colors"
+                          >
+                            {g}
+                            <span className="text-[10px] leading-none">✕</span>
+                          </button>
+                        ))}
+                        <span className="flex items-center text-[10px] text-zinc-500 ml-1">
+                          {selectedGenres.length}/{MAX_GENRES} selected
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Category rows */}
+                    <div className="space-y-2">
+                      {GENRE_CATEGORIES.map((cat) => {
+                        const isExpanded = expandedGenreCategory === cat.label;
+                        const displayedGenres = isExpanded ? cat.genres : cat.genres.slice(0, 6);
+                        const hasMore = cat.genres.length > 6;
+                        const categorySelected = cat.genres.filter((g) => selectedGenres.includes(g)).length;
+
+                        return (
+                          <div key={cat.label} className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+                                {cat.label}
+                              </span>
+                              {categorySelected > 0 && (
+                                <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-1.5 py-0.5">
+                                  {categorySelected}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {displayedGenres.map((genre) => {
+                                const isSelected = selectedGenres.includes(genre);
+                                const isDisabled = !isSelected && selectedGenres.length >= MAX_GENRES;
+                                return (
+                                  <button
+                                    key={genre}
+                                    onClick={() => !isDisabled && toggleGenre(genre)}
+                                    className={cn(
+                                      "px-2.5 py-1 rounded-full text-xs font-medium border transition-all",
+                                      isSelected
+                                        ? "bg-primary/20 text-primary border-primary/40"
+                                        : isDisabled
+                                        ? "bg-background/20 text-zinc-600 border-border/30 cursor-not-allowed opacity-40"
+                                        : "bg-background/40 text-zinc-400 border-border/50 hover:border-primary/40 hover:text-zinc-200 hover:bg-primary/10"
+                                    )}
+                                  >
+                                    {genre}
+                                  </button>
+                                );
+                              })}
+                              {hasMore && (
+                                <button
+                                  onClick={() => setExpandedGenreCategory(isExpanded ? null : cat.label)}
+                                  className="px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-border/40 text-zinc-500 hover:text-zinc-300 hover:border-border transition-colors"
+                                >
+                                  {isExpanded ? "Show less" : `+${cat.genres.length - 6} more`}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* Genre nudge */}
                   <div className="space-y-2">
                     <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
                       <Music2 className="w-4 h-4 text-secondary" /> Genre Nudge
+                      <span className="text-xs text-zinc-500 font-normal">(free text)</span>
                     </label>
                     <input
                       value={genreNudge}

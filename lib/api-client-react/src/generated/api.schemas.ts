@@ -22,6 +22,8 @@ export interface GenerateTemplateRequest {
   era?: "auto" | "70s" | "80s" | "90s" | "2000s" | "modern";
   /** Optional genre or style override */
   genreNudge?: string;
+  /** Selected genre tags to incorporate into the style prompt */
+  genres?: string[];
 }
 
 export interface SunoTemplate {

@@ -90,6 +90,11 @@ components:
         genreNudge:
           type: string
           description: Optional genre or style override (e.g. "more trap", "jazz influence")
+        genres:
+          type: array
+          items:
+            type: string
+          description: Selected genre tags to incorporate into the style prompt
       required:
         - youtubeUrl
     SunoTemplate:
