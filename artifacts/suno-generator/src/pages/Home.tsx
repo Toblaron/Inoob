@@ -25,8 +25,7 @@ import {
   Ban,
   Gauge,
   Smile,
-  ThumbsUp,
-  ThumbsDown,
+  Star,
   BrainCircuit,
 } from "lucide-react";
 import { useGenerateSunoTemplate } from "@workspace/api-client-react";
@@ -121,7 +120,7 @@ interface HistoryEntry {
   timestamp: number;
   youtubeUrl: string;
   template: SunoTemplate;
-  rating?: "liked" | "disliked" | null;
+  rating?: number | null;
   usedOptions?: UsedOptions;
 }
 
@@ -237,7 +236,8 @@ export default function Home() {
 
   const [shareToast, setShareToast] = useState<"idle" | "copied">("idle");
   const [clipboardToast, setClipboardToast] = useState(false);
-  const [templateRating, setTemplateRating] = useState<"liked" | "disliked" | null>(null);
+  const [templateRating, setTemplateRating] = useState<number | null>(null);
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
   const [ratingSaved, setRatingSaved] = useState(false);
   const ratingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -325,7 +325,7 @@ export default function Home() {
     });
   };
 
-  const rateCurrentTemplate = (rating: "liked" | "disliked") => {
+  const rateCurrentTemplate = (rating: number) => {
     const newRating = templateRating === rating ? null : rating;
     setTemplateRating(newRating);
     setHistory((prev) => {
@@ -354,11 +354,11 @@ export default function Home() {
   });
 
   const buildFeedbackContext = (): string | undefined => {
-    const rated = history.filter((e) => e.rating === "liked" || e.rating === "disliked");
+    const rated = history.filter((e) => typeof e.rating === "number");
     if (rated.length < 2) return undefined;
 
-    const liked = rated.filter((e) => e.rating === "liked");
-    const disliked = rated.filter((e) => e.rating === "disliked");
+    const liked = rated.filter((e) => typeof e.rating === "number" && e.rating >= 4);
+    const disliked = rated.filter((e) => typeof e.rating === "number" && e.rating <= 2);
 
     const countMap = <T extends string>(entries: HistoryEntry[], field: keyof UsedOptions): Map<T, number> => {
       const map = new Map<T, number>();
@@ -397,7 +397,7 @@ export default function Home() {
     }
 
     return parts.length > 0
-      ? `User feedback from ${rated.length} past ratings — ${parts.join(". ")}.`
+      ? `User star ratings (1–5 scale; ≥4 = liked, ≤2 = disliked) from ${rated.length} past templates — ${parts.join(". ")}.`
       : undefined;
   };
 
@@ -461,6 +461,7 @@ export default function Home() {
     setVariationB(null);
     setSelectedVariation(null);
     setTemplateRating(null);
+    setHoverRating(null);
     setRatingSaved(false);
     const usedOpts: UsedOptions = {
       genres: selectedGenres.length > 0 ? selectedGenres : undefined,
@@ -1267,42 +1268,52 @@ export default function Home() {
               />
 
               {/* Rating bar */}
-              <div className="flex items-center justify-center gap-3 mt-5 py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.07] max-w-6xl mx-auto">
-                <span className="text-xs text-zinc-400 mr-1">Rate this template:</span>
-                <button
-                  type="button"
-                  onClick={() => rateCurrentTemplate("liked")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                    templateRating === "liked"
-                      ? "bg-green-500/20 border-green-500/40 text-green-400"
-                      : "bg-white/5 border-white/10 text-zinc-300 hover:bg-green-500/10 hover:border-green-500/20 hover:text-green-400"
-                  )}
+              <div className="flex items-center justify-center gap-3 mt-5 py-3 px-5 rounded-xl bg-white/[0.03] border border-white/[0.07] max-w-6xl mx-auto">
+                <span className="text-xs text-zinc-400 mr-1 shrink-0">Rate this template:</span>
+                <div
+                  className="flex items-center gap-0.5"
+                  onMouseLeave={() => setHoverRating(null)}
                 >
-                  <ThumbsUp className="w-3.5 h-3.5" /> Good
-                </button>
-                <button
-                  type="button"
-                  onClick={() => rateCurrentTemplate("disliked")}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                    templateRating === "disliked"
-                      ? "bg-red-500/20 border-red-500/40 text-red-400"
-                      : "bg-white/5 border-white/10 text-zinc-300 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-400"
-                  )}
-                >
-                  <ThumbsDown className="w-3.5 h-3.5" /> Not great
-                </button>
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const active = (hoverRating ?? templateRating ?? 0) >= star;
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => rateCurrentTemplate(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        className="p-0.5 transition-transform hover:scale-110 focus:outline-none"
+                        aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                      >
+                        <Star
+                          className={cn(
+                            "w-6 h-6 transition-colors",
+                            active
+                              ? hoverRating !== null
+                                ? "fill-yellow-300 text-yellow-300"
+                                : "fill-yellow-400 text-yellow-400"
+                              : "fill-transparent text-zinc-600 hover:text-zinc-400"
+                          )}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+                {templateRating !== null && (
+                  <span className="text-xs text-zinc-400 ml-0.5">
+                    {templateRating === 1 ? "Poor" : templateRating === 2 ? "Fair" : templateRating === 3 ? "Good" : templateRating === 4 ? "Great" : "Perfect"}
+                  </span>
+                )}
                 {ratingSaved && (
-                  <span className="flex items-center gap-1 text-xs text-zinc-400 ml-1">
+                  <span className="flex items-center gap-1 text-xs text-zinc-400">
                     <Check className="w-3 h-3 text-green-400" /> Saved
                   </span>
                 )}
                 {(() => {
-                  const ratedCount = history.filter((e) => e.rating === "liked" || e.rating === "disliked").length;
+                  const ratedCount = history.filter((e) => typeof e.rating === "number").length;
                   if (ratedCount < 2) return null;
                   return (
-                    <span className="flex items-center gap-1 text-xs text-violet-400 ml-auto">
+                    <span className="flex items-center gap-1 text-xs text-violet-400 ml-auto shrink-0">
                       <BrainCircuit className="w-3 h-3" /> Learning from {ratedCount} ratings
                     </span>
                   );
