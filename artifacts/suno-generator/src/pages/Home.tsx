@@ -333,7 +333,9 @@ export default function Home() {
     setSuggestLoading(true);
     setShowStyleControls(true);
     try {
-      const resp = await fetch(`/api/suno/suggest?url=${encodeURIComponent(url)}`);
+      const resp = await fetch(`/api/suno/suggest?url=${encodeURIComponent(url)}`, {
+        signal: AbortSignal.timeout(15000),
+      });
       if (!resp.ok) return;
       const data = await resp.json() as SuggestedControls;
       const hasAny = data.genres.length > 0 || data.era || data.energy || data.tempo;
@@ -343,9 +345,10 @@ export default function Home() {
       if (data.era) setEra(data.era as typeof era);
       if (data.energy) setEnergyLevel(data.energy as typeof energyLevel);
       if (data.tempo) setTempo(data.tempo as typeof tempo);
-      setShowStyleControls(true);
     } catch {}
-    setSuggestLoading(false);
+    finally {
+      setSuggestLoading(false);
+    }
   }, []);
 
   const urlValue = form.watch("youtubeUrl");
