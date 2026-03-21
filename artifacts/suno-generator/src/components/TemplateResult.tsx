@@ -87,18 +87,16 @@ export function TemplateResult({ template }: TemplateResultProps) {
             onCopy={() => copy(template.title, "Title copied!")}
             mono={false}
           />
-          {template.negativePrompt && (
-            <SectionCard
-              variants={itemVariants}
-              icon={<Ban className="w-5 h-5 text-destructive" />}
-              label="SECTION 3"
-              title="Negative Prompt"
-              content={template.negativePrompt}
-              onCopy={() => copy(template.negativePrompt!, "Negative prompt copied!")}
-              mono={true}
-              accent="destructive"
-            />
-          )}
+          <SectionCard
+            variants={itemVariants}
+            icon={<Ban className="w-5 h-5 text-destructive" />}
+            label="SECTION 3"
+            title="Negative Prompt"
+            content={template.negativePrompt}
+            onCopy={() => copy(template.negativePrompt, "Negative prompt copied!")}
+            mono={true}
+            accent="destructive"
+          />
         </div>
       </div>
 
