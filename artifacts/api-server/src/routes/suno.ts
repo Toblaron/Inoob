@@ -5,6 +5,24 @@ import ytdl from "@distube/ytdl-core";
 
 const router: IRouter = Router();
 
+interface MusicBrainzData {
+  releaseYear?: string;
+  genres?: string[];
+  label?: string;
+  album?: string;
+  isrc?: string;
+}
+
+interface DescriptionMusicData {
+  producedBy?: string;
+  writtenBy?: string;
+  album?: string;
+  label?: string;
+  releaseYear?: string;
+  bpm?: string;
+  key?: string;
+}
+
 interface VideoMetadata {
   title: string;
   author: string;
@@ -12,6 +30,7 @@ interface VideoMetadata {
   keywords: string[];
   category: string;
   duration: string;
+  durationSeconds: number | null;
   /** Raw captions/transcript from YouTube */
   captionText: string | null;
   /** Authentic lyrics from a lyrics API */
@@ -21,6 +40,12 @@ interface VideoMetadata {
   /** Cleaned artist name for API searches */
   cleanArtist: string;
   lyricsSource: "user-override" | "api" | "captions" | "none";
+  /** Which lyrics source (lrclib vs lyrics.ovh) */
+  lyricsProvider?: "lrclib" | "lyrics.ovh";
+  /** MusicBrainz verified metadata */
+  musicBrainz?: MusicBrainzData;
+  /** Structured data extracted from the description */
+  descriptionData?: DescriptionMusicData;
 }
 
 function formatDuration(seconds: number): string {
@@ -112,6 +137,148 @@ async function fetchLyricsFromAPI(artist: string, title: string): Promise<string
   }
 }
 
+/**
+ * Fetch lyrics from lrclib.net — higher coverage and reliability than lyrics.ovh.
+ * API: GET https://lrclib.net/api/get?artist_name=...&track_name=...&duration=...
+ * Falls back to search endpoint if exact match fails.
+ */
+async function fetchLyricsFromLrcLib(artist: string, title: string, durationSec?: number): Promise<string | null> {
+  try {
+    // Primary: exact lookup with optional duration for disambiguation
+    const params = new URLSearchParams({ artist_name: artist, track_name: title });
+    if (durationSec) params.set("duration", String(Math.round(durationSec)));
+    const getUrl = `https://lrclib.net/api/get?${params.toString()}`;
+
+    const primaryResp = await fetch(getUrl, {
+      headers: { "Lrclib-Client": "SunoTemplateGenerator/1.0" },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (primaryResp.ok) {
+      const data = await primaryResp.json() as { plainLyrics?: string; instrumental?: boolean };
+      if (data.instrumental) return null;
+      if (data.plainLyrics && data.plainLyrics.length > 50) return data.plainLyrics.trim();
+    }
+
+    // Fallback: search
+    const searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(`${artist} ${title}`)}`;
+    const searchResp = await fetch(searchUrl, {
+      headers: { "Lrclib-Client": "SunoTemplateGenerator/1.0" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!searchResp.ok) return null;
+
+    const results = await searchResp.json() as Array<{ plainLyrics?: string; instrumental?: boolean }>;
+    const best = results.find((r) => !r.instrumental && r.plainLyrics && r.plainLyrics.length > 50);
+    return best?.plainLyrics?.trim() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch verified musical metadata from MusicBrainz.
+ * Returns: release year, genre tags, label, album name, ISRC.
+ * Rate limit: 1 req/s — use AbortSignal.timeout to avoid blocking.
+ */
+async function fetchMusicBrainzData(artist: string, title: string, durationSec?: number): Promise<MusicBrainzData> {
+  try {
+    const query = `recording:"${title}" AND artist:"${artist}"`;
+    const url = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(query)}&fmt=json&limit=5&inc=releases+genres+isrcs`;
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent": "SunoTemplateGenerator/1.0 (suno-template-gen@example.com)",
+        "Accept": "application/json",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!resp.ok) return {};
+
+    const data = await resp.json() as {
+      recordings?: Array<{
+        title: string;
+        length?: number;
+        isrcs?: string[];
+        genres?: Array<{ name: string; count: number }>;
+        releases?: Array<{
+          title: string;
+          date?: string;
+          "label-info"?: Array<{ label?: { name: string } }>;
+        }>;
+      }>;
+    };
+
+    if (!data.recordings || data.recordings.length === 0) return {};
+
+    // Pick best recording by duration proximity if available
+    let best = data.recordings[0];
+    if (durationSec && data.recordings.length > 1) {
+      const targetMs = durationSec * 1000;
+      best = data.recordings.reduce((acc, r) => {
+        if (!r.length) return acc;
+        const diff = Math.abs(r.length - targetMs);
+        const accDiff = acc.length ? Math.abs(acc.length - targetMs) : Infinity;
+        return diff < accDiff ? r : acc;
+      }, data.recordings[0]);
+    }
+
+    const releases = best.releases ?? [];
+    const dates = releases.map((r) => r.date).filter(Boolean).sort() as string[];
+    const releaseYear = dates[0]?.slice(0, 4);
+    const genres = (best.genres ?? [])
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6)
+      .map((g) => g.name);
+    const label = releases[0]?.["label-info"]?.[0]?.label?.name;
+    const album = releases.find((r) => r.date === dates[0])?.title ?? releases[0]?.title;
+    const isrc = best.isrcs?.[0];
+
+    return { releaseYear, genres: genres.length > 0 ? genres : undefined, label, album, isrc };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Parse a YouTube video description for embedded music metadata:
+ * producer credits, writer credits, album, label, release year, BPM, key.
+ */
+function parseDescriptionForMusicData(description: string): DescriptionMusicData {
+  if (!description) return {};
+  const result: DescriptionMusicData = {};
+
+  // Release year (4-digit year between 1950–2030, prioritise near label copyright symbol)
+  const labelYearMatch = description.match(/[℗©]\s*(19[5-9]\d|20[0-2]\d)/);
+  const standaloneYearMatch = description.match(/\b(19[5-9]\d|20[0-2]\d)\b/);
+  result.releaseYear = labelYearMatch?.[1] ?? standaloneYearMatch?.[1];
+
+  // Produced by
+  const prodMatch = description.match(/[Pp]roduced?\s+by[:\s]+([^\n,;()[\]]+)/);
+  if (prodMatch) result.producedBy = prodMatch[1].trim().slice(0, 80);
+
+  // Written by / Words by / Lyrics by
+  const writtenMatch = description.match(/(?:[Ww]ritten?|[Ww]ords?|[Ll]yrics?)\s+by[:\s]+([^\n,;()[\]]+)/);
+  if (writtenMatch) result.writtenBy = writtenMatch[1].trim().slice(0, 80);
+
+  // Album
+  const albumMatch = description.match(/(?:from the album|off the album|album[:\s]+"?)([^"\n.;,()[\]]+)/i);
+  if (albumMatch) result.album = albumMatch[1].trim().replace(/['"]/g, "").slice(0, 60);
+
+  // Label (℗ or © pattern)
+  const labelMatch = description.match(/[℗©]\s*(?:19[5-9]\d|20[0-2]\d)\s+([^\n,;()[\]]+)/);
+  if (labelMatch) result.label = labelMatch[1].trim().slice(0, 60);
+
+  // BPM
+  const bpmMatch = description.match(/(\d{2,3})\s*(?:bpm|BPM)/);
+  if (bpmMatch) result.bpm = bpmMatch[1];
+
+  // Key
+  const keyMatch = description.match(/\b(?:key\s+of\s+)?([A-G][b#]?\s*(?:major|minor|maj|min))\b/i);
+  if (keyMatch) result.key = keyMatch[1].trim();
+
+  return result;
+}
+
 async function fetchCaptions(info: ytdl.videoInfo): Promise<string | null> {
   try {
     const tracks =
@@ -169,72 +336,102 @@ async function fetchCaptions(info: ytdl.videoInfo): Promise<string | null> {
   }
 }
 
-async function fetchViaOembed(url: string): Promise<VideoMetadata> {
+async function fetchViaOembed(url: string): Promise<{ title: string; author: string }> {
   const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
   const response = await fetch(oembedUrl);
-  if (!response.ok) {
-    throw new Error("Could not fetch video metadata via oEmbed.");
-  }
+  if (!response.ok) throw new Error("Could not fetch video metadata via oEmbed.");
   const data = await response.json() as { title: string; author_name: string };
-  const { cleanTitle, cleanArtist } = cleanSongTitle(data.title, data.author_name);
-  return {
-    title: data.title,
-    author: data.author_name,
-    description: "",
-    keywords: [],
-    category: "",
-    duration: "",
-    captionText: null,
-    lyricsText: null,
-    cleanTitle,
-    cleanArtist,
-    lyricsSource: "none",
-  };
+  return { title: data.title, author: data.author_name };
 }
 
 async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
-  let baseMetadata: Omit<VideoMetadata, "lyricsText" | "lyricsSource">;
+  // --- Step 1: Get base metadata from ytdl-core (best source), fall back to oEmbed ---
+  let title = "";
+  let author = "";
+  let description = "";
+  let keywords: string[] = [];
+  let category = "";
+  let durationSeconds: number | null = null;
+  let captionText: string | null = null;
 
   try {
     const info = await ytdl.getInfo(url);
     const details = info.videoDetails;
-    const durationSec = parseInt(details.lengthSeconds, 10);
-    const captionText = await fetchCaptions(info);
-    const { cleanTitle, cleanArtist } = cleanSongTitle(details.title, details.author.name);
-
-    baseMetadata = {
-      title: details.title,
-      author: details.author.name,
-      description: details.description ?? "",
-      keywords: details.keywords ?? [],
-      category: (details as unknown as { category?: string }).category ?? "",
-      duration: formatDuration(durationSec),
-      captionText,
-      cleanTitle,
-      cleanArtist,
-    };
+    durationSeconds = parseInt(details.lengthSeconds, 10);
+    title = details.title;
+    author = details.author.name;
+    description = details.description ?? "";
+    keywords = details.keywords ?? [];
+    category = (details as unknown as { category?: string }).category ?? "";
+    captionText = await fetchCaptions(info);
+    console.log(`ytdl-core OK: "${title}" by "${author}" (${durationSeconds}s)`);
   } catch (ytdlErr) {
-    console.warn("ytdl-core failed, falling back to oEmbed:", ytdlErr);
-    const oembed = await fetchViaOembed(url);
-    return oembed;
+    console.warn("ytdl-core failed, falling back to oEmbed:", (ytdlErr as Error).message?.slice(0, 120));
+    try {
+      const oembed = await fetchViaOembed(url);
+      title = oembed.title;
+      author = oembed.author;
+    } catch {
+      throw new Error("Could not fetch video metadata from YouTube.");
+    }
   }
 
-  // Try to get authentic lyrics from lyrics.ovh API
-  console.log(`Fetching lyrics for: "${baseMetadata.cleanArtist}" - "${baseMetadata.cleanTitle}"`);
-  const lyricsText = await fetchLyricsFromAPI(baseMetadata.cleanArtist, baseMetadata.cleanTitle);
+  const { cleanTitle, cleanArtist } = cleanSongTitle(title, author);
+  const duration = durationSeconds ? formatDuration(durationSeconds) : "";
+  const descriptionData = parseDescriptionForMusicData(description);
+
+  console.log(`Looking up: "${cleanArtist}" - "${cleanTitle}"${durationSeconds ? ` (${durationSeconds}s)` : ""}`);
+
+  // --- Step 2: Parallel-fetch lyrics (lrclib + lyrics.ovh) and MusicBrainz ---
+  const [lrclibLyrics, ovhLyrics, musicBrainz] = await Promise.all([
+    fetchLyricsFromLrcLib(cleanArtist, cleanTitle, durationSeconds ?? undefined),
+    fetchLyricsFromAPI(cleanArtist, cleanTitle),
+    fetchMusicBrainzData(cleanArtist, cleanTitle, durationSeconds ?? undefined),
+  ]);
+
+  // --- Step 3: Pick the best lyrics source ---
+  // lrclib is preferred (more accurate and comprehensive)
+  let lyricsText: string | null = null;
+  let lyricsProvider: "lrclib" | "lyrics.ovh" | undefined;
+
+  if (lrclibLyrics) {
+    lyricsText = lrclibLyrics;
+    lyricsProvider = "lrclib";
+    console.log(`Lyrics via lrclib.net (${lyricsText.length} chars)`);
+  } else if (ovhLyrics) {
+    lyricsText = ovhLyrics;
+    lyricsProvider = "lyrics.ovh";
+    console.log(`Lyrics via lyrics.ovh (${lyricsText.length} chars)`);
+  }
+
+  if (musicBrainz.releaseYear || musicBrainz.genres?.length) {
+    console.log(`MusicBrainz: year=${musicBrainz.releaseYear}, genres=[${musicBrainz.genres?.join(", ")}], album="${musicBrainz.album}"`);
+  }
+
+  const base = {
+    title,
+    author,
+    description,
+    keywords,
+    category,
+    duration,
+    durationSeconds,
+    captionText,
+    cleanTitle,
+    cleanArtist,
+    musicBrainz: (musicBrainz.releaseYear || musicBrainz.genres?.length || musicBrainz.album) ? musicBrainz : undefined,
+    descriptionData: Object.keys(descriptionData).length > 0 ? descriptionData : undefined,
+  };
 
   if (lyricsText) {
-    console.log(`Lyrics found via API (${lyricsText.length} chars)`);
-    return { ...baseMetadata, lyricsText, lyricsSource: "api" };
+    return { ...base, lyricsText, lyricsSource: "api", lyricsProvider };
   }
-
-  if (baseMetadata.captionText) {
-    console.log(`No API lyrics found, using YouTube captions (${baseMetadata.captionText.length} chars)`);
-    return { ...baseMetadata, lyricsText: null, lyricsSource: "captions" };
+  if (captionText) {
+    console.log(`No lyrics found — using YouTube captions (${captionText.length} chars)`);
+    return { ...base, lyricsText: null, lyricsSource: "captions" };
   }
-
-  console.log("No lyrics or captions found, relying on AI knowledge");
-  return { ...baseMetadata, lyricsText: null, lyricsSource: "none" };
+  console.log("No lyrics or captions found — relying on AI knowledge");
+  return { ...base, lyricsText: null, lyricsSource: "none" };
 }
 
 function isValidYouTubeUrl(url: string): boolean {
@@ -257,23 +454,61 @@ function isValidYouTubeUrl(url: string): boolean {
 function buildPromptContext(metadata: VideoMetadata): string {
   const parts: string[] = [];
 
+  // --- Core identification ---
   parts.push(`Song: "${metadata.title}"`);
   parts.push(`Artist/Channel: ${metadata.author}`);
-  parts.push(`Cleaned Title (for template): "${metadata.cleanTitle}"`);
-  parts.push(`Cleaned Artist (for template): "${metadata.cleanArtist}"`);
+  parts.push(`Template Title: "${metadata.cleanTitle}" by ${metadata.cleanArtist}`);
   if (metadata.duration) parts.push(`Duration: ${metadata.duration}`);
   if (metadata.category) parts.push(`YouTube Category: ${metadata.category}`);
-  if (metadata.keywords.length > 0) {
-    parts.push(`YouTube Tags: ${metadata.keywords.join(", ")}`);
+
+  // --- MUSICAL ANALYSIS block (synthesises all data sources into explicit signals for the AI) ---
+  const analysisLines: string[] = [];
+
+  // MusicBrainz verified data (highest confidence)
+  const mb = metadata.musicBrainz;
+  if (mb) {
+    if (mb.releaseYear) analysisLines.push(`Release Year: ${mb.releaseYear} (MusicBrainz verified)`);
+    if (mb.album) analysisLines.push(`Album: "${mb.album}"`);
+    if (mb.label) analysisLines.push(`Record Label: ${mb.label}`);
+    if (mb.genres && mb.genres.length > 0) analysisLines.push(`MusicBrainz Genres: ${mb.genres.join(", ")}`);
+    if (mb.isrc) analysisLines.push(`ISRC: ${mb.isrc}`);
   }
+
+  // Description-extracted data (medium confidence)
+  const dd = metadata.descriptionData;
+  if (dd) {
+    if (dd.releaseYear && !mb?.releaseYear) analysisLines.push(`Release Year (from description): ${dd.releaseYear}`);
+    if (dd.album && !mb?.album) analysisLines.push(`Album (from description): "${dd.album}"`);
+    if (dd.label && !mb?.label) analysisLines.push(`Label (from description): ${dd.label}`);
+    if (dd.producedBy) analysisLines.push(`Produced by: ${dd.producedBy}`);
+    if (dd.writtenBy) analysisLines.push(`Written by: ${dd.writtenBy}`);
+    if (dd.bpm) analysisLines.push(`BPM (from description): ${dd.bpm}`);
+    if (dd.key) analysisLines.push(`Key (from description): ${dd.key}`);
+  }
+
+  // YouTube keywords (lower confidence but useful for style signals)
+  if (metadata.keywords.length > 0) {
+    analysisLines.push(`YouTube Tags: ${metadata.keywords.slice(0, 20).join(", ")}`);
+  }
+
+  // Lyrics source indicator
+  if (metadata.lyricsProvider) {
+    analysisLines.push(`Lyrics Source: ${metadata.lyricsProvider} (authentic — use verbatim)`);
+  }
+
+  if (analysisLines.length > 0) {
+    parts.push(`MUSICAL ANALYSIS (use these signals for accurate style/era/genre decisions):\n${analysisLines.join("\n")}`);
+  }
+
+  // --- Video description (trimmed, for additional context) ---
   if (metadata.description) {
-    const desc = metadata.description.length > 1500
-      ? metadata.description.slice(0, 1500) + "..."
+    const desc = metadata.description.length > 1200
+      ? metadata.description.slice(0, 1200) + "..."
       : metadata.description;
     parts.push(`Video Description:\n${desc}`);
   }
 
-  // Lyrics take priority: user override > API lyrics > captions > nothing
+  // --- Lyrics / Captions (highest priority content) ---
   if (metadata.lyricsSource === "user-override" && metadata.lyricsText) {
     const lyrics = metadata.lyricsText.length > 5000
       ? metadata.lyricsText.slice(0, 5000) + "\n[... lyrics truncated ...]"
@@ -283,12 +518,12 @@ function buildPromptContext(metadata: VideoMetadata): string {
     const lyrics = metadata.lyricsText.length > 5000
       ? metadata.lyricsText.slice(0, 5000) + "\n[... lyrics truncated ...]"
       : metadata.lyricsText;
-    parts.push(`AUTHENTIC LYRICS (from lyrics database — use these verbatim):\n${lyrics}`);
+    parts.push(`AUTHENTIC LYRICS (from ${metadata.lyricsProvider ?? "lyrics database"} — use these verbatim, do not paraphrase or invent lines):\n${lyrics}`);
   } else if (metadata.lyricsSource === "captions" && metadata.captionText) {
     const captions = metadata.captionText.length > 4000
       ? metadata.captionText.slice(0, 4000) + "..."
       : metadata.captionText;
-    parts.push(`YouTube Captions/Transcript (approximate lyrics — clean up errors):\n${captions}`);
+    parts.push(`YouTube Captions/Transcript (approximate lyrics — clean up word errors, fix capitalisation, infer missing parts from your knowledge):\n${captions}`);
   }
 
   return parts.join("\n\n");
@@ -303,6 +538,13 @@ function trimToCharLimit(text: string, limit: number): string {
 }
 
 const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate professional three-section templates for Suno.ai that produce high-quality, non-generic AI music. You will be given rich metadata about a YouTube song and must produce a precise, production-detailed template using every advanced Suno technique available.
+
+CONTEXT DATA PRIORITY (read the context block labels carefully):
+1. "MUSICAL ANALYSIS" block — synthesises verified data from MusicBrainz, description parsing, and YouTube metadata. Use the Release Year, Genre, BPM, Key, Label, and Producer signals here as the factual backbone of your template. These are real, verified facts — do not contradict them.
+2. "AUTHENTIC LYRICS" — real lyrics from a lyrics database. Use verbatim.
+3. "YouTube Captions/Transcript" — approximate lyrics that need cleaning.
+4. "Video Description" — supporting context.
+5. AI background knowledge — fill gaps with what you know about the song.
 
 OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
 {
