@@ -101,7 +101,6 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
     const details = info.videoDetails;
 
     const durationSec = parseInt(details.lengthSeconds, 10);
-
     const captionText = await fetchCaptions(info);
 
     return {
@@ -141,23 +140,17 @@ function buildPromptContext(metadata: VideoMetadata): string {
 
   parts.push(`Song: "${metadata.title}"`);
   parts.push(`Artist/Channel: ${metadata.author}`);
-  parts.push(`Duration: ${metadata.duration}`);
-
-  if (metadata.category) {
-    parts.push(`YouTube Category: ${metadata.category}`);
-  }
-
+  if (metadata.duration) parts.push(`Duration: ${metadata.duration}`);
+  if (metadata.category) parts.push(`YouTube Category: ${metadata.category}`);
   if (metadata.keywords.length > 0) {
     parts.push(`YouTube Tags: ${metadata.keywords.join(", ")}`);
   }
-
   if (metadata.description) {
     const desc = metadata.description.length > 2000
       ? metadata.description.slice(0, 2000) + "..."
       : metadata.description;
     parts.push(`Video Description:\n${desc}`);
   }
-
   if (metadata.captionText) {
     const captions = metadata.captionText.length > 4000
       ? metadata.captionText.slice(0, 4000) + "..."
@@ -167,6 +160,68 @@ function buildPromptContext(metadata: VideoMetadata): string {
 
   return parts.join("\n\n");
 }
+
+const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate professional three-section templates for Suno.ai that produce high-quality AI music generations. You will be given rich metadata about a YouTube song and must produce an accurate, detailed template.
+
+OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
+{
+  "styleOfMusic": "...",
+  "title": "...",
+  "lyrics": "...",
+  "negativePrompt": "..."
+}
+
+=== SECTION 1: styleOfMusic (~900 chars) ===
+The Suno "Style of Music" field. Rules:
+- Capitalization hierarchy: PRIMARY GENRE IN ALL CAPS, Secondary Genre In Title Case, tertiary descriptors in lowercase
+- Start with year/era, then primary genre, sub-genres, BPM, key, then production/instrument details
+- Include: era, genre hierarchy, BPM, musical key, vocal style (male/female/falsetto/raspy/etc), key instruments with specific descriptions, production techniques, mood, atmosphere, spatial/mixing details
+- Target ~900 characters. Be dense and specific.
+- Example format: "1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman Production, 113 BPM, B minor, warm baritone male lead with soulful phrasing, bright gated reverb snare, punchy four-on-the-floor kick, syncopated bassline, shimmering DX7 synth stabs, catchy pop hooks, analog warmth, club-friendly, radio-polished production"
+
+=== SECTION 2: lyrics (~5000 chars, target 4900-4999) ===
+The Suno "Lyrics" field. This is NOT just lyrics — it is a full production metadata + song structure block. Rules:
+
+HEADER BLOCK (production metadata, always first):
+[Produced by AI - Song Genre Description]
+[Mix: describe stereo field, frequency zones, panning]
+[Synthesis: list all key synths/instruments and their roles]
+[Modulation: LFO rates, envelope followers, macros]
+[Rhythm: BPM, swing amounts, groove pattern description]
+[Spatial: reverb type and time, delay type and sync, stereo width]
+[Dynamics: compression ratios, sidechain, saturation]
+[Master: glue compression, EQ, limiter ceiling]
+[Key: musical key]
+[BPM: exact BPM]
+
+SONG STRUCTURE (after header):
+Use these section markers with descriptions: [Intro - brief description], [Verse 1 - brief description], [Pre-Chorus - brief description], [Chorus - brief description], [Bridge - brief description], [Drop - brief description], [Breakdown - brief description], [Outro - brief description]
+
+Bracket conventions:
+- Square brackets [ ] = structural markers and production/instrument directions
+- Parentheses ( ) = performance feel and emotional directions
+
+Within each section, alternate between:
+- [square bracket lines] describing specific instruments, sounds, and production elements
+- (parenthetical lines) describing how it feels or the performance quality
+
+If you have real lyrics from captions, USE THEM and structure them with the metatags. If not, write thematic placeholder lyrics that capture the song's mood.
+
+Target 4900-4999 characters total for this field. Write enough sections and detail to hit this target.
+
+=== SECTION 3: negativePrompt (90-199 chars) ===
+What Suno should NOT generate. Rules:
+- Comma-separated, NO spaces after commas
+- List genres, instruments, styles, vocal types that clash with this song
+- Target 90-199 characters exactly
+- Example: "generic,lo-fi,acoustic guitar,country,jazz,spoken word,rap vocals,orchestral strings,piano ballad,choir,happy pop,folk,ukulele"
+
+=== QUALITY RULES ===
+- No asterisks (*) anywhere in output
+- Pure English only
+- No banned themes: no cyberpunk, neon, ghost-in-machine, tech metaphors
+- No placeholder text or [INSERT X HERE] patterns
+- Every detail should be specific and music-production accurate`;
 
 router.post("/generate-template", async (req, res) => {
   try {
@@ -195,36 +250,16 @@ router.post("/generate-template", async (req, res) => {
     const context = buildPromptContext(metadata);
     const hasCaptions = !!metadata.captionText;
 
+    const userMessage = `Create a Suno.ai template for this song. ${hasCaptions ? "Real lyrics/transcript from captions are provided — use them as the basis for the lyrics section, structured with Suno metatags." : "No captions available — use your knowledge of this song and write thematic placeholder lyrics."}
+
+${context}`;
+
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
       max_completion_tokens: 8192,
       messages: [
-        {
-          role: "system",
-          content: `You are a music analysis expert that creates Suno.ai prompt templates. You will be given detailed information about a song from YouTube, including metadata, tags, description, and${hasCaptions ? " the actual lyrics/transcript from captions" : " possibly no lyrics (use your knowledge of the song if you know it)"}.
-
-Your job is to create the most accurate possible Suno.ai template that would recreate a song with the same feel, structure, genre, and energy.
-
-You must respond with valid JSON matching this exact structure:
-{
-  "styleOfMusic": "comma-separated genre and style tags suitable for Suno's 'Style of Music' field",
-  "title": "a suggested title for the Suno creation",
-  "lyrics": "structured lyrics with Suno metatags",
-  "tags": ["array", "of", "tags"]
-}
-
-Guidelines:
-- **styleOfMusic**: Be very specific and detailed. Include: primary genre, subgenre, mood, vocal style (male/female/falsetto/raspy/etc), key instruments, production style, era/decade influence. Example: "80s synth-pop, upbeat, male vocals, punchy drums, analog synths, reverb-heavy, danceable, 118 BPM"
-- **lyrics**: Use Suno metatags: [Intro], [Verse 1], [Pre-Chorus], [Chorus], [Verse 2], [Bridge], [Outro], [Instrumental], [Guitar Solo], etc.${hasCaptions ? " You have the actual lyrics — use them as the basis, adapting them into proper Suno metatag structure. Preserve the real lyric content." : " Write original placeholder lyrics that capture the mood, themes, and vocal patterns of the original song. Do NOT reproduce copyrighted lyrics."}
-- **tags**: Include BPM estimate, key signature if known, mood descriptors, era, instruments, production techniques, vocal characteristics. Aim for 8-15 tags.
-- **title**: A creative title inspired by the original song.
-- Use the video description and YouTube tags to inform genre, mood, and style accuracy.
-- Match the song duration: ${metadata.duration} — structure the lyrics to fit this length realistically.`
-        },
-        {
-          role: "user",
-          content: `Create a Suno.ai template for this song:\n\n${context}`
-        }
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage }
       ],
       response_format: { type: "json_object" },
     });
@@ -239,7 +274,7 @@ Guidelines:
       styleOfMusic: string;
       title: string;
       lyrics: string;
-      tags: string[];
+      negativePrompt: string;
     };
 
     const template = GenerateSunoTemplateResponse.parse({
@@ -248,7 +283,8 @@ Guidelines:
       styleOfMusic: aiResult.styleOfMusic,
       title: aiResult.title,
       lyrics: aiResult.lyrics,
-      tags: aiResult.tags,
+      negativePrompt: aiResult.negativePrompt,
+      tags: [],
     });
 
     res.json(template);

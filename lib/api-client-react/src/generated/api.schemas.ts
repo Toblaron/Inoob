@@ -21,8 +21,10 @@ export interface SunoTemplate {
   styleOfMusic: string;
   /** Suggested title for the Suno creation */
   title: string;
-  /** Structured lyrics with metatags like [Verse], [Chorus], [Bridge], etc. */
+  /** Structured lyrics/metadata block with production header and Suno metatags */
   lyrics: string;
+  /** Comma-separated list of things Suno should NOT generate (no spaces after commas, 90-199 chars) */
+  negativePrompt: string;
   /** Additional tags for mood, instruments, tempo */
   tags: string[];
 }

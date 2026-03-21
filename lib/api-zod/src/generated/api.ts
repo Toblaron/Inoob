@@ -33,7 +33,12 @@ export const GenerateSunoTemplateResponse = zod.object({
   lyrics: zod
     .string()
     .describe(
-      "Structured lyrics with metatags like [Verse], [Chorus], [Bridge], etc.",
+      "Structured lyrics\/metadata block with production header and Suno metatags",
+    ),
+  negativePrompt: zod
+    .string()
+    .describe(
+      "Comma-separated list of things Suno should NOT generate (no spaces after commas, 90-199 chars)",
     ),
   tags: zod
     .array(zod.string())

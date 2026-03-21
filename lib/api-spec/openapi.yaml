@@ -89,7 +89,10 @@ components:
           description: Suggested title for the Suno creation
         lyrics:
           type: string
-          description: Structured lyrics with metatags like [Verse], [Chorus], [Bridge], etc.
+          description: Structured lyrics/metadata block with production header and Suno metatags
+        negativePrompt:
+          type: string
+          description: Comma-separated list of things Suno should NOT generate (no spaces after commas, 90-199 chars)
         tags:
           type: array
           items:
@@ -101,6 +104,7 @@ components:
         - styleOfMusic
         - title
         - lyrics
+        - negativePrompt
         - tags
     ErrorResponse:
       type: object
