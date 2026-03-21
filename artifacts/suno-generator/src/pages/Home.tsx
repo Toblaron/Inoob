@@ -35,11 +35,21 @@ import { cn } from "@/lib/utils";
 const HISTORY_KEY = "suno-template-history";
 const MAX_HISTORY = 10;
 const MAX_GENRES = 5;
-const MAX_MOODS = 3;
-const MAX_INSTRUMENTS = 4;
+const MAX_MOODS = 4;
+const MAX_INSTRUMENTS = 5;
 
-const MOOD_TAGS = ["Dark", "Euphoric", "Nostalgic", "Melancholic", "Aggressive", "Romantic", "Dreamy", "Rebellious", "Playful", "Mysterious", "Cinematic", "Hopeful"];
-const INSTRUMENT_TAGS = ["Piano", "Guitar", "Synth", "Strings", "Bass", "Choir", "Brass", "Drums", "Violin", "Flute", "Organ", "Sitar"];
+const MOOD_TAGS = [
+  "Dark", "Euphoric", "Nostalgic", "Melancholic", "Aggressive", "Romantic",
+  "Dreamy", "Rebellious", "Playful", "Mysterious", "Cinematic", "Hopeful",
+  "Angry", "Tender", "Haunted", "Triumphant", "Vulnerable", "Defiant",
+  "Serene", "Intense", "Wistful", "Bittersweet", "Groovy", "Frantic",
+];
+const INSTRUMENT_TAGS = [
+  "Piano", "Guitar", "Synth", "Strings", "Bass", "Choir", "Brass", "Drums",
+  "Violin", "Flute", "Organ", "Sitar", "Cello", "Saxophone", "Trumpet",
+  "Harp", "Banjo", "Ukulele", "Mandolin", "Marimba", "Theremin", "Mellotron",
+  "Pedal Steel", "Dulcimer",
+];
 const NEGATIVE_PRESETS: { label: string; value: string }[] = [
   { label: "No rap vocals", value: "no rap" },
   { label: "No autotune", value: "no autotune" },
@@ -57,6 +67,14 @@ const NEGATIVE_PRESETS: { label: string; value: string }[] = [
   { label: "No country influence", value: "no country" },
   { label: "No EDM / club beat", value: "no EDM,no club beat" },
   { label: "No ambient pads", value: "no ambient pads" },
+  { label: "No violin / strings", value: "no violin,no strings" },
+  { label: "No brass / horns", value: "no brass,no horns" },
+  { label: "No trap beats", value: "no trap beats,no trap hi-hats" },
+  { label: "No reggae rhythm", value: "no reggae" },
+  { label: "No falsetto", value: "no falsetto" },
+  { label: "No vocaloid / robotic", value: "no vocaloid,no robotic vocals" },
+  { label: "No lo-fi crackle", value: "no lo-fi,no vinyl crackle" },
+  { label: "No reverb / wet mix", value: "no heavy reverb,no wet mix" },
 ];
 
 interface GenreCategory {
@@ -80,10 +98,10 @@ const GENRE_CATEGORIES: GenreCategory[] = [
 ];
 
 const ALL_GENRES = GENRE_CATEGORIES.flatMap((c) => c.genres);
-const ALL_ERAS = ["70s", "80s", "90s", "2000s", "modern"] as const;
-const ALL_ENERGIES = ["chill", "medium", "high"] as const;
-const ALL_TEMPOS = ["slow", "mid", "uptempo", "fast"] as const;
-const ALL_GENDERS = ["male", "female"] as const;
+const ALL_ERAS = ["50s", "60s", "70s", "80s", "90s", "2000s", "2010s", "modern"] as const;
+const ALL_ENERGIES = ["very chill", "chill", "medium", "high", "intense"] as const;
+const ALL_TEMPOS = ["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"] as const;
+const ALL_VOCALS = ["male", "female", "mixed", "duet", "no vocals"] as const;
 
 interface HistoryEntry {
   id: string;
@@ -178,16 +196,16 @@ export default function Home() {
   const [showManualLyrics, setShowManualLyrics] = useState(false);
   const [showNegBuilder, setShowNegBuilder] = useState(false);
   const [manualLyrics, setManualLyrics] = useState("");
-  const [vocalGender, setVocalGender] = useState<"auto" | "male" | "female">("auto");
-  const [energyLevel, setEnergyLevel] = useState<"auto" | "chill" | "medium" | "high">("auto");
-  const [era, setEra] = useState<"auto" | "70s" | "80s" | "90s" | "2000s" | "modern">("auto");
+  const [vocalGender, setVocalGender] = useState<"auto" | "male" | "female" | "mixed" | "duet" | "no vocals">("auto");
+  const [energyLevel, setEnergyLevel] = useState<"auto" | "very chill" | "chill" | "medium" | "high" | "intense">("auto");
+  const [era, setEra] = useState<"auto" | "50s" | "60s" | "70s" | "80s" | "90s" | "2000s" | "2010s" | "modern">("auto");
   const [genreNudge, setGenreNudge] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [expandedGenreCategory, setExpandedGenreCategory] = useState<string | null>(null);
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
   const [mode, setMode] = useState<"cover" | "inspired" | null>(null);
-  const [tempo, setTempo] = useState<"slow" | "mid" | "uptempo" | "fast" | null>(null);
+  const [tempo, setTempo] = useState<"ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper" | null>(null);
   const [excludeTags, setExcludeTags] = useState<string[]>([]);
 
   const [videoPreview, setVideoPreview] = useState<VideoPreview | null>(null);
@@ -316,7 +334,7 @@ export default function Home() {
     setSelectedGenres(pickN(ALL_GENRES, Math.floor(Math.random() * 3) + 1));
     setSelectedMoods(pickN(MOOD_TAGS, Math.floor(Math.random() * 2) + 1));
     setSelectedInstruments(pickN(INSTRUMENT_TAGS, Math.floor(Math.random() * 3) + 1));
-    setVocalGender(pick(["auto", ...ALL_GENDERS]));
+    setVocalGender(pick(["auto", ...ALL_VOCALS]));
     setEnergyLevel(pick(["auto", ...ALL_ENERGIES]));
     setEra(pick(["auto", ...ALL_ERAS]));
     setTempo(pick(ALL_TEMPOS));
@@ -672,63 +690,78 @@ export default function Home() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-5 space-y-5">
-                  <p className="text-xs text-zinc-500 font-medium tracking-wide uppercase">
-                    Style preferences — these guide the AI output
-                  </p>
+                <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-4 space-y-4">
+                  <p className="text-[11px] text-zinc-500 font-medium tracking-widest uppercase">Style preferences — guide the AI output</p>
 
-                  {/* Vocal gender */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                      <Mic2 className="w-4 h-4 text-secondary" /> Vocal Gender
-                    </label>
-                    <div className="flex gap-2">
-                      {(["auto", "male", "female"] as const).map((v) => (
-                        <ChipButton key={v} active={vocalGender === v} onClick={() => setVocalGender(v)}>
-                          {v === "auto" ? "Auto" : v.charAt(0).toUpperCase() + v.slice(1)}
-                        </ChipButton>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Energy level */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                      <Zap className="w-4 h-4 text-secondary" /> Energy Level
-                    </label>
-                    <div className="flex gap-2">
-                      {(["auto", "chill", "medium", "high"] as const).map((v) => (
-                        <ChipButton key={v} active={energyLevel === v} onClick={() => setEnergyLevel(v)}>
-                          {v.charAt(0).toUpperCase() + v.slice(1)}
-                        </ChipButton>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tempo / BPM */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                      <Gauge className="w-4 h-4 text-secondary" /> Tempo / BPM
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {(["slow", "mid", "uptempo", "fast"] as const).map((v) => {
-                        const label = { slow: "Slow (<80)", mid: "Mid (80–110)", uptempo: "Up-tempo (110–130)", fast: "Fast (130+)" }[v];
-                        return (
-                          <ChipButton key={v} active={tempo === v} onClick={() => setTempo((prev) => prev === v ? null : v)}>
-                            {label}
+                  {/* Row 1: Vocal + Energy side by side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        <Mic2 className="w-3 h-3 text-secondary" /> Vocals
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["auto", ...ALL_VOCALS] as const).map((v) => (
+                          <ChipButton key={v} active={vocalGender === v} onClick={() => setVocalGender(v as typeof vocalGender)}>
+                            {v === "auto" ? "Auto" : v.charAt(0).toUpperCase() + v.slice(1)}
                           </ChipButton>
-                        );
-                      })}
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        <Zap className="w-3 h-3 text-secondary" /> Energy
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["auto", ...ALL_ENERGIES] as const).map((v) => (
+                          <ChipButton key={v} active={energyLevel === v} onClick={() => setEnergyLevel(v as typeof energyLevel)}>
+                            {v === "auto" ? "Auto" : v.charAt(0).toUpperCase() + v.slice(1)}
+                          </ChipButton>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 2: Tempo + Era side by side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        <Gauge className="w-3 h-3 text-secondary" /> Tempo
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(ALL_TEMPOS as readonly string[]).map((v) => {
+                          const labels: Record<string, string> = {
+                            ballad: "Ballad", slow: "Slow", mid: "Mid", groove: "Groove",
+                            uptempo: "Up-tempo", fast: "Fast", hyper: "Hyper",
+                          };
+                          return (
+                            <ChipButton key={v} active={tempo === v} onClick={() => setTempo((prev) => prev === v ? null : v as typeof tempo)}>
+                              {labels[v]}
+                            </ChipButton>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        <Clock className="w-3 h-3 text-secondary" /> Era
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["auto", ...ALL_ERAS] as const).map((v) => (
+                          <ChipButton key={v} active={era === v} onClick={() => setEra(v as typeof era)}>
+                            {v === "auto" ? "Auto" : v}
+                          </ChipButton>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
                   {/* Mood / Vibe */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                      <Smile className="w-4 h-4 text-secondary" /> Mood / Vibe
-                      <span className="text-xs text-zinc-500 font-normal">(up to {MAX_MOODS})</span>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      <Smile className="w-3 h-3 text-secondary" /> Mood / Vibe
+                      <span className="text-[10px] text-zinc-600 font-normal normal-case tracking-normal">(up to {MAX_MOODS})</span>
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {MOOD_TAGS.map((mood) => {
                         const isSelected = selectedMoods.includes(mood);
                         const isDisabled = !isSelected && selectedMoods.length >= MAX_MOODS;
@@ -738,9 +771,9 @@ export default function Home() {
                             type="button"
                             onClick={() => !isDisabled && setSelectedMoods((p) => toggleSet(p, mood, MAX_MOODS))}
                             className={cn(
-                              "px-3 py-1 rounded-full text-xs font-medium border transition-all",
+                              "px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all",
                               isSelected ? "bg-secondary/20 text-secondary border-secondary/40"
-                                : isDisabled ? "opacity-30 cursor-not-allowed bg-white/5 border-white/5 text-zinc-500"
+                                : isDisabled ? "opacity-25 cursor-not-allowed bg-white/5 border-white/5 text-zinc-500"
                                 : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
                             )}
                           >
@@ -752,12 +785,12 @@ export default function Home() {
                   </div>
 
                   {/* Instruments */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                      <Piano className="w-4 h-4 text-secondary" /> Instrument Focus
-                      <span className="text-xs text-zinc-500 font-normal">(up to {MAX_INSTRUMENTS})</span>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      <Piano className="w-3 h-3 text-secondary" /> Instruments
+                      <span className="text-[10px] text-zinc-600 font-normal normal-case tracking-normal">(up to {MAX_INSTRUMENTS})</span>
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {INSTRUMENT_TAGS.map((inst) => {
                         const isSelected = selectedInstruments.includes(inst);
                         const isDisabled = !isSelected && selectedInstruments.length >= MAX_INSTRUMENTS;
@@ -767,9 +800,9 @@ export default function Home() {
                             type="button"
                             onClick={() => !isDisabled && setSelectedInstruments((p) => toggleSet(p, inst, MAX_INSTRUMENTS))}
                             className={cn(
-                              "px-3 py-1 rounded-full text-xs font-medium border transition-all",
+                              "px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all",
                               isSelected ? "bg-primary/20 text-primary border-primary/40"
-                                : isDisabled ? "opacity-30 cursor-not-allowed bg-white/5 border-white/5 text-zinc-500"
+                                : isDisabled ? "opacity-25 cursor-not-allowed bg-white/5 border-white/5 text-zinc-500"
                                 : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
                             )}
                           >
@@ -780,59 +813,45 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Era */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                      <Clock className="w-4 h-4 text-secondary" /> Era / Decade
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {(["auto", "70s", "80s", "90s", "2000s", "modern"] as const).map((v) => (
-                        <ChipButton key={v} active={era === v} onClick={() => setEra(v)}>
-                          {v === "auto" ? "Auto" : v}
-                        </ChipButton>
-                      ))}
-                    </div>
-                  </div>
-
                   {/* Genre Picker */}
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                        <Tags className="w-4 h-4 text-secondary" /> Genres
-                        <span className="text-xs text-zinc-500 font-normal">(up to {MAX_GENRES})</span>
+                      <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        <Tags className="w-3 h-3 text-secondary" /> Genres
+                        <span className="text-[10px] text-zinc-600 font-normal normal-case tracking-normal">(up to {MAX_GENRES})</span>
                       </label>
                       {selectedGenres.length > 0 && (
-                        <button type="button" onClick={() => setSelectedGenres([])} className="text-xs text-zinc-500 hover:text-destructive transition-colors">Clear all</button>
+                        <button type="button" onClick={() => setSelectedGenres([])} className="text-[11px] text-zinc-500 hover:text-destructive transition-colors">Clear all</button>
                       )}
                     </div>
                     {selectedGenres.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
+                      <div className="flex flex-wrap gap-1 p-2 rounded-lg bg-primary/5 border border-primary/20">
                         {selectedGenres.map((g) => (
                           <button
                             key={g}
                             type="button"
                             onClick={() => setSelectedGenres((p) => p.filter((x) => x !== g))}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30 hover:bg-destructive/20 hover:text-destructive hover:border-destructive/30 transition-colors"
+                            className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/20 text-primary border border-primary/30 hover:bg-destructive/20 hover:text-destructive hover:border-destructive/30 transition-colors"
                           >
-                            {g}<span className="text-[10px] leading-none">✕</span>
+                            {g}<span className="text-[9px] leading-none ml-0.5">✕</span>
                           </button>
                         ))}
                         <span className="flex items-center text-[10px] text-zinc-500 ml-1">{selectedGenres.length}/{MAX_GENRES}</span>
                       </div>
                     )}
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {GENRE_CATEGORIES.map((cat) => {
                         const isExpanded = expandedGenreCategory === cat.label;
-                        const displayedGenres = isExpanded ? cat.genres : cat.genres.slice(0, 6);
-                        const hasMore = cat.genres.length > 6;
+                        const displayedGenres = isExpanded ? cat.genres : cat.genres.slice(0, 7);
+                        const hasMore = cat.genres.length > 7;
                         const catSelected = cat.genres.filter((g) => selectedGenres.includes(g)).length;
                         return (
-                          <div key={cat.label} className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">{cat.label}</span>
-                              {catSelected > 0 && <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-1.5 py-0.5">{catSelected}</span>}
+                          <div key={cat.label} className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">{cat.label}</span>
+                              {catSelected > 0 && <span className="text-[9px] font-medium text-primary bg-primary/10 rounded-full px-1.5 py-0.5">{catSelected}</span>}
                             </div>
-                            <div className="flex flex-wrap gap-1.5">
+                            <div className="flex flex-wrap gap-1">
                               {displayedGenres.map((genre) => {
                                 const isSelected = selectedGenres.includes(genre);
                                 const isDisabled = !isSelected && selectedGenres.length >= MAX_GENRES;
@@ -842,7 +861,7 @@ export default function Home() {
                                     type="button"
                                     onClick={() => !isDisabled && setSelectedGenres((p) => toggleSet(p, genre, MAX_GENRES))}
                                     className={cn(
-                                      "px-2.5 py-1 rounded-full text-xs font-medium border transition-all",
+                                      "px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all",
                                       isSelected ? "bg-primary/20 text-primary border-primary/40"
                                         : isDisabled ? "bg-background/20 text-zinc-600 border-border/30 cursor-not-allowed opacity-40"
                                         : "bg-background/40 text-zinc-400 border-border/50 hover:border-primary/40 hover:text-zinc-200 hover:bg-primary/10"
@@ -856,9 +875,9 @@ export default function Home() {
                                 <button
                                   type="button"
                                   onClick={() => setExpandedGenreCategory(isExpanded ? null : cat.label)}
-                                  className="px-2.5 py-1 rounded-full text-xs font-medium border border-dashed border-border/40 text-zinc-500 hover:text-zinc-300 hover:border-border transition-colors"
+                                  className="px-2 py-0.5 rounded-full text-[11px] font-medium border border-dashed border-border/40 text-zinc-500 hover:text-zinc-300 hover:border-border transition-colors"
                                 >
-                                  {isExpanded ? "Show less" : `+${cat.genres.length - 6} more`}
+                                  {isExpanded ? "less" : `+${cat.genres.length - 7}`}
                                 </button>
                               )}
                             </div>
@@ -869,16 +888,16 @@ export default function Home() {
                   </div>
 
                   {/* Genre nudge */}
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
-                      <Music2 className="w-4 h-4 text-secondary" /> Genre Nudge
-                      <span className="text-xs text-zinc-500 font-normal">(free text)</span>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      <Music2 className="w-3 h-3 text-secondary" /> Custom nudge
+                      <span className="text-[10px] text-zinc-600 font-normal normal-case tracking-normal">(free text)</span>
                     </label>
                     <input
                       value={genreNudge}
                       onChange={(e) => setGenreNudge(e.target.value)}
-                      placeholder='e.g. "more trap", "jazz influence", "synthwave"'
-                      className="w-full px-4 py-2.5 rounded-xl bg-background/50 border border-border text-sm text-foreground placeholder:text-zinc-600 focus:outline-none focus:border-primary/50 transition-colors"
+                      placeholder='e.g. "more trap", "jazz influence", "synthwave vibes"'
+                      className="w-full px-3 py-2 rounded-lg bg-background/50 border border-border text-xs text-foreground placeholder:text-zinc-600 focus:outline-none focus:border-primary/50 transition-colors"
                     />
                   </div>
                 </div>
@@ -905,7 +924,7 @@ export default function Home() {
                       <button type="button" onClick={() => setExcludeTags([])} className="text-xs text-zinc-500 hover:text-destructive transition-colors">Clear all</button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {NEGATIVE_PRESETS.map((preset) => {
                       const tags = preset.value.split(",");
                       const isChecked = tags.some((t) => excludeTags.includes(t));
@@ -913,7 +932,7 @@ export default function Home() {
                         <label
                           key={preset.value}
                           className={cn(
-                            "flex items-center gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm",
+                            "flex items-center gap-1.5 px-2 py-1.5 rounded-lg border cursor-pointer transition-all text-[11px]",
                             isChecked
                               ? "bg-destructive/10 border-destructive/30 text-destructive"
                               : "bg-white/4 border-border/40 text-zinc-400 hover:border-border hover:text-zinc-200"
@@ -931,10 +950,10 @@ export default function Home() {
                             }}
                           />
                           <span className={cn(
-                            "w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
+                            "w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors",
                             isChecked ? "bg-destructive/30 border-destructive/50" : "border-border"
                           )}>
-                            {isChecked && <Check className="w-2.5 h-2.5" />}
+                            {isChecked && <Check className="w-2 h-2" />}
                           </span>
                           {preset.label}
                         </label>

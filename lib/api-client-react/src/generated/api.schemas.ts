@@ -14,12 +14,12 @@ export interface GenerateTemplateRequest {
   youtubeUrl: string;
   /** Optional manually provided lyrics to use instead of fetching from APIs */
   manualLyrics?: string;
-  /** Preferred vocal gender for the style prompt */
-  vocalGender?: "auto" | "male" | "female";
+  /** Preferred vocal type for the style prompt */
+  vocalGender?: "auto" | "male" | "female" | "mixed" | "duet" | "no vocals";
   /** Energy level of the track */
-  energyLevel?: "chill" | "medium" | "high";
+  energyLevel?: "auto" | "very chill" | "chill" | "medium" | "high" | "intense";
   /** Target musical era or decade */
-  era?: "auto" | "70s" | "80s" | "90s" | "2000s" | "modern";
+  era?: "auto" | "50s" | "60s" | "70s" | "80s" | "90s" | "2000s" | "2010s" | "modern";
   /** Optional genre or style override */
   genreNudge?: string;
   /** Selected genre tags to incorporate into the style prompt */
@@ -31,7 +31,7 @@ export interface GenerateTemplateRequest {
   /** Generation mode — faithful cover or creative inspiration */
   mode?: "cover" | "inspired";
   /** Target BPM range */
-  tempo?: "slow" | "mid" | "uptempo" | "fast";
+  tempo?: "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper";
   /** Tags to explicitly exclude from the negative prompt */
   excludeTags?: string[];
   /** Which variation to generate (1 or 2) */

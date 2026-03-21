@@ -454,32 +454,47 @@ function buildStyleControls(opts: {
     lines.push(`USER PREFERENCE — Featured instruments: ${opts.instruments.join(", ")}. Highlight these in Section 1 and include them in the production header of Section 2.`);
   }
   if (opts.vocalGender && opts.vocalGender !== "auto") {
-    lines.push(`USER PREFERENCE — Vocal gender: ${opts.vocalGender}. Use a ${opts.vocalGender} vocalist.`);
+    const vocalMap: Record<string, string> = {
+      male: "male lead vocalist — chest voice, masculine timbre",
+      female: "female lead vocalist — feminine timbre, soprano or mezzo range",
+      mixed: "mixed vocals — both male and female voices present, harmonised",
+      duet: "duet — two vocalists sharing the lead, call-and-response or parallel harmonies",
+      "no vocals": "fully instrumental — no singing or lyrics, purely instrumental arrangement",
+    };
+    lines.push(`USER PREFERENCE — Vocal type: ${vocalMap[opts.vocalGender] ?? opts.vocalGender}.`);
   }
   if (opts.energyLevel && opts.energyLevel !== "auto") {
     const energyMap: Record<string, string> = {
+      "very chill": "very chill, ambient, near-silent energy — minimal percussion, whispered or no vocals, open spacious mix",
       chill: "chill, relaxed, low-energy — quiet dynamics, intimate delivery, sparse arrangement",
       medium: "medium energy — balanced dynamics, moderate intensity, clear arrangement",
       high: "high-energy, intense — loud dynamics, explosive choruses, dense arrangement, driving momentum",
+      intense: "maximum intensity — relentless energy, wall-of-sound production, powerful and overwhelming dynamics",
     };
     lines.push(`USER PREFERENCE — Energy level: ${energyMap[opts.energyLevel] ?? opts.energyLevel}.`);
   }
   if (opts.tempo) {
     const tempoMap: Record<string, string> = {
-      slow: "slow tempo, under 80 BPM — languid, spacious phrasing",
-      mid: "mid tempo, 80–110 BPM — steady groove, comfortable pace",
-      uptempo: "up-tempo, 110–130 BPM — driving energy, danceable",
-      fast: "fast tempo, 130+ BPM — high-octane, frenetic, adrenaline",
+      ballad: "ballad tempo, under 60 BPM — slow, emotional, spacious phrasing, long sustained notes",
+      slow: "slow tempo, 60–80 BPM — languid, spacious phrasing, unhurried feel",
+      mid: "mid tempo, 80–100 BPM — steady groove, comfortable conversational pace",
+      groove: "groove tempo, 100–115 BPM — laid-back funk pocket, head-nodding momentum",
+      uptempo: "up-tempo, 115–130 BPM — driving energy, danceable, urgent forward motion",
+      fast: "fast tempo, 130–145 BPM — high-octane, frenetic, adrenaline rush",
+      hyper: "hyper-speed, 145+ BPM — extreme tempo, relentless drive, manic energy",
     };
     lines.push(`USER PREFERENCE — Tempo: ${tempoMap[opts.tempo] ?? opts.tempo}. Include a BPM indicator in the style tags.`);
   }
   if (opts.era && opts.era !== "auto") {
     const eraMap: Record<string, string> = {
-      "70s": "1970s — analog warmth, tape saturation, lush orchestration, vinyl grain",
-      "80s": "1980s — gated reverb drums, synth-pop, DX7 keys, bright compressed production",
-      "90s": "1990s — grunge, alt-rock, or golden-era hip-hop depending on genre; punchy transients",
-      "2000s": "2000s — digital clarity, glossy pop production, early EDM influence",
-      modern: "modern/contemporary — hyper-clean production, wide stereo, streaming-optimized loudness",
+      "50s": "1950s — mono recording warmth, early rock & roll, doo-wop harmonies, slap-back echo, upright bass",
+      "60s": "1960s — tube amp warmth, Motown string arrangements, psychedelic tape effects, close-mic'd vocals",
+      "70s": "1970s — analog warmth, tape saturation, lush orchestration, vinyl grain, funky live rhythm sections",
+      "80s": "1980s — gated reverb drums, synth-pop, DX7 electric piano, bright compressed production, chorus effects",
+      "90s": "1990s — grunge, alt-rock, or golden-era hip-hop depending on genre; punchy transients, flannel-era rawness",
+      "2000s": "2000s — digital clarity, glossy pop production, early EDM influence, AutoTune sheen",
+      "2010s": "2010s — EDM drop culture, trap hi-hats, side-chain compression, maximalist production, festival anthems",
+      modern: "modern/contemporary (2020s) — hyper-clean production, wide stereo, streaming-optimized loudness, spatial audio feel",
     };
     lines.push(`USER PREFERENCE — Era: ${eraMap[opts.era] ?? opts.era}. Make the style reflect this era's production aesthetics.`);
   }
