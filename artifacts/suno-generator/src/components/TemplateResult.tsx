@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
+import type { Variants } from "framer-motion";
 import { Copy, Sparkles, Music, Mic2, Heading, Ban } from "lucide-react";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
-import type { SunoTemplate } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { SunoTemplate } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
 interface TemplateResultProps {
@@ -11,7 +12,7 @@ interface TemplateResultProps {
 export function TemplateResult({ template }: TemplateResultProps) {
   const { copy } = useCopyToClipboard();
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
@@ -19,9 +20,13 @@ export function TemplateResult({ template }: TemplateResultProps) {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { type: "spring", stiffness: 300, damping: 24 },
+    },
   };
 
   const copyAll = () => {
@@ -66,7 +71,7 @@ export function TemplateResult({ template }: TemplateResultProps) {
         </button>
       </motion.div>
 
-      {/* Top row: Style + Title side by side */}
+      {/* Top row: Style + Title/NegativePrompt side by side */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SectionCard
           variants={itemVariants}
@@ -120,7 +125,7 @@ export function TemplateResult({ template }: TemplateResultProps) {
 
         <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
           <pre className="font-mono text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap">
-            {template.lyrics.split(/(\[[^\]]*\]|\([^)]*\))/).map((part, i) => {
+            {template.lyrics.split(/(\[[^\]]*\]|\([^)]*\))/).map((part: string, i: number) => {
               if (part.startsWith("[") && part.endsWith("]")) {
                 return (
                   <span key={i} className="text-secondary font-semibold">
@@ -159,7 +164,7 @@ function SectionCard({
   title: string;
   content: string;
   onCopy: () => void;
-  variants: object;
+  variants: Variants;
   mono: boolean;
   accent?: "destructive";
 }) {

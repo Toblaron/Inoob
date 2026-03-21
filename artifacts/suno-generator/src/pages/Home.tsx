@@ -31,7 +31,7 @@ export default function Home() {
     mutate({ data: { youtubeUrl: values.youtubeUrl } });
   };
 
-  const errorMessage = error?.response?.data?.error || error?.message;
+  const errorMessage = error?.data?.error || error?.message;
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-start pt-20 px-4 pb-24 overflow-x-hidden">

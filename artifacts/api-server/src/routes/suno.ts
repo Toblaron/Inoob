@@ -108,7 +108,7 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
       author: details.author.name,
       description: details.description ?? "",
       keywords: details.keywords ?? [],
-      category: (details as Record<string, unknown> & { category?: string }).category ?? "",
+      category: (details as unknown as { category?: string }).category ?? "",
       duration: formatDuration(durationSec),
       captionText,
     };
