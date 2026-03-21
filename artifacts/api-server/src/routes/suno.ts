@@ -313,45 +313,60 @@ OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
 The Suno "Style of Music" field. Rules:
 - Capitalization hierarchy: PRIMARY GENRE IN ALL CAPS, Secondary Genre In Title Case, tertiary descriptors in lowercase
 - Order: era/year → PRIMARY GENRE → sub-genres → BPM → key → chord flavour → vocal descriptor → instrument details → production quality → dynamics → mood/atmosphere
-- Vocal descriptor must specify: gender (male/female), timbre (baritone/tenor/soprano/alto/raspy/breathy/soulful/angelic), and delivery style (falsetto, vibrato, melismatic, conversational)
-- Include dynamics: e.g. "quiet introspective verses, explosive anthemic choruses, dynamic shifts" or "crescendo build into drop"
-- Include production quality descriptor: e.g. "crisp and clean production", "analog warmth", "reverb-drenched", "hyper-modern production", "lo-fi textures"
+- Vocal descriptor must specify: gender (male/female), timbre (baritone/tenor/soprano/alto/raspy/breathy/soulful/angelic), delivery style (falsetto, vibrato, melismatic, Sprechgesang, lounge singer, sultry, resonant), AND a brief "actor-like" character note (e.g. "world-weary swagger", "intimate confessional", "soaring anthemic conviction")
+- Include dynamics: e.g. "quiet introspective verses, explosive anthemic choruses, dynamic shifts" or "crescendo build into drop" — always state the CONTRAST between sections
+- Include production quality + mastering descriptor: e.g. "radio-ready mix", "crisp and clean production with wide stereo image", "analog warmth", "reverb-drenched", "hyper-modern production", "punchy drums with controlled dynamic range"
 - Include chord flavour if relevant: e.g. "I-IV-V-vi pop progression", "minor ii-V-I jazz changes", "Am-G-C-F loop"
+- Describe instruments with articulation vocabulary: not just "guitar" but "palm-muted rhythm guitar", "staccato piano fills", "legato string swells", "pizzicato bass plucks", "marcato brass hits", "legato saxophone lead"
+- Include performance nuance vocabulary: e.g. "slightly behind-the-beat drum feel", "breathy intimate vocal delivery", "aggressive pick attack on downbeats", "gentle imperceptible string swells", "subtle pitch bend on phrase endings"
 - Target ~900 characters. Be dense and hyper-specific. Avoid vague words like "catchy" or "beautiful" — always specify HOW.
-- Example: "1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman production, 113 BPM, B minor, I-IV-V-vi chord structure, warm baritone male lead with soulful phrasing and light vibrato, bright gated-reverb snare on 2 and 4, punchy four-on-the-floor kick with sub tail, syncopated slap bass, shimmering DX7 synth stabs panned wide, sawtooth lead synth, crisp and clean production, quiet verse builds to explosive chorus, club-friendly radio polish, analog warmth with slight tape saturation"
+- Example: "1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman production, 113 BPM, B minor, I-IV-V-vi chord structure, warm baritone male lead with soulful legato phrasing and light vibrato — intimate yet commanding delivery, bright gated-reverb snare on 2 and 4, punchy four-on-the-floor kick with sub tail, staccato syncopated slap bass, shimmering DX7 synth stabs panned wide, sawtooth lead synth, crisp and clean production with radio-ready master, quiet verses build to explosive chorus, analog warmth with slight tape saturation, wide stereo image"
 
 === SECTION 2: lyrics (up to 4900 chars) ===
 The Suno "Lyrics" field. This is a FULL PRODUCTION METADATA + STRUCTURED LYRICS block.
 
 --- HEADER BLOCK (always first, before any lyrics) ---
 [Produced by AI - Genre Description]
-[Vocal: specify vocalist type — e.g. Male vocalist, Female vocalist, Raspy male vocal, Soulful female vocal, Angelic voice, Echoing vocals]
-[Mix: stereo field, frequency zones, panning details]
-[Synthesis: all key synths/instruments and their specific roles]
-[Modulation: LFO rates, filter sweeps, envelope followers, macro assignments]
-[Rhythm: exact BPM, swing %, groove pattern, kick/snare pattern description]
-[Spatial: reverb type and decay time, delay sync, stereo width, room size]
-[Dynamics: compression ratios, sidechain pumping, saturation, limiting]
-[Master: glue compression, high-shelf EQ, true-peak limiter ceiling]
-[Chord Progression: list the main chord loop, e.g. Am-G-C-F or I-V-vi-IV]
-[Key: musical key and mode]
+[Vocal: vocalist type AND actor-like character — e.g. "Male vocalist, world-weary baritone whispering close to the mic with cynical detachment" or "Female vocalist, bright alto soprano with soaring anthemic conviction, melismatic on held notes"]
+[Mix: stereo field description — e.g. "Sub mono <60Hz, midrange centered, synths wide >400Hz, shimmer ultra-wide >2kHz, well-separated instruments"]
+[Synthesis: instruments with articulation — e.g. "Legato DX7 lead, staccato rhythm guitar palm-muted, pizzicato bass, marcato brass stabs, wavetable shimmer pad"]
+[Modulation: specific effects — e.g. "subtle shimmering stereo chorus on guitar, slow sweeping phaser on synth pad, rhythmic tremolo on electric piano, LFO 0.25Hz filter drift"]
+[Rhythm: exact BPM, swing %, kick/snare pattern — e.g. "113 BPM, 8% hat swing, four-on-the-floor kick, gated reverb snare on 2 and 4, syncopated hi-hat 16ths"]
+[Spatial: specific reverb and delay — e.g. "short bright plate reverb 0.8s on vocals, long dark hall reverb 2.2s on pads, syncopated 1/8th note ping-pong delay, wide stereo image"]
+[Dynamics: e.g. "sidechain 6:1 kick-to-bass, 3:1 kick-to-lead, parallel drum compression, warm tape saturation, aggressive transient on kick"]
+[Master: e.g. "glue compression -1.5dB GR, high-shelf EQ +1.5dB, true-peak limiter -0.3dBTP, radio-ready loudness"]
+[Chord Progression: main chord loop — e.g. Am-G-C-F or I-V-vi-IV or Bm-G-D-A]
+[Key: musical key and mode — e.g. "B minor, Aeolian mode"]
 [BPM: exact BPM]
 
 --- SONG STRUCTURE ---
 Use the recommended Suno flow:
 [Intro] → [Verse 1] → [Pre-Chorus] → [Chorus] → [Verse 2] → [Pre-Chorus] → [Chorus] → [Bridge] → [Final Chorus] → [Outro]
 
-Adapt this to the song (not all sections required, add [Break], [Drop], [Instrumental], [Post-Chorus] where appropriate).
+Adapt to the song — not all sections required. Additional section types you may use:
+- [Build-Up] — rising intensity before a drop or chorus (describe elements building: snare roll, rising synths)
+- [Break] — brief rhythmic pause or minimal section between major sections
+- [Interlude] — atmospheric or instrumental passage connecting sections
+- [Silence] — a beat of silence for dramatic effect before a section hit
+- [Drop] — EDM-style bass-heavy section after a build-up
+- [Guitar Solo] / [Instrumental] — dedicated instrumental section
+- [Post-Chorus] — short hook-like phrase after the chorus
+- [Spoken Word] / [Narration] — spoken rather than sung passage
+- [Pre-Intro] — atmospheric section before the main intro
 
 SECTION FORMATTING RULES:
-1. Each section header must be descriptive: [Verse 1 - held-back energy, dry vocal, hat 16ths]
-2. After the header, write 2-3 [square bracket] instrument/production direction lines
+1. Each section header must be descriptive: [Verse 1 - sparse, dry vocal, staccato piano, held-back energy]
+2. After the header, write 2-3 [square bracket] instrument/production direction lines using articulation vocabulary:
+   - Use: staccato, legato, pizzicato, marcato, palm-muted, arpeggiated, tremolo, gliding, sustained
+   - Examples: [staccato piano fills, legato bass holding root], [palm-muted rhythm guitar, arpeggiated synth pad], [marcato brass stabs on offbeats]
 3. Then write the lyric stanzas (4 lines preferred per stanza — Suno handles 4-line sections best)
-4. Then write 1-2 (parenthetical performance direction lines) in parentheses
+4. Then write 1-2 (parenthetical performance directions) using nuance vocabulary:
+   - Use: slightly behind the beat, breathy and intimate, aggressive pick attack, imperceptible string swells, subtle pitch bend, melismatic on held notes, conversational, whispered
+   - Examples: (breathy and intimate, barely above a whisper), (soaring and melismatic on the final word), (slightly behind the beat, relaxed swagger)
 5. Add vocal meta-tags within sections where appropriate: [Whispers], [Harmonized chorus], [Echoing vocals], [Choir], [Giggling], [Announcer]
 6. Add ad-lib parentheses to choruses and hooks: (yeah!), (oh-oh), (come on), (let's go) — these humanise the vocal
 7. Use vowel elongation for emotional moments: e.g. "go-o-o-one", "sta-a-ay", "hea-ea-eart" — signals the AI to stretch the syllable
-8. Add instrument direction tags within sections: [808s kick in], [Piano fills], [Guitar solo], [Strings swell], [Synth drop], [Beat drops out]
+8. Add instrument/effect cue tags within sections: [808s kick in], [staccato Piano fills], [Guitar solo], [legato Strings swell], [Synth drop], [Beat drops out], [Glitch Percussion], [Filter sweep opens]
 9. End the song with [Fade Out] on the penultimate line and [End] on the final line
 
 LYRICS HANDLING — depends on what was provided:
