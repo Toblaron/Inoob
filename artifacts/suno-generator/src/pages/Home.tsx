@@ -87,7 +87,22 @@ interface GenreCategory {
 const GENRE_CATEGORIES: GenreCategory[] = [
   { label: "Pop", genres: ["Pop", "Dance Pop", "Indie Pop", "Electropop", "Synth-Pop", "Dream Pop", "Chamber Pop", "Baroque Pop", "Britpop", "Power Pop", "Teen Pop", "Art Pop", "Bedroom Pop", "Chillout Pop"] },
   { label: "Rock", genres: ["Rock", "Alternative Rock", "Indie Rock", "Hard Rock", "Classic Rock", "Punk", "Post-Punk", "Grunge", "Shoegaze", "Psychedelic Rock", "Progressive Rock", "Garage Rock", "Folk Rock", "Blues-Rock", "Arena Rock", "New Wave", "Emo", "Post-Rock", "Stoner Rock"] },
-  { label: "Electronic", genres: ["Electronic", "House", "Deep House", "Tech House", "Techno", "Synthwave", "Lo-Fi", "Drum & Bass", "Dubstep", "EDM", "Trance", "IDM", "Industrial", "Vaporwave", "Chillwave", "Future Bass", "Glitch Hop", "Electro", "Breakbeat"] },
+  { label: "House", genres: ["House", "Deep House", "Tech House", "Progressive House", "Acid House", "Melodic House", "Afro House", "Soulful House", "Chicago House", "Tribal House", "Jackin House", "Micro House", "Nu Disco", "Lo-Fi House", "Garage House", "Funky House"] },
+  { label: "Techno", genres: ["Techno", "Berlin Techno", "Detroit Techno", "Minimal Techno", "Hard Techno", "Industrial Techno", "Dub Techno", "Acid Techno", "Hypnotic Techno", "Dark Techno", "Modular Techno", "Rave Techno", "Ambient Techno", "Afro Techno"] },
+  { label: "Trance", genres: ["Trance", "Progressive Trance", "Uplifting Trance", "Psytrance", "Goa Trance", "Tech Trance", "Vocal Trance", "Future Rave", "Dark Psy", "Forest Psy", "Full-On Psy", "Big Room Trance", "Twilight Psy", "Orchestral Trance"] },
+  { label: "Drum & Bass / Jungle", genres: ["Drum & Bass", "Liquid DnB", "Neurofunk", "Darkstep", "Jump Up", "Jungle", "Techstep", "Rollers", "Drumstep", "Minimal DnB", "Atmospheric DnB", "Reese Bass DnB", "Halfstep DnB", "Afro DnB"] },
+  { label: "Dubstep & Bass", genres: ["Dubstep", "Post-Dubstep", "Brostep", "Riddim", "Tearout", "Halfstep", "Deep Dubstep", "Wonky", "Deathstep", "Minatory", "Future Bass", "Wave", "Melodic Bass", "Color Bass"] },
+  { label: "Breakbeat", genres: ["Breakbeat", "Big Beat", "Chemical Breaks", "Progressive Breaks", "Nu-Skool Breaks", "Electro Break", "Glitch Hop", "Amen Break", "Ragga Breaks", "Miami Bass", "Broken Beat"] },
+  { label: "Synthwave & Retro", genres: ["Synthwave", "Darksynth", "Outrun", "Retrowave", "Chillwave", "Hi-NRG", "Italo Disco", "Futurepop", "Cyberwave", "Nu-Italo", "Dreamwave", "Spacesynth", "Elektro", "New Romanticism"] },
+  { label: "Electro & EBM", genres: ["Electro", "EBM", "Aggrotech", "Dark Electro", "Industrial", "New Beat", "Electro-Industrial", "Darkwave", "Cold Wave", "Power Noise", "Noise", "Post-Industrial", "Martial Industrial", "Hellectro"] },
+  { label: "EDM & Big Room", genres: ["EDM", "Big Room", "Electro House", "Festival Trap", "Complextro", "Dutch House", "Bounce", "Hands Up", "Club House", "Mainstage", "Hardstyle EDM", "Rave Anthem", "Carnival Electro"] },
+  { label: "Ambient & IDM", genres: ["Ambient", "Dark Ambient", "IDM", "Glitch", "Space Music", "Drone Ambient", "Isolationism", "Microsound", "Clicks & Cuts", "Generative", "Field Recording", "Bio-Ambient", "Post-Glitch", "Algo-Glitch", "New Age"] },
+  { label: "Trip-Hop & Downtempo", genres: ["Trip-Hop", "Downtempo", "Chillhop", "Lo-Fi", "Bristol Sound", "Nu Jazz", "Dub Ambient", "Cinematic Downtempo", "Chillout", "Electronica", "Neo-Electro", "Space Hop"] },
+  { label: "Vaporwave & Future Funk", genres: ["Vaporwave", "Future Funk", "Dreampunk", "Mallsoft", "City Pop Revival", "Vaportrap", "Hardvapour", "Slushwave", "Hypersynth", "Future Nostalgia", "Lo-Fi Aesthetics", "Utopian Virtual"] },
+  { label: "Hardcore & Hard Dance", genres: ["Hardcore", "Gabber", "Hardstyle", "Frenchcore", "Happy Hardcore", "UK Hardcore", "Speedcore", "Rawstyle", "Industrial Hardcore", "Terror", "Uptempo Hardcore", "Makina", "Schranz", "Hard Trance"] },
+  { label: "UK Garage & Grime", genres: ["Grime", "UK Garage", "2-Step", "Bassline", "UK Bass", "Hyper-Garage", "Drill Garage", "Speed Garage", "Soulful 2-Step", "Funky House UK", "Jersey Club", "Juke"] },
+  { label: "Phonk & Hyperpop", genres: ["Phonk", "Memphis Phonk", "Slavic Phonk", "Drift Phonk", "Dark Phonk", "Hyperpop", "PC Music", "Bubblegum Bass", "Digicore", "Pluggnb", "Emo Rap Phonk", "Rage"] },
+  { label: "Afro Electronic", genres: ["Amapiano", "Gqom", "Afro House", "Afro Tech", "Baile Funk", "Kuduro", "Footwork", "Kwaito", "Shangaan Electro", "Afrobeat Electronic", "Afro Percussion", "Global Bass"] },
   { label: "Hip-Hop", genres: ["Hip-Hop", "Trap", "Rap", "Drill", "Boom Bap", "Gangsta Rap", "G-Funk", "Conscious Hip-Hop", "Lo-Fi Hip-Hop", "Grime", "Cloud Rap", "East Coast", "West Coast Rap", "Golden Age Hip Hop", "Jazz Rap", "Phonk"] },
   { label: "R&B / Soul", genres: ["R&B", "Soul", "Neo-Soul", "Funk", "Disco", "Motown", "Gospel", "Contemporary R&B", "Quiet Storm", "Psychedelic Soul", "New Jack Swing"] },
   { label: "Jazz", genres: ["Jazz", "Smooth Jazz", "Bebop", "Swing", "Jazz Fusion", "Big Band", "Acid Jazz", "Cool Jazz", "Modal Jazz", "Latin Jazz", "Free Jazz", "Nu Jazz"] },
@@ -96,7 +111,6 @@ const GENRE_CATEGORIES: GenreCategory[] = [
   { label: "Classical", genres: ["Classical", "Orchestral", "Baroque", "Cinematic", "Film Score", "Chamber Music", "Opera", "Neo-Classical", "Minimalist", "Romantic"] },
   { label: "World / Other", genres: ["K-Pop", "Afrobeats", "Reggae", "Dancehall", "Reggaeton", "Latin Pop", "Bossa Nova", "Flamenco", "Salsa", "Cumbia", "Afropop", "Afro-Cuban", "J-Pop", "Tropical", "Ska", "Dub"] },
   { label: "Blues", genres: ["Blues", "Delta Blues", "Chicago Blues", "Electric Blues", "Soul Blues", "Blues Rock", "Jump Blues", "Swamp Blues"] },
-  { label: "New Age / Ambient", genres: ["New Age", "Ambient", "Meditation", "Healing", "Dark Ambient", "Space Music"] },
 ];
 
 const ALL_GENRES = GENRE_CATEGORIES.flatMap((c) => c.genres);
