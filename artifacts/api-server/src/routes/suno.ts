@@ -1107,56 +1107,72 @@ function inferTempo(genres: string[]): string | null {
 }
 
 /**
- * GET /api/suno/suggest?url=...
- * Lightweight endpoint — returns suggested style controls based on YouTube + MusicBrainz metadata.
- * Does NOT fetch lyrics or call AI.
+ * GET /api/suggest?title=...&artist=...
+ * Accepts the clean song title and artist directly (passed by the frontend after youtube-preview resolves).
+ * Uses MusicBrainz for release year/era, then AI to identify genres/energy/tempo.
  */
 router.get("/suggest", async (req, res) => {
-  const url = req.query.url as string;
-  if (!url || !isValidYouTubeUrl(url)) {
-    res.status(400).json({ error: "Invalid YouTube URL" });
+  const title = (req.query.title as string ?? "").trim();
+  const artist = (req.query.artist as string ?? "").trim();
+
+  if (!title || !artist) {
+    res.status(400).json({ error: "title and artist query params are required" });
     return;
   }
+
   try {
-    let cleanTitle = "", cleanArtist = "", durationSec: number | undefined;
-    try {
-      const info = await ytdl.getBasicInfo(url, {
-        requestOptions: { headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" } },
-      });
-      const vd = info.videoDetails;
-      const raw = cleanSongTitle(vd.title ?? "", vd.author?.name ?? "");
-      cleanTitle = raw.cleanTitle;
-      cleanArtist = raw.cleanArtist;
-      durationSec = Number(vd.lengthSeconds) || undefined;
-    } catch {
-      const oembed = await fetchViaOembed(url);
-      const raw = cleanSongTitle(oembed.title, oembed.author);
-      cleanTitle = raw.cleanTitle;
-      cleanArtist = raw.cleanArtist;
-    }
-
-    if (!cleanTitle) {
-      res.json({ genres: [], era: null, energy: null, tempo: null, vocals: null, songTitle: "", artist: cleanArtist, mbTags: [] });
-      return;
-    }
-
-    const mbData = await Promise.race([
-      fetchMusicBrainzData(cleanArtist, cleanTitle, durationSec),
-      new Promise<MusicBrainzData>((resolve) => setTimeout(() => resolve({}), 9000)),
+    // Run MusicBrainz and AI in parallel for speed
+    const [mbData, aiSuggestion] = await Promise.all([
+      Promise.race([
+        fetchMusicBrainzData(artist, title),
+        new Promise<MusicBrainzData>((resolve) => setTimeout(() => resolve({}), 7000)),
+      ]),
+      (async () => {
+        try {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4.1-mini",
+            max_completion_tokens: 120,
+            response_format: { type: "json_object" },
+            messages: [
+              {
+                role: "system",
+                content: `You are a music genre expert. Given a song title and artist, return a JSON object with ONLY these fields:
+- "genres": array of 1–3 genre names from this list ONLY: Pop, Dance Pop, Indie Pop, Synth-Pop, Dream Pop, Art Pop, Electropop, Britpop, Rock, Alternative Rock, Indie Rock, Hard Rock, Classic Rock, Punk, Post-Punk, Grunge, Shoegaze, Psychedelic Rock, Progressive Rock, Garage Rock, Folk Rock, Arena Rock, New Wave, Emo, Post-Rock, Stoner Rock, Hip-Hop, Trap, Rap, Drill, Boom Bap, Gangsta Rap, G-Funk, Grime, Cloud Rap, Phonk, R&B, Soul, Neo-Soul, Funk, Disco, Motown, Gospel, Contemporary R&B, Jazz, Smooth Jazz, Bebop, Swing, Jazz Fusion, Big Band, Acid Jazz, Cool Jazz, Latin Jazz, Free Jazz, Metal, Heavy Metal, Black Metal, Death Metal, Thrash Metal, Nu Metal, Metalcore, Power Metal, Doom Metal, Symphonic Metal, Djent, Country, Americana, Bluegrass, Folk, Indie Folk, Outlaw Country, Country Rock, Country Pop, Alt-Country, Classical, Orchestral, Baroque, Cinematic, Film Score, Opera, Minimalist, Reggae, Dancehall, Reggaeton, Latin Pop, Bossa Nova, Flamenco, Salsa, K-Pop, J-Pop, Afrobeats, Blues, Delta Blues, Chicago Blues, Electric Blues, House, Deep House, Tech House, Progressive House, Acid House, Melodic House, Afro House, Soulful House, Chicago House, Nu Disco, Techno, Berlin Techno, Detroit Techno, Minimal Techno, Hard Techno, Dub Techno, Trance, Progressive Trance, Uplifting Trance, Psytrance, Goa Trance, Vocal Trance, Future Rave, Drum & Bass, Liquid DnB, Neurofunk, Darkstep, Jump Up, Jungle, Dubstep, Post-Dubstep, Brostep, Riddim, Future Bass, Breakbeat, Big Beat, Glitch Hop, Synthwave, Darksynth, Outrun, Retrowave, Chillwave, Hi-NRG, Italo Disco, Futurepop, Electro, EBM, Industrial, Darkwave, Cold Wave, EDM, Big Room, Electro House, Ambient, Dark Ambient, IDM, Glitch, Space Music, Drone Ambient, New Age, Trip-Hop, Downtempo, Chillhop, Lo-Fi, Vaporwave, Future Funk, Hardcore, Gabber, Hardstyle, UK Garage, 2-Step, Grime, UK Bass, Phonk, Memphis Phonk, Hyperpop, Amapiano, Gqom, Baile Funk, Footwork
+- "era": one of: 50s, 60s, 70s, 80s, 90s, 2000s, 2010s, modern
+- "energy": one of: very chill, chill, medium, high, intense
+- "tempo": one of: ballad, slow, mid, groove, uptempo, fast, hyper`,
+              },
+              {
+                role: "user",
+                content: `Song: "${title}" by ${artist}`,
+              },
+            ],
+          });
+          const raw = completion.choices[0]?.message?.content ?? "{}";
+          return JSON.parse(raw) as { genres?: string[]; era?: string; energy?: string; tempo?: string };
+        } catch {
+          return {};
+        }
+      })(),
     ]);
 
     const mbTags = mbData.genres ?? [];
-    const genres = mapMbTagsToGenres(mbTags);
-    const era = yearToEra(mbData.releaseYear);
-    const energy = inferEnergy(genres);
-    const tempo = inferTempo(genres);
+    const mbGenres = mapMbTagsToGenres(mbTags);
 
-    console.log(`[suggest] ${cleanArtist} - ${cleanTitle} → genres:${genres.join(",")} era:${era} energy:${energy} tempo:${tempo}`);
+    // Merge: AI provides genres/energy/tempo, MusicBrainz provides era (more accurate release year)
+    const mbEra = yearToEra(mbData.releaseYear);
+    const aiGenres = (aiSuggestion.genres ?? []).filter((g) => typeof g === "string").slice(0, 3);
+    const genres = aiGenres.length > 0 ? aiGenres : mbGenres;
+    const era = mbEra ?? (aiSuggestion.era as string | null) ?? null;
+    const energy = (aiSuggestion.energy as string | null) ?? inferEnergy(genres);
+    const tempo = (aiSuggestion.tempo as string | null) ?? inferTempo(genres);
 
-    res.json({ genres, era, energy, tempo, vocals: null, songTitle: cleanTitle, artist: cleanArtist, mbTags });
+    console.log(`[suggest] ${artist} – ${title} → AI genres:[${genres.join(",")}] MB era:${mbEra} AI era:${aiSuggestion.era} energy:${energy} tempo:${tempo}`);
+
+    res.json({ genres, era, energy, tempo, vocals: null, songTitle: title, artist, mbTags });
   } catch (err) {
     console.error("suggest error:", err);
-    res.status(400).json({ error: "Could not fetch suggestions" });
+    res.status(500).json({ error: "Could not fetch suggestions" });
   }
 });
 

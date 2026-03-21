@@ -318,23 +318,26 @@ export default function Home() {
     setVideoPreview((prev) => prev ? { ...prev, thumbnail: thumb } : { title: "", author: "", thumbnail: thumb, duration: null });
     setPreviewLoading(true);
     try {
-      const resp = await fetch(`/api/suno/youtube-preview?url=${encodeURIComponent(url)}`);
+      const resp = await fetch(`/api/youtube-preview?url=${encodeURIComponent(url)}`);
       if (resp.ok) {
-        const data = await resp.json() as VideoPreview;
+        const data = await resp.json() as VideoPreview & { cleanTitle?: string };
         setVideoPreview({ ...data, thumbnail: thumb });
+        // Once we have clean title + artist, fire the suggest call with them directly
+        const artist = data.author ?? "";
+        const title = data.cleanTitle ?? data.title ?? "";
+        if (artist && title) fetchSuggestionsForSong(title, artist);
       }
     } catch {}
     setPreviewLoading(false);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchSuggestions = useCallback(async (url: string) => {
-    const id = extractVideoId(url);
-    if (!id) return;
+  const fetchSuggestionsForSong = useCallback(async (title: string, artist: string) => {
     setSuggestLoading(true);
     setShowStyleControls(true);
     try {
-      const resp = await fetch(`/api/suno/suggest?url=${encodeURIComponent(url)}`, {
-        signal: AbortSignal.timeout(15000),
+      const params = new URLSearchParams({ title, artist });
+      const resp = await fetch(`/api/suggest?${params.toString()}`, {
+        signal: AbortSignal.timeout(12000),
       });
       if (!resp.ok) return;
       const data = await resp.json() as SuggestedControls;
@@ -363,13 +366,15 @@ export default function Home() {
       return;
     }
     setVideoPreview((prev) => prev ?? { title: "", author: "", thumbnail: `https://img.youtube.com/vi/${id}/mqdefault.jpg`, duration: null });
+    // Show loading state immediately
+    setSuggestLoading(true);
+    setShowStyleControls(true);
     previewTimerRef.current = setTimeout(() => fetchVideoPreview(urlValue), 800);
-    suggestTimerRef.current = setTimeout(() => fetchSuggestions(urlValue), 900);
     return () => {
       if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
       if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
     };
-  }, [urlValue, fetchVideoPreview, fetchSuggestions]);
+  }, [urlValue, fetchVideoPreview]);
 
   const addToHistory = (url: string, template: SunoTemplate, opts?: UsedOptions) => {
     const entry: HistoryEntry = {
