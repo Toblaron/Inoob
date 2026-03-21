@@ -289,6 +289,14 @@ function buildPromptContext(metadata: VideoMetadata): string {
   return parts.join("\n\n");
 }
 
+function trimToCharLimit(text: string, limit: number): string {
+  const normalized = text.replace(/\r\n/g, "\n");
+  if (normalized.length <= limit) return normalized;
+  const truncated = normalized.slice(0, limit);
+  const lastNewline = truncated.lastIndexOf("\n");
+  return lastNewline !== -1 ? truncated.slice(0, lastNewline) : "";
+}
+
 const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate professional three-section templates for Suno.ai that produce high-quality AI music generations. You will be given rich metadata about a YouTube song and must produce an accurate, detailed template.
 
 OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
@@ -299,6 +307,8 @@ OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
   "negativePrompt": "..."
 }
 
+**HARD LIMIT: 4900 characters. The lyrics field MUST NOT exceed 4900 characters under any circumstances.**
+
 === SECTION 1: styleOfMusic (~900 chars) ===
 The Suno "Style of Music" field. Rules:
 - Capitalization hierarchy: PRIMARY GENRE IN ALL CAPS, Secondary Genre In Title Case, tertiary descriptors in lowercase
@@ -307,7 +317,7 @@ The Suno "Style of Music" field. Rules:
 - Target ~900 characters. Be dense and specific.
 - Example format: "1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman Production, 113 BPM, B minor, warm baritone male lead with soulful phrasing, bright gated reverb snare, punchy four-on-the-floor kick, syncopated bassline, shimmering DX7 synth stabs, catchy pop hooks, analog warmth, club-friendly, radio-polished production"
 
-=== SECTION 2: lyrics (~5000 chars, target 4900-4999) ===
+=== SECTION 2: lyrics (up to 4900 chars) ===
 The Suno "Lyrics" field. This is a FULL PRODUCTION METADATA + LYRICS block.
 
 HEADER BLOCK (production metadata, always first — before any lyrics):
@@ -348,7 +358,9 @@ Bracket conventions in lyrics:
 - Parentheses ( ) = performance feel and emotional directions
 - Actual lyric lines = plain text (no brackets)
 
-Target 4900-4999 characters total. Write enough sections and detail to reach the target.
+Target up to 4900 characters total. Write enough sections and detail to fill the space, but do not exceed 4900 characters.
+
+**HARD LIMIT: 4900 characters. The lyrics field MUST NOT exceed 4900 characters under any circumstances.**
 
 === SECTION 3: negativePrompt (150-200 chars) ===
 What Suno should NOT generate. Rules:
@@ -430,7 +442,7 @@ ${context}`;
       artist: metadata.cleanArtist || metadata.author,
       styleOfMusic: aiResult.styleOfMusic,
       title: aiResult.title,
-      lyrics: aiResult.lyrics,
+      lyrics: trimToCharLimit(aiResult.lyrics, 4900),
       negativePrompt: aiResult.negativePrompt,
       tags: [],
     });

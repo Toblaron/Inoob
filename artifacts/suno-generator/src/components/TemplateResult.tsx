@@ -117,7 +117,19 @@ export function TemplateResult({ template }: TemplateResultProps) {
               <span className="text-xs font-bold tracking-widest text-secondary uppercase opacity-70">
                 SECTION 2
               </span>
-              <h3 className="font-semibold text-foreground leading-tight">Lyrics / Metadata</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground leading-tight">Lyrics / Metadata</h3>
+                <span
+                  className={cn(
+                    "text-xs font-mono px-2 py-0.5 rounded-full border",
+                    template.lyrics.length > 4900
+                      ? "bg-destructive/20 text-destructive border-destructive/40"
+                      : "bg-secondary/10 text-secondary border-secondary/30"
+                  )}
+                >
+                  {template.lyrics.length.toLocaleString()} / 4,900 chars
+                </span>
+              </div>
             </div>
           </div>
           <CopyButton onClick={() => copy(template.lyrics, "Lyrics copied!")} isStatic />
