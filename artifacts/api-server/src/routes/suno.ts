@@ -20,7 +20,7 @@ interface VideoMetadata {
   cleanTitle: string;
   /** Cleaned artist name for API searches */
   cleanArtist: string;
-  lyricsSource: "api" | "captions" | "none";
+  lyricsSource: "user-override" | "api" | "captions" | "none";
 }
 
 function formatDuration(seconds: number): string {
@@ -273,8 +273,13 @@ function buildPromptContext(metadata: VideoMetadata): string {
     parts.push(`Video Description:\n${desc}`);
   }
 
-  // Lyrics take priority: API lyrics > captions > nothing
-  if (metadata.lyricsSource === "api" && metadata.lyricsText) {
+  // Lyrics take priority: user override > API lyrics > captions > nothing
+  if (metadata.lyricsSource === "user-override" && metadata.lyricsText) {
+    const lyrics = metadata.lyricsText.length > 5000
+      ? metadata.lyricsText.slice(0, 5000) + "\n[... lyrics truncated ...]"
+      : metadata.lyricsText;
+    parts.push(`USER-PROVIDED LYRICS — MANDATORY: The user has manually supplied these lyrics. Every single lyric line below MUST appear in the output, word-for-word. Do NOT substitute, paraphrase, or invent any lyric lines:\n${lyrics}`);
+  } else if (metadata.lyricsSource === "api" && metadata.lyricsText) {
     const lyrics = metadata.lyricsText.length > 5000
       ? metadata.lyricsText.slice(0, 5000) + "\n[... lyrics truncated ...]"
       : metadata.lyricsText;
@@ -376,12 +381,19 @@ SECTION FORMATTING RULES:
     Only use emoji when they reinforce what the text direction already says. Never use emoji as the sole cue.
 11. End the song with [Fade Out] on the penultimate line and [End] on the final line (or [Fade to End] as a combined tag for a slow fade-out ending)
 
-LYRICS HANDLING — depends on what was provided:
+LYRICS HANDLING — depends on what was provided (read the context block label):
+
+IF "USER-PROVIDED LYRICS — MANDATORY" appears in context (HIGHEST PRIORITY):
+- The user manually typed or pasted these lyrics. This overrides everything else.
+- Copy every lyric line EXACTLY as written — no changes, no additions, no omissions to any lyric line.
+- Wrap each lyric section with appropriate [Section Header] tags, production cue lines, and (performance direction) parentheticals.
+- To reach the 4,900-character minimum: expand production cue lines and performance directions — NEVER by adding lyric lines the user did not write.
+- If the user lyrics are short, add more bracketed instrument cue lines, more (parenthetical performance directions), more ad-lib variants in choruses, and richer articulation in section headers.
 
 IF "AUTHENTIC LYRICS" are provided in context:
 - These are REAL lyrics from a professional database. Use them VERBATIM — never paraphrase or invent lines.
 - Structure them with all the above formatting (headers, production tags, ad-libs, vowel elongation, vocal tags).
-- Do not omit real lyric lines to fit the character limit — instead trim production tag verbosity.
+- To reach the 4,900-character minimum: expand production tag verbosity, add more instrument cue lines and performance directions.
 
 IF "YouTube Captions/Transcript" are provided:
 - These are approximate. Clean up obvious errors, fix capitalization, and apply full section formatting.
@@ -509,11 +521,11 @@ router.post("/generate-template", async (req, res) => {
 
     // Override lyrics with user-provided lyrics if supplied
     if (manualLyrics && manualLyrics.trim().length > 20) {
-      console.log(`Using manually provided lyrics (${manualLyrics.trim().length} chars)`);
+      console.log(`Using user-provided lyrics override (${manualLyrics.trim().length} chars)`);
       metadata = {
         ...metadata,
         lyricsText: manualLyrics.trim(),
-        lyricsSource: "api",
+        lyricsSource: "user-override",
       };
     }
 
@@ -521,13 +533,13 @@ router.post("/generate-template", async (req, res) => {
     const styleControls = buildStyleControls({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex });
 
     const lyricsInstruction =
-      metadata.lyricsSource === "api"
-        ? manualLyrics && manualLyrics.trim().length > 20
-          ? "USER-PROVIDED LYRICS are given — use them VERBATIM, structured with Suno metatags."
-          : "AUTHENTIC LYRICS from a professional database are provided — use them VERBATIM, structured with Suno metatags."
-        : metadata.lyricsSource === "captions"
-          ? "YouTube captions (approximate) are provided — clean them up and structure with Suno metatags."
-          : "No lyrics source available — use your knowledge of this song or write thematic placeholder lyrics.";
+      metadata.lyricsSource === "user-override"
+        ? "⚠️ USER-PROVIDED LYRICS OVERRIDE ACTIVE: The user has manually supplied their own lyrics. You MUST use every lyric line exactly as written — not one word changed. Add Suno production tags, section headers, and performance directions around them, but the lyric lines themselves are locked and non-negotiable."
+        : metadata.lyricsSource === "api"
+          ? "AUTHENTIC LYRICS from a professional database are provided — use them VERBATIM, structured with Suno metatags."
+          : metadata.lyricsSource === "captions"
+            ? "YouTube captions (approximate) are provided — clean them up and structure with Suno metatags."
+            : "No lyrics source available — use your knowledge of this song or write thematic placeholder lyrics.";
 
     const modeInstruction = mode === "cover"
       ? "\n\nGENERATION MODE: AI Cover — Reconstruct this song as faithfully as Suno allows. Keep the original genre, tempo, instrumentation, structure, vocal style, and lyrics as close to the original recording as possible. Prioritise accuracy over creativity."
