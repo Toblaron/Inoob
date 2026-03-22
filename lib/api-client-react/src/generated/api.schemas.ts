@@ -38,6 +38,8 @@ export interface GenerateTemplateRequest {
   variationIndex?: number;
   /** Learning context derived from the user's past template ratings */
   feedbackContext?: string;
+  /** When true, generate as a fully instrumental track — no lyrics, only structural cues */
+  isInstrumental?: boolean;
 }
 
 export interface SunoTemplate {

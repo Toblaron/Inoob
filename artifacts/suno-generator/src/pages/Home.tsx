@@ -12,6 +12,7 @@ import {
   Mic2,
   Zap,
   Clock,
+  Music,
   Music2,
   FileText,
   History,
@@ -55,31 +56,40 @@ const INSTRUMENT_TAGS = [
   "Harp", "Banjo", "Ukulele", "Mandolin", "Marimba", "Theremin", "Mellotron",
   "Pedal Steel", "Dulcimer",
 ];
-const NEGATIVE_PRESETS: { label: string; value: string }[] = [
-  { label: "No rap vocals", value: "no rap" },
+const QUALITY_EXCLUSIONS: { label: string; value: string }[] = [
+  { label: "Muddy mix", value: "muddy mix" },
+  { label: "Soulless", value: "soulless" },
+  { label: "Amateur", value: "amateur" },
+  { label: "Generic EDM", value: "generic edm" },
+  { label: "Happy pop", value: "happy pop" },
+  { label: "Uncreative", value: "uncreative" },
+  { label: "Boring", value: "boring" },
+  { label: "Stale", value: "stale" },
+  { label: "Weak beats", value: "weak beats" },
+  { label: "Predictable", value: "predictable" },
+  { label: "Cheesy", value: "cheezy" },
+  { label: "Silence gaps", value: "silence" },
+];
+
+const ELEMENT_EXCLUSIONS: { label: string; value: string }[] = [
+  { label: "No rap", value: "no rap" },
   { label: "No autotune", value: "no autotune" },
-  { label: "No heavy distortion", value: "no heavy distortion" },
-  { label: "No spoken word", value: "no spoken word" },
+  { label: "No distortion", value: "no heavy distortion" },
   { label: "No choir", value: "no choir" },
   { label: "No orchestral", value: "no orchestral" },
-  { label: "No 8-bit / chiptune", value: "no 8-bit,no chiptune" },
+  { label: "No 8-bit", value: "no 8-bit,no chiptune" },
   { label: "No drums", value: "no drums" },
-  { label: "No bass", value: "no bass" },
-  { label: "No electric guitar", value: "no electric guitar" },
   { label: "No piano", value: "no piano" },
-  { label: "No synthesizer", value: "no synthesizer" },
-  { label: "No jazz influence", value: "no jazz" },
-  { label: "No country influence", value: "no country" },
-  { label: "No EDM / club beat", value: "no EDM,no club beat" },
-  { label: "No ambient pads", value: "no ambient pads" },
-  { label: "No violin / strings", value: "no violin,no strings" },
-  { label: "No brass / horns", value: "no brass,no horns" },
+  { label: "No synth", value: "no synthesizer" },
+  { label: "No EDM drops", value: "no EDM,no club beat" },
+  { label: "No strings", value: "no violin,no strings" },
+  { label: "No brass", value: "no brass,no horns" },
   { label: "No trap beats", value: "no trap beats,no trap hi-hats" },
-  { label: "No reggae rhythm", value: "no reggae" },
   { label: "No falsetto", value: "no falsetto" },
-  { label: "No vocaloid / robotic", value: "no vocaloid,no robotic vocals" },
-  { label: "No lo-fi crackle", value: "no lo-fi,no vinyl crackle" },
-  { label: "No reverb / wet mix", value: "no heavy reverb,no wet mix" },
+  { label: "No spoken word", value: "no spoken word" },
+  { label: "No lo-fi", value: "no lo-fi,no vinyl crackle" },
+  { label: "No heavy reverb", value: "no heavy reverb" },
+  { label: "No country", value: "no country" },
 ];
 
 interface GenreCategory {
@@ -346,6 +356,8 @@ export default function Home() {
   const [mode, setMode] = useState<"cover" | "inspired" | null>(null);
   const [tempo, setTempo] = useState<"ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper" | null>(null);
   const [excludeTags, setExcludeTags] = useState<string[]>([]);
+  const [customExclusions, setCustomExclusions] = useState("");
+  const [isInstrumental, setIsInstrumental] = useState(false);
 
   const [videoPreview, setVideoPreview] = useState<VideoPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -589,20 +601,28 @@ export default function Home() {
     return [...prev, value];
   }
 
-  const buildOptions = () => ({
-    manualLyrics: manualLyrics.trim() || undefined,
-    vocalGender: vocalGender !== "auto" ? vocalGender : undefined,
-    energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
-    era: era !== "auto" ? era : undefined,
-    genreNudge: genreNudge.trim() || undefined,
-    genres: selectedGenres.length > 0 ? selectedGenres : undefined,
-    moods: selectedMoods.length > 0 ? selectedMoods : undefined,
-    instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
-    mode: mode ?? undefined,
-    tempo: tempo ?? undefined,
-    excludeTags: excludeTags.length > 0 ? excludeTags : undefined,
-    feedbackContext: buildFeedbackContext(),
-  });
+  const buildOptions = () => {
+    const allExcludeTags = [
+      ...excludeTags,
+      ...customExclusions.split(",").map((s) => s.trim()).filter(Boolean),
+      ...(isInstrumental ? ["vocals", "singing", "spoken word"] : []),
+    ];
+    return {
+      manualLyrics: manualLyrics.trim() || undefined,
+      vocalGender: isInstrumental ? ("no vocals" as const) : (vocalGender !== "auto" ? vocalGender : undefined),
+      energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
+      era: era !== "auto" ? era : undefined,
+      genreNudge: genreNudge.trim() || undefined,
+      genres: selectedGenres.length > 0 ? selectedGenres : undefined,
+      moods: selectedMoods.length > 0 ? selectedMoods : undefined,
+      instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
+      mode: mode ?? undefined,
+      tempo: tempo ?? undefined,
+      excludeTags: allExcludeTags.length > 0 ? allExcludeTags : undefined,
+      isInstrumental: isInstrumental || undefined,
+      feedbackContext: buildFeedbackContext(),
+    };
+  };
 
   const handleSurpriseMe = () => {
     const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
@@ -780,7 +800,8 @@ export default function Home() {
     tempo !== null,
   ].filter(Boolean).length;
 
-  const negActiveCount = excludeTags.length;
+  const customExclusionCount = customExclusions.split(",").map((s) => s.trim()).filter(Boolean).length;
+  const negActiveCount = excludeTags.length + customExclusionCount + (isInstrumental ? 1 : 0);
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-start pt-20 px-4 pb-24 overflow-x-hidden">
@@ -991,6 +1012,21 @@ export default function Home() {
 
           {/* Expand toggles */}
           <div className="flex flex-wrap gap-2 pt-1">
+            {/* Instrumental mode toggle */}
+            <button
+              type="button"
+              onClick={() => setIsInstrumental((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                isInstrumental
+                  ? "bg-secondary/20 border-secondary/50 text-secondary shadow-sm shadow-secondary/20"
+                  : "bg-white/4 border-border/40 text-zinc-400 hover:border-border hover:text-zinc-200"
+              )}
+            >
+              <Music className="w-3.5 h-3.5" />
+              Instrumental
+              {isInstrumental && <span className="text-[10px] bg-secondary/30 px-1.5 py-0.5 rounded-full ml-0.5">ON</span>}
+            </button>
             <ExpandToggle
               active={showStyleControls}
               onClick={() => setShowStyleControls((v) => !v)}
@@ -1310,55 +1346,100 @@ export default function Home() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-zinc-500 font-medium tracking-wide uppercase">
-                      Negative Prompt Builder — tell Suno what to avoid
-                    </p>
-                    {excludeTags.length > 0 && (
-                      <button type="button" onClick={() => setExcludeTags([])} className="text-xs text-zinc-500 hover:text-destructive transition-colors">Clear all</button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {NEGATIVE_PRESETS.map((preset) => {
-                      const tags = preset.value.split(",");
-                      const isChecked = tags.some((t) => excludeTags.includes(t));
-                      return (
-                        <label
-                          key={preset.value}
-                          className={cn(
-                            "flex items-center gap-1.5 px-2 py-1.5 rounded-lg border cursor-pointer transition-all text-[11px]",
-                            isChecked
-                              ? "bg-destructive/10 border-destructive/30 text-destructive"
-                              : "bg-white/4 border-border/40 text-zinc-400 hover:border-border hover:text-zinc-200"
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            className="hidden"
-                            checked={isChecked}
-                            onChange={() => {
-                              setExcludeTags((prev) => {
-                                if (isChecked) return prev.filter((t) => !tags.includes(t));
-                                return [...new Set([...prev, ...tags])];
-                              });
-                            }}
-                          />
-                          <span className={cn(
-                            "w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors",
-                            isChecked ? "bg-destructive/30 border-destructive/50" : "border-border"
-                          )}>
-                            {isChecked && <Check className="w-2 h-2" />}
-                          </span>
-                          {preset.label}
-                        </label>
-                      );
-                    })}
-                  </div>
-                  {excludeTags.length > 0 && (
-                    <div className="text-xs text-zinc-500 font-mono bg-background/40 rounded-lg px-3 py-2 border border-border/40">
-                      Will add to negative prompt: <span className="text-zinc-300">{excludeTags.join(",")}</span>
+                <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-5 space-y-5">
+
+                  {/* Quality / vibe exclusions */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Quality & Vibe</p>
+                      {excludeTags.some((t) => QUALITY_EXCLUSIONS.map((q) => q.value).includes(t)) && (
+                        <button type="button" onClick={() => setExcludeTags((p) => p.filter((t) => !QUALITY_EXCLUSIONS.map((q) => q.value).includes(t)))} className="text-[11px] text-zinc-500 hover:text-destructive transition-colors">Clear</button>
+                      )}
                     </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {QUALITY_EXCLUSIONS.map((preset) => {
+                        const isChecked = excludeTags.includes(preset.value);
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setExcludeTags((prev) => isChecked ? prev.filter((t) => t !== preset.value) : [...prev, preset.value])}
+                            className={cn(
+                              "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
+                              isChecked
+                                ? "bg-destructive/15 border-destructive/40 text-destructive"
+                                : "bg-white/4 border-border/40 text-zinc-400 hover:border-destructive/30 hover:text-zinc-200 hover:bg-destructive/8"
+                            )}
+                          >
+                            {isChecked && <span className="mr-1 text-[9px]">✕</span>}{preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Element / instrument exclusions */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Elements & Instruments</p>
+                      {ELEMENT_EXCLUSIONS.some((e) => e.value.split(",").some((v) => excludeTags.includes(v))) && (
+                        <button type="button" onClick={() => setExcludeTags((p) => p.filter((t) => !ELEMENT_EXCLUSIONS.flatMap((e) => e.value.split(",")).includes(t)))} className="text-[11px] text-zinc-500 hover:text-destructive transition-colors">Clear</button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ELEMENT_EXCLUSIONS.map((preset) => {
+                        const tags = preset.value.split(",");
+                        const isChecked = tags.some((t) => excludeTags.includes(t));
+                        return (
+                          <button
+                            key={preset.value}
+                            type="button"
+                            onClick={() => setExcludeTags((prev) => {
+                              if (isChecked) return prev.filter((t) => !tags.includes(t));
+                              return [...new Set([...prev, ...tags])];
+                            })}
+                            className={cn(
+                              "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
+                              isChecked
+                                ? "bg-destructive/15 border-destructive/40 text-destructive"
+                                : "bg-white/4 border-border/40 text-zinc-400 hover:border-destructive/30 hover:text-zinc-200 hover:bg-destructive/8"
+                            )}
+                          >
+                            {isChecked && <span className="mr-1 text-[9px]">✕</span>}{preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Custom freetext exclusions */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Custom terms</p>
+                    <input
+                      type="text"
+                      value={customExclusions}
+                      onChange={(e) => setCustomExclusions(e.target.value)}
+                      placeholder="e.g. no flute, no church bells, no whistling"
+                      className="w-full px-3 py-2 rounded-lg bg-background/50 border border-border text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-destructive/40 transition-colors font-mono"
+                    />
+                    <p className="text-[10px] text-zinc-600">Comma-separated. These will be added directly to the negative prompt.</p>
+                  </div>
+
+                  {/* Live preview */}
+                  {(excludeTags.length > 0 || customExclusions.trim()) && (
+                    <div className="text-[11px] text-zinc-500 font-mono bg-background/40 rounded-lg px-3 py-2.5 border border-border/40 leading-relaxed">
+                      <span className="text-zinc-600 font-sans font-semibold uppercase text-[10px] tracking-wider">Will exclude: </span>
+                      <span className="text-zinc-300">
+                        {[...excludeTags, ...customExclusions.split(",").map((s) => s.trim()).filter(Boolean)].join(", ")}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Clear all */}
+                  {(excludeTags.length > 0 || customExclusions.trim()) && (
+                    <button type="button" onClick={() => { setExcludeTags([]); setCustomExclusions(""); }} className="text-xs text-zinc-500 hover:text-destructive transition-colors">
+                      Clear all exclusions
+                    </button>
                   )}
                 </div>
               </motion.div>
