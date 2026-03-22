@@ -804,13 +804,8 @@ export default function Home() {
   const negActiveCount = excludeTags.length + customExclusionCount + (isInstrumental ? 1 : 0);
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-start pt-20 px-4 pb-24 overflow-x-hidden">
-      <div
-        className="fixed inset-0 z-0 opacity-20 bg-cover bg-center bg-no-repeat mix-blend-screen pointer-events-none"
-        style={{ backgroundImage: `url(${import.meta.env.BASE_URL}images/hero-bg.png)` }}
-      />
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/15 blur-[120px] rounded-full pointer-events-none" />
+    <div className="relative min-h-screen flex flex-col items-center justify-start pt-10 px-4 pb-24 overflow-x-hidden">
+      {/* Pure black BG — no decorations */}
 
       <AnimatePresence>
         {clipboardToast && (
@@ -825,67 +820,56 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <div className="relative z-10 w-full max-w-3xl flex flex-col items-center mb-12">
+      <div className="relative z-10 w-full max-w-3xl flex flex-col items-center mb-8">
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex flex-col items-center text-center space-y-6"
+          transition={{ duration: 0.4 }}
+          className="w-full mb-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
-            <SparkleIcon className="w-4 h-4 text-secondary" />
-            <span className="text-sm font-medium tracking-wide text-zinc-300">Suno.ai Prompt Generator</span>
+          {/* Compact header */}
+          <div className="flex items-center gap-3 mb-1">
+            <span className="font-mono text-[10px] text-primary/60 uppercase tracking-widest border border-primary/20 px-2 py-0.5">v2</span>
+            <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">SUNO.AI PROMPT GENERATOR</span>
           </div>
-
-          <h1 className="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-zinc-200 to-zinc-500 drop-shadow-sm pb-2">
-            Track to{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
-              Template
-            </span>
+          <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+            Track <span className="text-primary">→</span> Template
           </h1>
-
-          <p className="text-lg md:text-xl text-zinc-400 max-w-xl font-medium leading-relaxed">
-            Paste any YouTube song link. Our AI will extract its soul and construct the perfect Suno prompt for you to remix, recreate, or be inspired.
+          <p className="mt-1.5 text-sm text-zinc-500 font-mono">
+            Paste a YouTube link. AI extracts metadata + lyrics and builds a complete Suno prompt.
           </p>
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-          className="w-full mt-10 space-y-4"
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="w-full space-y-3"
         >
           {/* Mode toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-zinc-500 font-medium mr-1">Mode:</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest mr-1">Mode</span>
             {(["cover", "inspired"] as const).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMode((prev) => prev === m ? null : m)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                  "flex items-center gap-1.5 px-3 py-1 text-[11px] font-mono uppercase tracking-wider border transition-all",
                   mode === m
-                    ? m === "cover"
-                      ? "bg-secondary/20 border-secondary/50 text-secondary"
-                      : "bg-primary/20 border-primary/50 text-primary"
-                    : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+                    ? "border-primary bg-primary text-black"
+                    : "border-primary/20 text-zinc-500 hover:border-primary/50 hover:text-primary"
                 )}
               >
-                {m === "cover" ? <><Layers className="w-3 h-3" /> AI Cover</> : <><Wand2 className="w-3 h-3" /> Inspired By</>}
+                {m === "cover" ? <><Layers className="w-3 h-3" />AI Cover</> : <><Wand2 className="w-3 h-3" />Inspired By</>}
               </button>
             ))}
-            {mode && (
-              <span className="text-xs text-zinc-500 italic">
-                {mode === "cover" ? "— faithful reconstruction" : "— creative reimagining"}
-              </span>
-            )}
           </div>
 
           {/* Creative direction presets */}
           <div className="space-y-1.5">
-            <p className="text-[11px] text-zinc-500 font-medium uppercase tracking-wider pl-0.5">Creative Direction</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Direction</p>
+            <div className="flex flex-wrap gap-1.5">
               {CREATIVE_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
@@ -893,30 +877,29 @@ export default function Home() {
                   onClick={() => applyPreset(preset)}
                   title={preset.description}
                   className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                    "flex items-center gap-1 px-2.5 py-1 text-[11px] font-mono border transition-all",
                     activePreset === preset.id
-                      ? "bg-secondary/25 border-secondary/60 text-secondary shadow-sm shadow-secondary/20"
-                      : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+                      ? "border-primary text-primary bg-primary/10"
+                      : "border-primary/15 text-zinc-500 hover:border-primary/40 hover:text-zinc-300"
                   )}
                 >
-                  <span>{preset.emoji}</span> {preset.label}
+                  <span className="text-[10px]">{preset.emoji}</span>{preset.label}
                 </button>
               ))}
             </div>
           </div>
 
           {/* URL input row */}
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-3 relative">
-            <div className="relative flex-1 group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary rounded-2xl blur-md opacity-20 group-focus-within:opacity-50 transition-opacity duration-500" />
-              <div className="relative flex items-center bg-card border-2 border-border focus-within:border-primary/50 rounded-2xl overflow-hidden transition-all shadow-xl">
-                <div className="pl-5 pr-3 text-muted-foreground">
-                  <Youtube className="w-6 h-6" />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-2 relative">
+            <div className="relative flex-1">
+              <div className="flex items-center bg-card border border-primary/25 focus-within:border-primary/70 transition-all overflow-hidden">
+                <div className="pl-4 pr-2 text-primary/40">
+                  <Youtube className="w-4 h-4" />
                 </div>
                 <input
                   {...form.register("youtubeUrl")}
                   placeholder="https://youtube.com/watch?v=..."
-                  className="w-full py-4 pr-5 bg-transparent border-none text-foreground placeholder:text-zinc-600 focus:outline-none focus:ring-0 text-lg font-medium"
+                  className="w-full py-3 pr-4 bg-transparent border-none text-foreground placeholder:text-zinc-700 focus:outline-none focus:ring-0 text-sm font-mono"
                   autoComplete="off"
                   disabled={isLoading}
                 />
@@ -928,22 +911,22 @@ export default function Home() {
                 type="button"
                 onClick={handleSurpriseMe}
                 title="Surprise Me — randomise all settings"
-                className="shrink-0 px-4 py-4 sm:py-0 rounded-2xl font-bold text-zinc-300 border border-border bg-white/5 hover:bg-white/10 hover:text-white transition-all flex items-center gap-2"
+                className="shrink-0 px-3 py-3 sm:py-0 font-mono text-xs uppercase tracking-wider text-zinc-500 border border-primary/20 hover:border-primary/50 hover:text-primary transition-all flex items-center gap-1.5"
               >
-                <Shuffle className="w-4 h-4" />
-                <span className="hidden sm:inline text-sm">Surprise</span>
+                <Shuffle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Surprise</span>
               </button>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="relative shrink-0 px-8 py-4 sm:py-0 rounded-2xl font-bold text-white shadow-xl flex items-center justify-center gap-2 group overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                className="shrink-0 px-6 py-3 sm:py-0 font-mono font-bold text-sm uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-primary to-secondary group-hover:scale-105 transition-transform duration-300" />
-                <span className="relative z-10 flex items-center gap-2 text-lg">
-                  {isLoading ? "Analyzing..." : "Generate"}
-                  {!isLoading && <Wand2 className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
-                </span>
+                {isLoading ? (
+                  <span className="flex items-center gap-2"><span className="animate-pulse">◈</span> Analyzing</span>
+                ) : (
+                  <><Wand2 className="w-3.5 h-3.5" /> Generate</>
+                )}
               </button>
             </div>
           </form>
@@ -958,31 +941,31 @@ export default function Home() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/4 border border-border/60">
+                <div className="flex items-center gap-3 p-2.5 bg-card border border-primary/20">
                   {videoPreview.thumbnail && (
                     <img
                       src={videoPreview.thumbnail}
                       alt="thumbnail"
-                      className="w-20 h-14 object-cover rounded-lg shrink-0 bg-zinc-800"
+                      className="w-16 h-11 object-cover shrink-0 bg-zinc-900"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                   )}
                   <div className="min-w-0 flex-1">
                     {previewLoading && !videoPreview.title ? (
                       <div className="space-y-1.5">
-                        <div className="h-3.5 bg-white/10 rounded animate-pulse w-3/4" />
-                        <div className="h-3 bg-white/5 rounded animate-pulse w-1/2" />
+                        <div className="h-2.5 bg-primary/10 animate-pulse w-3/4" />
+                        <div className="h-2 bg-primary/5 animate-pulse w-1/2" />
                       </div>
                     ) : videoPreview.title ? (
                       <>
-                        <p className="font-semibold text-sm text-foreground truncate">{videoPreview.title}</p>
-                        <p className="text-xs text-zinc-500 mt-0.5">{videoPreview.author}{videoPreview.duration ? ` · ${videoPreview.duration}` : ""}</p>
+                        <p className="font-mono text-xs text-white truncate">{videoPreview.title}</p>
+                        <p className="font-mono text-[10px] text-primary/50 mt-0.5">{videoPreview.author}{videoPreview.duration ? ` · ${videoPreview.duration}` : ""}</p>
                       </>
                     ) : (
-                      <p className="text-xs text-zinc-500">YouTube video detected</p>
+                      <p className="font-mono text-[10px] text-zinc-600">YouTube video detected</p>
                     )}
                   </div>
-                  <div className="w-2 h-2 rounded-full bg-green-500 shrink-0 animate-pulse" title="Video found" />
+                  <div className="w-1.5 h-1.5 bg-primary shrink-0 animate-pulse" title="Video found" />
                 </div>
               </motion.div>
             )}
@@ -1017,15 +1000,15 @@ export default function Home() {
               type="button"
               onClick={() => setIsInstrumental((v) => !v)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                "flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] uppercase tracking-wider border transition-all",
                 isInstrumental
-                  ? "bg-secondary/20 border-secondary/50 text-secondary shadow-sm shadow-secondary/20"
-                  : "bg-white/4 border-border/40 text-zinc-400 hover:border-border hover:text-zinc-200"
+                  ? "border-primary bg-primary text-black"
+                  : "border-primary/20 text-zinc-500 hover:border-primary/50 hover:text-primary/80"
               )}
             >
-              <Music className="w-3.5 h-3.5" />
+              <Music className="w-3 h-3" />
               Instrumental
-              {isInstrumental && <span className="text-[10px] bg-secondary/30 px-1.5 py-0.5 rounded-full ml-0.5">ON</span>}
+              {isInstrumental && <span className="text-[9px] ml-0.5">◉</span>}
             </button>
             <ExpandToggle
               active={showStyleControls}
@@ -1069,26 +1052,26 @@ export default function Home() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-4 space-y-4">
+                <div className="bg-card border border-primary/15 p-4 space-y-4">
                   {/* Artist memory banner */}
                   {artistMemoryBanner && (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-400">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/8 border border-yellow-500/20 text-xs text-yellow-400 font-mono">
                       <BrainCircuit className="w-3.5 h-3.5 shrink-0" />
-                      <span>Loaded your saved style for <strong>{artistMemoryBanner}</strong></span>
+                      <span>Loaded saved style for <strong>{artistMemoryBanner}</strong></span>
                     </div>
                   )}
 
                   {/* Suggestion loading indicator */}
                   {suggestLoading && (
-                    <div className="flex items-center gap-2 text-xs text-zinc-500 animate-pulse">
-                      <Sparkles className="w-3.5 h-3.5 text-primary" />
-                      AI is analyzing genre, era, and energy…
+                    <div className="flex items-center gap-2 text-[11px] font-mono text-primary/50 animate-pulse">
+                      <Sparkles className="w-3 h-3" />
+                      AI analyzing genre, era, energy…
                     </div>
                   )}
 
                   {/* Suggestion applied banner */}
                   {!suggestLoading && suggestions && (
-                    <div className="flex items-start justify-between gap-3 px-3 py-2.5 rounded-xl bg-primary/8 border border-primary/20">
+                    <div className="flex items-start justify-between gap-3 px-3 py-2.5 bg-primary/5 border border-primary/20">
                       <div className="flex items-start gap-2 min-w-0">
                         <Sparkles className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                         <div className="min-w-0">
@@ -1122,7 +1105,7 @@ export default function Home() {
                     </div>
                   )}
 
-                  <p className="text-[11px] text-zinc-500 font-medium tracking-widest uppercase">Style preferences — guide the AI output</p>
+                  <p className="font-mono text-[10px] text-zinc-700 uppercase tracking-widest">Style preferences — guide AI output</p>
 
                   {/* Row 1: Vocal + Energy side by side */}
                   <div className="grid grid-cols-2 gap-4">
@@ -1202,10 +1185,10 @@ export default function Home() {
                             type="button"
                             onClick={() => !isDisabled && setSelectedMoods((p) => toggleSet(p, mood, MAX_MOODS))}
                             className={cn(
-                              "px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all",
-                              isSelected ? "bg-secondary/20 text-secondary border-secondary/40"
-                                : isDisabled ? "opacity-25 cursor-not-allowed bg-white/5 border-white/5 text-zinc-500"
-                                : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+                              "px-2.5 py-0.5 font-mono text-[11px] border transition-all",
+                              isSelected ? "border-primary text-primary bg-primary/10"
+                                : isDisabled ? "opacity-20 cursor-not-allowed border-primary/10 text-zinc-600"
+                                : "border-primary/15 text-zinc-500 hover:border-primary/40 hover:text-zinc-300"
                             )}
                           >
                             {mood}
@@ -1231,10 +1214,10 @@ export default function Home() {
                             type="button"
                             onClick={() => !isDisabled && setSelectedInstruments((p) => toggleSet(p, inst, MAX_INSTRUMENTS))}
                             className={cn(
-                              "px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all",
-                              isSelected ? "bg-primary/20 text-primary border-primary/40"
-                                : isDisabled ? "opacity-25 cursor-not-allowed bg-white/5 border-white/5 text-zinc-500"
-                                : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+                              "px-2.5 py-0.5 font-mono text-[11px] border transition-all",
+                              isSelected ? "border-primary text-primary bg-primary/10"
+                                : isDisabled ? "opacity-20 cursor-not-allowed border-primary/10 text-zinc-600"
+                                : "border-primary/15 text-zinc-500 hover:border-primary/40 hover:text-zinc-300"
                             )}
                           >
                             {inst}
@@ -1256,18 +1239,18 @@ export default function Home() {
                       )}
                     </div>
                     {selectedGenres.length > 0 && (
-                      <div className="flex flex-wrap gap-1 p-2 rounded-lg bg-primary/5 border border-primary/20">
+                      <div className="flex flex-wrap gap-1 p-2 bg-primary/5 border border-primary/20">
                         {selectedGenres.map((g) => (
                           <button
                             key={g}
                             type="button"
                             onClick={() => setSelectedGenres((p) => p.filter((x) => x !== g))}
-                            className="flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/20 text-primary border border-primary/30 hover:bg-destructive/20 hover:text-destructive hover:border-destructive/30 transition-colors"
+                            className="flex items-center gap-0.5 px-2 py-0.5 font-mono text-[11px] bg-primary/15 text-primary border border-primary/30 hover:border-destructive/40 hover:text-destructive transition-colors"
                           >
                             {g}<span className="text-[9px] leading-none ml-0.5">✕</span>
                           </button>
                         ))}
-                        <span className="flex items-center text-[10px] text-zinc-500 ml-1">{selectedGenres.length}/{MAX_GENRES}</span>
+                        <span className="flex items-center font-mono text-[10px] text-primary/40 ml-1">{selectedGenres.length}/{MAX_GENRES}</span>
                       </div>
                     )}
                     <div className="space-y-1.5">
@@ -1279,8 +1262,8 @@ export default function Home() {
                         return (
                           <div key={cat.label} className="space-y-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">{cat.label}</span>
-                              {catSelected > 0 && <span className="text-[9px] font-medium text-primary bg-primary/10 rounded-full px-1.5 py-0.5">{catSelected}</span>}
+                              <span className="font-mono text-[10px] uppercase tracking-widest text-zinc-700">{cat.label}</span>
+                              {catSelected > 0 && <span className="font-mono text-[9px] text-primary border border-primary/30 px-1">{catSelected}</span>}
                             </div>
                             <div className="flex flex-wrap gap-1">
                               {displayedGenres.map((genre) => {
@@ -1292,10 +1275,10 @@ export default function Home() {
                                     type="button"
                                     onClick={() => !isDisabled && setSelectedGenres((p) => toggleSet(p, genre, MAX_GENRES))}
                                     className={cn(
-                                      "px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all",
-                                      isSelected ? "bg-primary/20 text-primary border-primary/40"
-                                        : isDisabled ? "bg-background/20 text-zinc-600 border-border/30 cursor-not-allowed opacity-40"
-                                        : "bg-background/40 text-zinc-400 border-border/50 hover:border-primary/40 hover:text-zinc-200 hover:bg-primary/10"
+                                      "px-2 py-0.5 font-mono text-[11px] border transition-all",
+                                      isSelected ? "border-primary text-primary bg-primary/10"
+                                        : isDisabled ? "border-primary/10 text-zinc-700 cursor-not-allowed opacity-40"
+                                        : "border-primary/15 text-zinc-500 hover:border-primary/40 hover:text-zinc-300"
                                     )}
                                   >
                                     {genre}
@@ -1306,7 +1289,7 @@ export default function Home() {
                                 <button
                                   type="button"
                                   onClick={() => setExpandedGenreCategory(isExpanded ? null : cat.label)}
-                                  className="px-2 py-0.5 rounded-full text-[11px] font-medium border border-dashed border-border/40 text-zinc-500 hover:text-zinc-300 hover:border-border transition-colors"
+                                  className="px-2 py-0.5 font-mono text-[11px] border border-dashed border-primary/20 text-zinc-600 hover:text-primary/60 hover:border-primary/30 transition-colors"
                                 >
                                   {isExpanded ? "less" : `+${cat.genres.length - 7}`}
                                 </button>
@@ -1346,7 +1329,7 @@ export default function Home() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-5 space-y-5">
+                <div className="bg-card border border-primary/15 p-5 space-y-5">
 
                   {/* Quality / vibe exclusions */}
                   <div className="space-y-2">
@@ -1365,10 +1348,10 @@ export default function Home() {
                             type="button"
                             onClick={() => setExcludeTags((prev) => isChecked ? prev.filter((t) => t !== preset.value) : [...prev, preset.value])}
                             className={cn(
-                              "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
+                              "px-2.5 py-0.5 font-mono text-[11px] border transition-all",
                               isChecked
-                                ? "bg-destructive/15 border-destructive/40 text-destructive"
-                                : "bg-white/4 border-border/40 text-zinc-400 hover:border-destructive/30 hover:text-zinc-200 hover:bg-destructive/8"
+                                ? "border-destructive/40 text-destructive bg-destructive/8"
+                                : "border-primary/15 text-zinc-500 hover:border-destructive/30 hover:text-zinc-300"
                             )}
                           >
                             {isChecked && <span className="mr-1 text-[9px]">✕</span>}{preset.label}
@@ -1399,10 +1382,10 @@ export default function Home() {
                               return [...new Set([...prev, ...tags])];
                             })}
                             className={cn(
-                              "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
+                              "px-2.5 py-0.5 font-mono text-[11px] border transition-all",
                               isChecked
-                                ? "bg-destructive/15 border-destructive/40 text-destructive"
-                                : "bg-white/4 border-border/40 text-zinc-400 hover:border-destructive/30 hover:text-zinc-200 hover:bg-destructive/8"
+                                ? "border-destructive/40 text-destructive bg-destructive/8"
+                                : "border-primary/15 text-zinc-500 hover:border-destructive/30 hover:text-zinc-300"
                             )}
                           >
                             {isChecked && <span className="mr-1 text-[9px]">✕</span>}{preset.label}
@@ -1414,22 +1397,22 @@ export default function Home() {
 
                   {/* Custom freetext exclusions */}
                   <div className="space-y-1.5">
-                    <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Custom terms</p>
+                    <p className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Custom terms</p>
                     <input
                       type="text"
                       value={customExclusions}
                       onChange={(e) => setCustomExclusions(e.target.value)}
                       placeholder="e.g. no flute, no church bells, no whistling"
-                      className="w-full px-3 py-2 rounded-lg bg-background/50 border border-border text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-destructive/40 transition-colors font-mono"
+                      className="w-full px-3 py-2 bg-background border border-primary/20 text-xs text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-destructive/40 transition-colors font-mono"
                     />
-                    <p className="text-[10px] text-zinc-600">Comma-separated. These will be added directly to the negative prompt.</p>
+                    <p className="font-mono text-[10px] text-zinc-700">Comma-separated — added directly to the negative prompt.</p>
                   </div>
 
                   {/* Live preview */}
                   {(excludeTags.length > 0 || customExclusions.trim()) && (
-                    <div className="text-[11px] text-zinc-500 font-mono bg-background/40 rounded-lg px-3 py-2.5 border border-border/40 leading-relaxed">
-                      <span className="text-zinc-600 font-sans font-semibold uppercase text-[10px] tracking-wider">Will exclude: </span>
-                      <span className="text-zinc-300">
+                    <div className="font-mono text-[11px] text-zinc-500 bg-background px-3 py-2.5 border border-primary/15 leading-relaxed">
+                      <span className="font-mono text-[10px] text-zinc-700 uppercase tracking-wider">Excluding: </span>
+                      <span className="text-primary/70">
                         {[...excludeTags, ...customExclusions.split(",").map((s) => s.trim()).filter(Boolean)].join(", ")}
                       </span>
                     </div>
@@ -1456,21 +1439,21 @@ export default function Home() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-5 space-y-3">
+                <div className="bg-card border border-primary/15 p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-zinc-500 font-medium tracking-wide uppercase">
-                      Paste your own lyrics — overrides the automatic lookup
+                    <p className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
+                      Override automatic lyrics — paste custom lyrics below
                     </p>
                     {manualLyrics.trim().length > 0 && (
-                      <span className="text-xs text-secondary font-mono">{manualLyrics.trim().length} chars</span>
+                      <span className="font-mono text-[10px] text-primary/60">{manualLyrics.trim().length} chars</span>
                     )}
                   </div>
                   <textarea
                     value={manualLyrics}
                     onChange={(e) => setManualLyrics(e.target.value)}
-                    placeholder={"Paste song lyrics here...\n\nThese will be used verbatim in the Suno template instead of the automatically fetched lyrics."}
+                    placeholder={"Paste song lyrics here...\n\nThese will be used instead of the auto-fetched lyrics."}
                     rows={8}
-                    className="w-full px-4 py-3 rounded-xl bg-background/50 border border-border text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-primary/50 transition-colors resize-y font-mono leading-relaxed"
+                    className="w-full px-3 py-2.5 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors resize-y font-mono leading-relaxed"
                   />
                   {manualLyrics.trim().length > 0 && (
                     <button type="button" onClick={() => setManualLyrics("")} className="text-xs text-zinc-500 hover:text-destructive transition-colors">
@@ -1492,20 +1475,20 @@ export default function Home() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="bg-card/40 backdrop-blur-md border border-border rounded-2xl p-5 space-y-3">
+                <div className="bg-card border border-primary/15 p-5 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs text-zinc-500 font-medium tracking-wide uppercase">Recent generations</p>
-                    <button type="button" onClick={handleClearHistory} className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-destructive transition-colors">
+                    <p className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Recent generations</p>
+                    <button type="button" onClick={handleClearHistory} className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-600 hover:text-destructive transition-colors uppercase tracking-wider">
                       <Trash2 className="w-3 h-3" /> Clear all
                     </button>
                   </div>
-                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
                     {history.map((entry) => (
                       <button
                         key={entry.id}
                         type="button"
                         onClick={() => handleLoadHistory(entry)}
-                        className="w-full text-left px-4 py-3 rounded-xl bg-background/40 hover:bg-background/70 border border-border/50 hover:border-primary/30 transition-all group"
+                        className="w-full text-left px-3 py-2.5 bg-background hover:bg-primary/5 border border-primary/10 hover:border-primary/30 transition-all group"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -1601,7 +1584,7 @@ export default function Home() {
                         compact
                       />
                     ) : (
-                      <div className="flex items-center justify-center h-40 rounded-2xl border border-border bg-card/40">
+                      <div className="flex items-center justify-center h-40 border border-primary/10 bg-card">
                         <LoadingEq />
                       </div>
                     )}
@@ -1622,21 +1605,21 @@ export default function Home() {
                   type="button"
                   onClick={handleGenerateVariations}
                   disabled={isGeneratingVariations}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40"
+                  className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border border-primary/20 text-zinc-500 hover:border-primary/50 hover:text-primary transition-all disabled:opacity-30"
                 >
-                  <Layers className="w-3.5 h-3.5" /> Generate 2 Variations
+                  <Layers className="w-3 h-3" /> Generate Variations
                 </button>
                 <button
                   type="button"
                   onClick={handleShareTemplate}
                   className={cn(
-                    "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border transition-all",
+                    "flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border transition-all",
                     shareToast === "copied"
-                      ? "bg-green-500/20 border-green-500/40 text-green-400"
-                      : "bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white"
+                      ? "border-primary/40 text-primary"
+                      : "border-primary/20 text-zinc-500 hover:border-primary/50 hover:text-primary"
                   )}
                 >
-                  {shareToast === "copied" ? <><Check className="w-3.5 h-3.5" /> Link copied!</> : <><Share2 className="w-3.5 h-3.5" /> Share template</>}
+                  {shareToast === "copied" ? <><Check className="w-3 h-3" /> Link copied!</> : <><Share2 className="w-3 h-3" /> Share</>}
                 </button>
               </div>
               <TemplateResult
@@ -1646,7 +1629,7 @@ export default function Home() {
               />
 
               {/* Rating bar */}
-              <div className="flex items-center justify-center gap-3 mt-5 py-3 px-5 rounded-xl bg-white/[0.03] border border-white/[0.07] max-w-6xl mx-auto">
+              <div className="flex items-center justify-center gap-3 mt-4 py-2.5 px-5 bg-card border border-primary/10 max-w-6xl mx-auto">
                 <span className="text-xs text-zinc-400 mr-1 shrink-0">Rate this template:</span>
                 <div
                   className="flex items-center gap-0.5"
@@ -1719,20 +1702,20 @@ function ExpandToggle({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+        "flex items-center gap-1.5 px-3 py-1 font-mono text-[11px] uppercase tracking-wider border transition-all",
         active
-          ? "bg-primary/20 border-primary/40 text-primary"
-          : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+          ? "border-primary text-primary bg-primary/8"
+          : "border-primary/20 text-zinc-500 hover:border-primary/50 hover:text-primary/80"
       )}
     >
       {icon}
       {label}
       {activeCount > 0 && (
-        <span className="ml-1 w-4 h-4 rounded-full bg-secondary/80 text-black text-[10px] font-bold flex items-center justify-center">
+        <span className="ml-0.5 px-1.5 bg-primary text-black text-[9px] font-bold">
           {activeCount}
         </span>
       )}
-      <ChevronDown className={cn("w-3.5 h-3.5 ml-0.5 transition-transform duration-200", active && "rotate-180")} />
+      <ChevronDown className={cn("w-3 h-3 ml-0.5 transition-transform duration-200", active && "rotate-180")} />
     </button>
   );
 }
@@ -1743,10 +1726,10 @@ function ChipButton({ active, onClick, children }: { active: boolean; onClick: (
       type="button"
       onClick={onClick}
       className={cn(
-        "px-4 py-1.5 rounded-lg text-sm font-medium border transition-all",
+        "px-3 py-1 font-mono text-[11px] border transition-all",
         active
-          ? "bg-primary/20 border-primary/50 text-primary shadow-sm shadow-primary/10"
-          : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200 hover:bg-white/10"
+          ? "border-primary text-primary bg-primary/10"
+          : "border-primary/15 text-zinc-500 hover:border-primary/40 hover:text-zinc-300"
       )}
     >
       {children}

@@ -134,51 +134,51 @@ export function TemplateResult({
       variants={containerVariants}
       initial="hidden"
       animate="show"
-      className="w-full max-w-5xl mx-auto flex flex-col gap-6 relative"
+      className="w-full max-w-5xl mx-auto flex flex-col gap-4 relative"
     >
       {/* Header info bar */}
       <motion.div
         variants={itemVariants}
-        className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-card/40 backdrop-blur-md border border-border p-6 rounded-2xl shadow-xl shadow-black/20"
+        className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-card border border-primary/20 px-5 py-4"
       >
         <div>
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="font-mono text-[10px] text-primary/50 uppercase tracking-widest">Template Ready</span>
+          </div>
+          <h2 className="text-xl font-bold text-white leading-tight">
             {template.songTitle}
           </h2>
-          <p className="text-muted-foreground flex items-center gap-2 mt-1">
-            <Mic2 className="w-4 h-4" /> Original Artist:{" "}
-            <span className="text-foreground font-medium">{template.artist}</span>
+          <p className="flex items-center gap-1.5 mt-0.5 font-mono text-[11px] text-zinc-500">
+            <Mic2 className="w-3 h-3 text-primary/40" />
+            {template.artist}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {/* Open Suno — copies style prompt then opens suno.com */}
           <button
             onClick={handleOpenSuno}
             title="Copies the Style Prompt to your clipboard, then opens Suno.ai"
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm border transition-all",
+              "flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border transition-all",
               openSunoCopied
-                ? "bg-green-500/15 border-green-500/40 text-green-400"
-                : "bg-white/5 border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white"
+                ? "border-primary/50 text-primary bg-primary/10"
+                : "border-primary/25 text-zinc-400 hover:border-primary hover:text-primary"
             )}
           >
-            {openSunoCopied ? <Check className="w-4 h-4" /> : <ExternalLink className="w-4 h-4" />}
-            {openSunoCopied ? "Style copied!" : "Open Suno"}
+            {openSunoCopied ? <Check className="w-3 h-3" /> : <ExternalLink className="w-3 h-3" />}
+            {openSunoCopied ? "Copied!" : "Open Suno"}
           </button>
-          {/* Export */}
           <button
             onClick={exportAsTxt}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border border-primary/25 text-zinc-400 hover:border-primary/50 hover:text-zinc-300 transition-all"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3 h-3" />
             Export .txt
           </button>
-          {/* Copy all */}
           <button
             onClick={copyAll}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-4 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all"
           >
-            <Copy className="w-4 h-4" />
+            <Copy className="w-3 h-3" />
             Copy All
           </button>
         </div>
@@ -186,27 +186,26 @@ export function TemplateResult({
 
       {/* Anti-cliché validator */}
       {antiCliches.length > 0 && !compact && (
-        <motion.div variants={itemVariants} className="bg-yellow-500/8 border border-yellow-500/25 rounded-2xl overflow-hidden">
+        <motion.div variants={itemVariants} className="bg-yellow-500/5 border border-yellow-500/20 overflow-hidden">
           <button
             onClick={() => setValidatorExpanded((v) => !v)}
-            className="w-full flex items-center justify-between gap-3 px-5 py-3.5 text-left hover:bg-yellow-500/10 transition-colors"
+            className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-yellow-500/8 transition-colors"
           >
-            <div className="flex items-center gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
-              <span className="text-sm font-semibold text-yellow-300">
-                {antiCliches.length} overused word{antiCliches.length > 1 ? "s" : ""} detected in the style prompt
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
+              <span className="font-mono text-[11px] text-yellow-400 uppercase tracking-wider">
+                {antiCliches.length} cliché{antiCliches.length > 1 ? "s" : ""} detected — regen style for better results
               </span>
-              <span className="text-xs text-yellow-500/70 hidden sm:inline">— consider regenerating</span>
             </div>
-            {validatorExpanded ? <ChevronUp className="w-4 h-4 text-yellow-500" /> : <ChevronDown className="w-4 h-4 text-yellow-500" />}
+            {validatorExpanded ? <ChevronUp className="w-3.5 h-3.5 text-yellow-600" /> : <ChevronDown className="w-3.5 h-3.5 text-yellow-600" />}
           </button>
           {validatorExpanded && (
-            <div className="px-5 pb-4 space-y-2">
-              <p className="text-xs text-yellow-600/80">These words are known to produce generic, less specific Suno output. Click the regenerate button on the Style section to get a new version.</p>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="px-4 pb-3 space-y-2 border-t border-yellow-500/15">
+              <p className="font-mono text-[10px] text-yellow-600/70 pt-2">Generic words produce vague Suno output. Regenerate the Style section to fix.</p>
+              <div className="flex flex-wrap gap-1">
                 {antiCliches.map((w) => (
-                  <span key={w} className="text-xs px-2.5 py-1 rounded-full bg-yellow-500/15 border border-yellow-500/30 text-yellow-300 font-mono">
-                    "{w}"
+                  <span key={w} className="font-mono text-[10px] px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/25 text-yellow-400">
+                    {w}
                   </span>
                 ))}
               </div>
@@ -216,7 +215,7 @@ export function TemplateResult({
       )}
 
       {/* Top row: Style + Title/NegativePrompt */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <SectionCard
           variants={itemVariants}
           icon={<Music className="w-5 h-5 text-secondary" />}
@@ -232,7 +231,7 @@ export function TemplateResult({
           isRegenerating={regeneratingSection === "styleOfMusic"}
           mono={false}
         />
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <SectionCard
             variants={itemVariants}
             icon={<Heading className="w-5 h-5 text-accent" />}
@@ -266,29 +265,27 @@ export function TemplateResult({
       <motion.div
         variants={itemVariants}
         className={cn(
-          "bg-card/40 backdrop-blur-md border border-border p-6 rounded-2xl shadow-lg relative group flex flex-col",
-          regeneratingSection === "lyrics" && "opacity-60"
+          "bg-card border border-primary/15 p-5 relative group flex flex-col",
+          regeneratingSection === "lyrics" && "opacity-50"
         )}
       >
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-border/50">
-          <div className="flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-secondary" />
+        <div className="flex items-center justify-between mb-3 pb-3 border-b border-primary/10">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-primary/60" />
             <div>
-              <span className="text-xs font-bold tracking-widest text-secondary uppercase opacity-70">
-                SECTION 2
-              </span>
+              <span className="font-mono text-[10px] text-primary/50 uppercase tracking-widest block">Section 2</span>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-foreground leading-tight">Lyrics / Metadata</h3>
+                <h3 className="text-sm font-semibold text-white leading-tight">Lyrics / Metadata</h3>
                 <CharBadge
                   count={template.lyrics.length}
-                  limit={4900}
-                  warning={template.lyrics.length > 4400}
-                  error={template.lyrics.length > 4900}
+                  limit={4999}
+                  warning={template.lyrics.length < 4900}
+                  error={template.lyrics.length > 4999}
                 />
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <RegenerateButton
               onClick={() => onRegenerateSection("lyrics")}
               isRegenerating={regeneratingSection === "lyrics"}
@@ -298,24 +295,24 @@ export function TemplateResult({
         </div>
 
         {regeneratingSection === "lyrics" ? (
-          <div className="flex items-center justify-center py-16 gap-3 text-zinc-500">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm font-medium">Regenerating lyrics...</span>
+          <div className="flex items-center justify-center py-12 gap-2 text-zinc-600">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span className="font-mono text-[11px] text-primary/50">Regenerating...</span>
           </div>
         ) : (
           <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-            <pre className="font-mono text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap">
+            <pre className="font-mono text-sm leading-relaxed text-zinc-400 whitespace-pre-wrap">
               {template.lyrics.split(/(\[[^\]]*\]|\([^)]*\))/).map((part: string, i: number) => {
                 if (part.startsWith("[") && part.endsWith("]")) {
                   return (
-                    <span key={i} className="text-secondary font-semibold">
+                    <span key={i} className="text-primary font-semibold">
                       {part}
                     </span>
                   );
                 }
                 if (part.startsWith("(") && part.endsWith(")")) {
                   return (
-                    <span key={i} className="text-primary/80 italic">
+                    <span key={i} className="text-primary/60 italic">
                       {part}
                     </span>
                   );
@@ -344,12 +341,12 @@ function CharBadge({
   return (
     <span
       className={cn(
-        "text-xs font-mono px-2 py-0.5 rounded-full border",
+        "font-mono text-[10px] px-1.5 py-0.5 border",
         error
-          ? "bg-destructive/20 text-destructive border-destructive/40"
+          ? "border-destructive/40 text-destructive"
           : warning
-            ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-            : "bg-secondary/10 text-secondary border-secondary/30"
+            ? "border-yellow-500/30 text-yellow-500"
+            : "border-primary/25 text-primary/60"
       )}
     >
       {count.toLocaleString()} / {limit.toLocaleString()}
@@ -369,20 +366,20 @@ function RegenerateButton({
       onClick={onClick}
       disabled={isRegenerating}
       title="Regenerate this section"
-      className="p-2 rounded-lg bg-background/50 hover:bg-secondary/20 hover:text-secondary border border-white/5 hover:border-secondary/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+      className="p-1.5 border border-primary/15 text-zinc-600 hover:border-primary/40 hover:text-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
       aria-label="Regenerate"
     >
       {isRegenerating ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
       ) : (
-        <RefreshCw className="w-4 h-4" />
+        <RefreshCw className="w-3.5 h-3.5" />
       )}
     </button>
   );
 }
 
 function SectionCard({
-  icon,
+  icon: _icon,
   label,
   title,
   content,
@@ -412,52 +409,51 @@ function SectionCard({
   mono: boolean;
   accent?: "destructive";
 }) {
-  const accentColor = accent === "destructive" ? "text-destructive" : "text-secondary";
+  const borderColor = accent === "destructive" ? "border-destructive/20" : "border-primary/15";
+  const labelColor = accent === "destructive" ? "text-destructive/50" : "text-primary/50";
 
   return (
     <motion.div
       variants={variants}
       className={cn(
-        "bg-card/40 backdrop-blur-md border border-border p-5 rounded-2xl shadow-lg relative group flex flex-col gap-3",
-        isRegenerating && "opacity-60"
+        "bg-card border p-4 relative group flex flex-col gap-2.5",
+        borderColor,
+        isRegenerating && "opacity-50"
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2">
-          {icon}
-          <div>
-            <span className={cn("text-xs font-bold tracking-widest uppercase opacity-70", accentColor)}>
-              {label}
-            </span>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-foreground leading-tight">{title}</h3>
-              {charCount !== undefined && charLimit !== undefined && (
-                <CharBadge
-                  count={charCount}
-                  limit={charLimit}
-                  warning={charWarning}
-                  error={charError}
-                />
-              )}
-            </div>
+        <div>
+          <span className={cn("font-mono text-[10px] uppercase tracking-widest block", labelColor)}>
+            {label}
+          </span>
+          <div className="flex items-center gap-2 flex-wrap mt-0.5">
+            <h3 className="text-sm font-semibold text-white leading-tight">{title}</h3>
+            {charCount !== undefined && charLimit !== undefined && (
+              <CharBadge
+                count={charCount}
+                limit={charLimit}
+                warning={charWarning}
+                error={charError}
+              />
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <RegenerateButton onClick={onRegenerate} isRegenerating={isRegenerating} />
           <CopyButton onClick={onCopy} />
         </div>
       </div>
 
       {isRegenerating ? (
-        <div className="flex items-center gap-2 py-4 text-zinc-500">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-sm">Regenerating...</span>
+        <div className="flex items-center gap-2 py-4 text-zinc-600">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+          <span className="font-mono text-[11px] text-primary/50">Regenerating...</span>
         </div>
       ) : (
         <p
           className={cn(
-            "text-zinc-200 leading-relaxed break-words",
-            mono ? "font-mono text-sm" : "font-medium"
+            "text-zinc-300 leading-relaxed break-words text-sm",
+            mono ? "font-mono" : ""
           )}
         >
           {content}
@@ -478,14 +474,14 @@ function CopyButton({
     <button
       onClick={onClick}
       className={cn(
-        "p-2 rounded-lg bg-background/50 hover:bg-primary hover:text-primary-foreground border border-white/5 hover:border-transparent transition-all",
+        "p-1.5 border border-primary/15 text-zinc-600 hover:border-primary/40 hover:text-primary transition-all",
         isStatic
           ? "opacity-100"
           : "opacity-0 group-hover:opacity-100 focus:opacity-100"
       )}
       aria-label="Copy"
     >
-      <Copy className="w-4 h-4" />
+      <Copy className="w-3.5 h-3.5" />
     </button>
   );
 }
