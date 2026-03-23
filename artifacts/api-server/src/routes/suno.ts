@@ -3,6 +3,7 @@ import { GenerateSunoTemplateBody, GenerateSunoTemplateResponse } from "@workspa
 import { openai } from "@workspace/integrations-openai-ai-server";
 import ytdl from "@distube/ytdl-core";
 import { parse as parseHtml } from "node-html-parser";
+import { detectAudioFeatures, type AudioFeatures } from "../lib/audioFeatures.js";
 
 const router: IRouter = Router();
 
@@ -51,6 +52,8 @@ interface VideoMetadata {
   musicBrainz?: MusicBrainzData;
   /** Structured data extracted from the description */
   descriptionData?: DescriptionMusicData;
+  /** Audio features: BPM, key, time signature (from description → GetSongBPM → Essentia.js) */
+  audioFeatures?: AudioFeatures;
 }
 
 function formatDuration(seconds: number): string {
@@ -507,12 +510,20 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
 
   console.log(`Looking up: "${cleanArtist}" - "${cleanTitle}"${durationSeconds ? ` (${durationSeconds}s)` : ""}`);
 
-  // --- Step 2: Parallel-fetch Genius lyrics + (lrclib + lyrics.ovh) + MusicBrainz ---
-  const [geniusResult, lrclibLyrics, ovhLyrics, musicBrainz] = await Promise.all([
+  // --- Step 2: Parallel-fetch Genius lyrics + (lrclib + lyrics.ovh) + MusicBrainz + audio features (fast) ---
+  const [geniusResult, lrclibLyrics, ovhLyrics, musicBrainz, audioFeaturesFast] = await Promise.all([
     fetchLyricsFromGenius(cleanArtist, cleanTitle),
     fetchLyricsFromLrcLib(cleanArtist, cleanTitle, durationSeconds ?? undefined),
     fetchLyricsFromAPI(cleanArtist, cleanTitle),
     fetchMusicBrainzData(cleanArtist, cleanTitle, durationSeconds ?? undefined),
+    detectAudioFeatures({
+      artist: cleanArtist,
+      title: cleanTitle,
+      youtubeUrl: url,
+      descriptionBpm: descriptionData.bpm,
+      descriptionKey: descriptionData.key,
+      skipEssentia: true,
+    }),
   ]);
 
   // --- Step 3: Pick the best lyrics source (Genius > lrclib > lyrics.ovh) ---
@@ -542,6 +553,19 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
     console.log(`MusicBrainz: year=${musicBrainz.releaseYear}, genres=[${musicBrainz.genres?.join(", ")}], album="${musicBrainz.album}"`);
   }
 
+  // --- Step 4: Essentia.js audio analysis fallback (only if no BPM/key found yet) ---
+  let audioFeatures = audioFeaturesFast;
+  if (!audioFeatures) {
+    audioFeatures = await detectAudioFeatures({
+      artist: cleanArtist,
+      title: cleanTitle,
+      youtubeUrl: url,
+      descriptionBpm: descriptionData.bpm,
+      descriptionKey: descriptionData.key,
+      skipEssentia: false,
+    });
+  }
+
   const base = {
     title,
     author,
@@ -556,6 +580,7 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
     language,
     musicBrainz: (musicBrainz.releaseYear || musicBrainz.genres?.length || musicBrainz.album) ? musicBrainz : undefined,
     descriptionData: Object.keys(descriptionData).length > 0 ? descriptionData : undefined,
+    audioFeatures: audioFeatures ?? undefined,
   };
 
   if (lyricsText) {
@@ -609,6 +634,18 @@ function buildPromptContext(metadata: VideoMetadata): string {
     if (mb.isrc) analysisLines.push(`ISRC: ${mb.isrc}`);
   }
 
+  // Verified audio features — BPM, key, time signature (highest confidence signal for style prompt)
+  const af = metadata.audioFeatures;
+  if (af) {
+    const sourceLabel =
+      af.source === "description" ? "from description"
+      : af.source === "getsongbpm" ? "GetSongBPM database — verified"
+      : "Essentia.js audio analysis — measured from audio";
+    if (af.bpm) analysisLines.push(`BPM: ${af.bpm} (${sourceLabel}) ← USE THIS EXACT VALUE in style prompt and [BPM:] tag`);
+    if (af.key) analysisLines.push(`Musical Key: ${af.key} (${sourceLabel}) ← USE THIS EXACT VALUE in style prompt and [Key:] tag`);
+    if (af.timeSignature && af.timeSignature !== "4/4") analysisLines.push(`Time Signature: ${af.timeSignature} (${sourceLabel})`);
+  }
+
   // Description-extracted data (medium confidence)
   const dd = metadata.descriptionData;
   if (dd) {
@@ -617,8 +654,8 @@ function buildPromptContext(metadata: VideoMetadata): string {
     if (dd.label && !mb?.label) analysisLines.push(`Label (from description): ${dd.label}`);
     if (dd.producedBy) analysisLines.push(`Produced by: ${dd.producedBy}`);
     if (dd.writtenBy) analysisLines.push(`Written by: ${dd.writtenBy}`);
-    if (dd.bpm) analysisLines.push(`BPM (from description): ${dd.bpm}`);
-    if (dd.key) analysisLines.push(`Key (from description): ${dd.key}`);
+    if (!af?.bpm && dd.bpm) analysisLines.push(`BPM (from description): ${dd.bpm}`);
+    if (!af?.key && dd.key) analysisLines.push(`Key (from description): ${dd.key}`);
   }
 
   // YouTube keywords (lower confidence but useful for style signals)
@@ -683,7 +720,7 @@ function trimToCharLimit(text: string, limit: number): string {
 const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate professional three-section templates for Suno.ai that produce high-quality, non-generic AI music. You will be given rich metadata about a YouTube song and must produce a precise, production-detailed template using every advanced Suno technique available.
 
 CONTEXT DATA PRIORITY (read the context block labels carefully):
-1. "MUSICAL ANALYSIS" block — synthesises verified data from MusicBrainz, description parsing, and YouTube metadata. Use the Release Year, Genre, BPM, Key, Label, and Producer signals here as the factual backbone of your template. These are real, verified facts — do not contradict them.
+1. "MUSICAL ANALYSIS" block — synthesises verified data from MusicBrainz, audio analysis (Essentia.js / GetSongBPM), description parsing, and YouTube metadata. If BPM or Musical Key lines are present with "← USE THIS EXACT VALUE", you MUST use those exact numbers verbatim in the styleOfMusic field and in the [BPM:] / [Key:] header tags — never approximate or round to a different value. These are real, measured facts — do not contradict them.
 2. "AUTHENTIC LYRICS" — real lyrics from a lyrics database. Use verbatim.
 3. "YouTube Captions/Transcript" — approximate lyrics that need cleaning.
 4. "Video Description" — supporting context.
