@@ -703,6 +703,15 @@ function trimToCharLimit(text: string, limit: number): string {
   return lastNewline !== -1 ? truncated.slice(0, lastNewline) : "";
 }
 
+/** Hard-trim styleOfMusic to 900 chars, breaking at the last comma boundary */
+function trimStylePrompt(text: string, limit = 900): string {
+  const flat = text.replace(/\r?\n/g, " ").trim();
+  if (flat.length <= limit) return flat;
+  const cut = flat.slice(0, limit);
+  const lastComma = cut.lastIndexOf(",");
+  return lastComma > limit * 0.75 ? cut.slice(0, lastComma) : cut.trimEnd();
+}
+
 const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate professional three-section templates for Suno.ai that produce high-quality, non-generic AI music. You will be given rich metadata about a YouTube song and must produce a precise, production-detailed template using every advanced Suno technique available.
 
 **80/20 SONGWRITING PRINCIPLE — apply throughout all three sections:**
@@ -729,8 +738,10 @@ OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
 
 **HARD LIMIT: 4900 characters. The lyrics field MUST NOT exceed 4900 characters.**
 
-=== SECTION 1: styleOfMusic (~900 chars) ===
+=== SECTION 1: styleOfMusic (HARD LIMIT: 900 characters) ===
 The Suno "Style of Music" field. Apply the 80/20 principle: lead with the core creative 20% (hook identity, melody character, chord progression) — then fill remaining space with production/era detail.
+
+**HARD LIMIT: styleOfMusic MUST NOT exceed 900 characters. Count every character. If you reach 900, stop — do not write more.**
 
 **ORDER — follow this exact sequence:**
 1. HOOK IDENTITY (first) — one sharp phrase describing the ONE musical idea that makes the song unforgettable: e.g. "anthemic four-bar rising chorus melody", "two-chord hypnotic vamp with syncopated vocal stutter", "melancholic chromatic descending bass line under soaring hook"
@@ -744,7 +755,7 @@ The Suno "Style of Music" field. Apply the 80/20 principle: lead with the core c
 9. PRODUCTION QUALITY — mastering descriptor: e.g. "radio-ready mix", "analog warmth", "hyper-modern production with punchy transients"
 10. PERFORMANCE NUANCE — e.g. "slightly behind-the-beat drum feel", "aggressive pick attack on downbeats", "subtle pitch bend on phrase endings"
 
-- Target ~900 characters. Be dense and hyper-specific. Avoid vague words like "catchy" or "beautiful" — always specify HOW.
+- HARD LIMIT: 900 characters maximum. Be dense and hyper-specific. Avoid vague words like "catchy" or "beautiful" — always specify HOW. Write less if needed — hitting the limit is more important than completeness.
 - Example: "anthemic four-bar rising hook with a suspended-4th peak note, Am-G-C-F chord loop, stepwise verse melody with wide octave leap on chorus, 1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman production, 113 BPM, B minor, warm baritone male lead — soulful legato phrasing, light vibrato, intimate yet commanding, bright gated-reverb snare 2 and 4, four-on-the-floor kick with sub tail, staccato syncopated slap bass, shimmering DX7 synth stabs wide, sawtooth lead synth, sparse verse builds to explosive anthemic chorus, analog warmth, radio-ready master, wide stereo image"
 
 === SECTION 2: lyrics (up to 4900 chars) ===
@@ -1033,7 +1044,7 @@ ${context}`;
     const template = GenerateSunoTemplateResponse.parse({
       songTitle: metadata.title,
       artist: metadata.cleanArtist || metadata.author,
-      styleOfMusic: aiResult.styleOfMusic,
+      styleOfMusic: trimStylePrompt(aiResult.styleOfMusic, 900),
       title: aiResult.title,
       lyrics: trimToCharLimit(aiResult.lyrics, 4999),
       negativePrompt: aiResult.negativePrompt,
