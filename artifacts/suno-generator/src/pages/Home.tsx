@@ -1733,7 +1733,7 @@ export default function Home() {
         <a
           href="https://getsongbpm.com"
           target="_blank"
-          rel="noopener noreferrer"
+          rel="noopener"
           className="text-zinc-500 hover:text-primary transition-colors underline underline-offset-2"
         >
           GetSongBPM
