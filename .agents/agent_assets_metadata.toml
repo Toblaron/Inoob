@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "TNmVIlYAGZyF1w1IgpfN-"
+uri = "file://DEPLOY.md"
+type = "text"
+title = "DietPi Deployment Guide"

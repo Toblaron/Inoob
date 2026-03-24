@@ -1,18 +1,19 @@
 import OpenAI from "openai";
 
-if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
-  throw new Error(
-    "AI_INTEGRATIONS_OPENAI_BASE_URL must be set. Did you forget to provision the OpenAI AI integration?",
-  );
-}
+const replitBaseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+const replitApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+const standaloneApiKey = process.env.OPENAI_API_KEY;
 
-if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+const apiKey = replitApiKey || standaloneApiKey;
+
+if (!apiKey) {
   throw new Error(
-    "AI_INTEGRATIONS_OPENAI_API_KEY must be set. Did you forget to provision the OpenAI AI integration?",
+    "OpenAI API key not found. In Replit: provision the OpenAI AI integration. " +
+    "Self-hosted: set OPENAI_API_KEY in your .env file."
   );
 }
 
 export const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  apiKey,
+  ...(replitBaseURL ? { baseURL: replitBaseURL } : {}),
 });
