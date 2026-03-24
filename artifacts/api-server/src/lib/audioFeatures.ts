@@ -1,13 +1,10 @@
-import { createRequire } from "module";
-import ytdl from "@distube/ytdl-core";
-
-const _require = createRequire(import.meta.url);
+import { openai } from "@workspace/integrations-openai-ai-server";
 
 export interface AudioFeatures {
   bpm: number;
   key: string;
   timeSignature: string;
-  source: "description" | "getsongbpm" | "essentia";
+  source: "description" | "getsongbpm" | "ai-knowledge";
   confidence: number;
 }
 
@@ -56,7 +53,6 @@ async function fetchGetSongBPM(
     if (!results || results.length === 0) return null;
 
     const match = results[0];
-
     let bpm = parseFloat(match.tempo);
     let key = normalizeKey(match.key_of ?? "");
     let timeSig = match.time_sig || "4/4";
@@ -85,97 +81,60 @@ async function fetchGetSongBPM(
       confidence: 0.92,
     };
   } catch (err) {
-    console.warn(
-      "[audioFeatures] GetSongBPM error:",
-      (err as Error).message?.slice(0, 80)
-    );
+    console.warn("[audioFeatures] GetSongBPM error:", (err as Error).message?.slice(0, 80));
     return null;
   }
 }
 
-async function analyzeWithEssentia(
-  youtubeUrl: string
+async function fetchAiKnowledge(
+  artist: string,
+  title: string
 ): Promise<AudioFeatures | null> {
-  const MAX_BYTES = 4 * 1024 * 1024;
-  const STREAM_TIMEOUT_MS = 35_000;
-
   try {
-    const { EssentiaWASM, Essentia } = _require("essentia.js") as {
-      EssentiaWASM: object;
-      Essentia: new (wasm: object) => {
-        arrayToVector: (arr: Float32Array) => object;
-        RhythmExtractor2013: (vec: object) => { bpm: number };
-        KeyExtractor: (vec: object) => { key: string; scale: string; strength: number };
-        delete: () => void;
-        version: string;
-      };
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      max_completion_tokens: 120,
+      messages: [
+        {
+          role: "system",
+          content: `You are a music theory database. Given a song title and artist, return ONLY a JSON object with the following fields: bpm (integer), key (e.g. "A minor", "C major", "F# minor"), time_signature (e.g. "4/4"), confidence ("high" | "medium" | "low"). If you are not confident about BPM or key, set confidence to "low" and use your best estimate. Never refuse — always attempt an answer. Respond with raw JSON only, no markdown.`,
+        },
+        {
+          role: "user",
+          content: `Song: "${title}" by ${artist}`,
+        },
+      ],
+    });
+
+    const raw = completion.choices[0]?.message?.content?.trim() ?? "";
+    const cleaned = raw.replace(/^```(?:json)?|```$/g, "").trim();
+    const parsed = JSON.parse(cleaned) as {
+      bpm?: number;
+      key?: string;
+      time_signature?: string;
+      confidence?: string;
     };
-    const audioDecode = ((await import("audio-decode")) as { default: (buf: Buffer) => Promise<{ channelData: Float32Array[]; sampleRate: number }> }).default;
 
-    const audioStream = ytdl(youtubeUrl, {
-      filter: "audioonly",
-      quality: "lowestaudio",
-    });
+    const bpm = Math.round(Number(parsed.bpm));
+    const key = normalizeKey(parsed.key ?? "");
+    const timeSig = parsed.time_signature || "4/4";
+    const confidence = parsed.confidence === "high" ? 0.88
+      : parsed.confidence === "medium" ? 0.70
+      : 0.50;
 
-    const chunks: Buffer[] = [];
-    let totalBytes = 0;
+    if (isNaN(bpm) || bpm < 40 || bpm > 300) return null;
 
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        audioStream.destroy();
-        resolve();
-      }, STREAM_TIMEOUT_MS);
-
-      audioStream.on("data", (chunk: Buffer) => {
-        chunks.push(chunk);
-        totalBytes += chunk.length;
-        if (totalBytes >= MAX_BYTES) {
-          clearTimeout(timeout);
-          audioStream.destroy();
-          resolve();
-        }
-      });
-      audioStream.on("end", () => { clearTimeout(timeout); resolve(); });
-      audioStream.on("error", (err) => { clearTimeout(timeout); reject(err); });
-    });
-
-    if (chunks.length === 0) return null;
-
-    const audioBuffer = Buffer.concat(chunks);
-    const decoded = await audioDecode(audioBuffer);
-
-    if (!decoded.channelData || decoded.channelData.length === 0) return null;
-
-    const sampleRate = decoded.sampleRate || 44100;
-    const channelData = decoded.channelData[0];
-    const maxSamples = Math.min(channelData.length, sampleRate * 90);
-    const audioSlice = channelData.slice(0, maxSamples);
-
-    const essentia = new Essentia(EssentiaWASM);
-    const audioVector = essentia.arrayToVector(audioSlice);
-
-    const rhythmResult = essentia.RhythmExtractor2013(audioVector);
-    const keyResult = essentia.KeyExtractor(audioVector);
-    essentia.delete();
-
-    const bpm = Math.round(rhythmResult.bpm);
-    const key = `${keyResult.key} ${keyResult.scale}`;
-    const confidence = keyResult.strength;
-
-    if (bpm < 40 || bpm > 300) return null;
+    console.log(`[audioFeatures] AI knowledge → ${bpm} BPM, ${key}, ${timeSig} (confidence: ${parsed.confidence})`);
 
     return {
       bpm,
       key,
-      timeSignature: "4/4",
-      source: "essentia",
+      timeSignature: timeSig,
+      source: "ai-knowledge",
       confidence,
     };
   } catch (err) {
-    console.warn(
-      "[audioFeatures] Essentia analysis failed:",
-      (err as Error).message?.slice(0, 120)
-    );
+    console.warn("[audioFeatures] AI knowledge lookup failed:", (err as Error).message?.slice(0, 80));
     return null;
   }
 }
@@ -186,11 +145,11 @@ export async function detectAudioFeatures(opts: {
   youtubeUrl: string;
   descriptionBpm?: string;
   descriptionKey?: string;
-  /** Skip the slow Essentia audio analysis tier (default false). Use true for parallel fast lookups. */
   skipEssentia?: boolean;
 }): Promise<AudioFeatures | null> {
-  const { artist, title, youtubeUrl, descriptionBpm, descriptionKey, skipEssentia } = opts;
+  const { artist, title, descriptionBpm, descriptionKey } = opts;
 
+  // Tier 1: description/title parsing (instant, no API)
   if (descriptionBpm) {
     const bpmNum = parseFloat(descriptionBpm);
     if (!isNaN(bpmNum) && bpmNum >= 40 && bpmNum <= 300) {
@@ -205,24 +164,16 @@ export async function detectAudioFeatures(opts: {
     }
   }
 
+  // Tier 2: GetSongBPM API (only runs if GETSONGBPM_API_KEY is set)
   const gsbResult = await fetchGetSongBPM(artist, title);
   if (gsbResult) {
-    console.log(
-      `[audioFeatures] GetSongBPM → ${gsbResult.bpm} BPM, ${gsbResult.key}, ${gsbResult.timeSignature}`
-    );
+    console.log(`[audioFeatures] GetSongBPM → ${gsbResult.bpm} BPM, ${gsbResult.key}`);
     return gsbResult;
   }
 
-  if (skipEssentia) return null;
-
-  console.log("[audioFeatures] No DB match — running Essentia.js audio analysis...");
-  const essentiaResult = await analyzeWithEssentia(youtubeUrl);
-  if (essentiaResult) {
-    console.log(
-      `[audioFeatures] Essentia → ${essentiaResult.bpm} BPM, ${essentiaResult.key} (confidence: ${essentiaResult.confidence.toFixed(2)})`
-    );
-    return essentiaResult;
-  }
+  // Tier 3: AI knowledge-based estimation (fast, no audio download, no external API key)
+  const aiResult = await fetchAiKnowledge(artist, title);
+  if (aiResult) return aiResult;
 
   return null;
 }

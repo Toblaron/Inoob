@@ -52,7 +52,7 @@ interface VideoMetadata {
   musicBrainz?: MusicBrainzData;
   /** Structured data extracted from the description */
   descriptionData?: DescriptionMusicData;
-  /** Audio features: BPM, key, time signature (from description → GetSongBPM → Essentia.js) */
+  /** Audio features: BPM, key, time signature (from description → GetSongBPM → AI knowledge) */
   audioFeatures?: AudioFeatures;
 }
 
@@ -510,8 +510,8 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
 
   console.log(`Looking up: "${cleanArtist}" - "${cleanTitle}"${durationSeconds ? ` (${durationSeconds}s)` : ""}`);
 
-  // --- Step 2: Parallel-fetch Genius lyrics + (lrclib + lyrics.ovh) + MusicBrainz + audio features (fast) ---
-  const [geniusResult, lrclibLyrics, ovhLyrics, musicBrainz, audioFeaturesFast] = await Promise.all([
+  // --- Step 2: Parallel-fetch Genius lyrics + (lrclib + lyrics.ovh) + MusicBrainz + audio features ---
+  const [geniusResult, lrclibLyrics, ovhLyrics, musicBrainz, audioFeatures] = await Promise.all([
     fetchLyricsFromGenius(cleanArtist, cleanTitle),
     fetchLyricsFromLrcLib(cleanArtist, cleanTitle, durationSeconds ?? undefined),
     fetchLyricsFromAPI(cleanArtist, cleanTitle),
@@ -522,7 +522,6 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
       youtubeUrl: url,
       descriptionBpm: descriptionData.bpm,
       descriptionKey: descriptionData.key,
-      skipEssentia: true,
     }),
   ]);
 
@@ -551,19 +550,6 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
 
   if (musicBrainz.releaseYear || musicBrainz.genres?.length) {
     console.log(`MusicBrainz: year=${musicBrainz.releaseYear}, genres=[${musicBrainz.genres?.join(", ")}], album="${musicBrainz.album}"`);
-  }
-
-  // --- Step 4: Essentia.js audio analysis fallback (only if no BPM/key found yet) ---
-  let audioFeatures = audioFeaturesFast;
-  if (!audioFeatures) {
-    audioFeatures = await detectAudioFeatures({
-      artist: cleanArtist,
-      title: cleanTitle,
-      youtubeUrl: url,
-      descriptionBpm: descriptionData.bpm,
-      descriptionKey: descriptionData.key,
-      skipEssentia: false,
-    });
   }
 
   const base = {
@@ -640,7 +626,7 @@ function buildPromptContext(metadata: VideoMetadata): string {
     const sourceLabel =
       af.source === "description" ? "from description"
       : af.source === "getsongbpm" ? "GetSongBPM database — verified"
-      : "Essentia.js audio analysis — measured from audio";
+      : "AI music knowledge — estimated from training data";
     if (af.bpm) analysisLines.push(`BPM: ${af.bpm} (${sourceLabel}) ← USE THIS EXACT VALUE in style prompt and [BPM:] tag`);
     if (af.key) analysisLines.push(`Musical Key: ${af.key} (${sourceLabel}) ← USE THIS EXACT VALUE in style prompt and [Key:] tag`);
     if (af.timeSignature && af.timeSignature !== "4/4") analysisLines.push(`Time Signature: ${af.timeSignature} (${sourceLabel})`);
@@ -727,7 +713,7 @@ const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate p
 - Hook first: always identify the ONE melodic or lyrical idea that makes this song uniquely memorable, and let every other production choice serve that idea.
 
 CONTEXT DATA PRIORITY (read the context block labels carefully):
-1. "MUSICAL ANALYSIS" block — synthesises verified data from MusicBrainz, audio analysis (Essentia.js / GetSongBPM), description parsing, and YouTube metadata. If BPM or Musical Key lines are present with "← USE THIS EXACT VALUE", you MUST use those exact numbers verbatim in the styleOfMusic field and in the [BPM:] / [Key:] header tags — never approximate or round to a different value. These are real, measured facts — do not contradict them.
+1. "MUSICAL ANALYSIS" block — synthesises verified data from MusicBrainz, BPM/key detection (description parsing → GetSongBPM → AI knowledge lookup), and YouTube metadata. If BPM or Musical Key lines are present with "← USE THIS EXACT VALUE", you MUST use those exact numbers verbatim in the styleOfMusic field and in the [BPM:] / [Key:] header tags — never approximate or round to a different value. These are verified values — do not contradict them.
 2. "AUTHENTIC LYRICS" — real lyrics from a lyrics database. Use verbatim.
 3. "YouTube Captions/Transcript" — approximate lyrics that need cleaning.
 4. "Video Description" — supporting context.
