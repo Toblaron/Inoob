@@ -1726,6 +1726,19 @@ export default function Home() {
           ) : null}
         </AnimatePresence>
       </div>
+
+      {/* Attribution footer — required by GetSongBPM API terms */}
+      <div className="w-full max-w-3xl mt-8 pb-6 flex items-center justify-center gap-1.5 font-mono text-[10px] text-zinc-700">
+        <span>BPM &amp; KEY DETECTION POWERED BY</span>
+        <a
+          href="https://getsongbpm.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-zinc-500 hover:text-primary transition-colors underline underline-offset-2"
+        >
+          GetSongBPM
+        </a>
+      </div>
     </div>
   );
 }
