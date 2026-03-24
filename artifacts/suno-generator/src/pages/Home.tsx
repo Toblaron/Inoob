@@ -49,12 +49,23 @@ const MOOD_TAGS = [
   "Dreamy", "Rebellious", "Playful", "Mysterious", "Cinematic", "Hopeful",
   "Angry", "Tender", "Haunted", "Triumphant", "Vulnerable", "Defiant",
   "Serene", "Intense", "Wistful", "Bittersweet", "Groovy", "Frantic",
+  "Ethereal", "Hypnotic", "Brooding", "Raw", "Gritty", "Majestic",
+  "Eerie", "Sensual", "Savage", "Soulful", "Cathartic", "Blissful",
+  "Chaotic", "Anxious", "Desolate", "Primal", "Lush", "Fierce",
+  "Longing", "Psychedelic", "Icy", "Dusty", "Tense", "Laid-back",
+  "Transcendent", "Unsettling", "Festive", "Murky", "Euphoric-Sad",
+  "Punchy", "Stormy", "Intimate", "Epic", "Uneasy", "Crystalline",
 ];
 const INSTRUMENT_TAGS = [
   "Piano", "Guitar", "Synth", "Strings", "Bass", "Choir", "Brass", "Drums",
   "Violin", "Flute", "Organ", "Sitar", "Cello", "Saxophone", "Trumpet",
   "Harp", "Banjo", "Ukulele", "Mandolin", "Marimba", "Theremin", "Mellotron",
   "Pedal Steel", "Dulcimer",
+  "808", "Acoustic Guitar", "Electric Guitar", "Harmonica", "Accordion",
+  "Vibraphone", "Glockenspiel", "Rhodes", "Clarinet", "Oboe", "French Horn",
+  "Tabla", "Congas", "Sub Bass", "Pad", "Wurlitzer", "Harpsichord",
+  "Bagpipes", "Moog", "Oud", "Koto", "Erhu", "Steel Drums",
+  "Trombone", "Bassoon", "Bansuri", "Lap Steel", "Didgeridoo",
 ];
 const QUALITY_EXCLUSIONS: { label: string; value: string }[] = [
   { label: "Muddy mix", value: "muddy mix" },
@@ -69,27 +80,51 @@ const QUALITY_EXCLUSIONS: { label: string; value: string }[] = [
   { label: "Predictable", value: "predictable" },
   { label: "Cheesy", value: "cheezy" },
   { label: "Silence gaps", value: "silence" },
+  { label: "Thin sound", value: "thin sound" },
+  { label: "Over-compressed", value: "over-compressed" },
+  { label: "Flat dynamics", value: "flat dynamics" },
+  { label: "Dated sound", value: "dated production" },
 ];
 
 const ELEMENT_EXCLUSIONS: { label: string; value: string }[] = [
-  { label: "No rap", value: "no rap" },
-  { label: "No autotune", value: "no autotune" },
-  { label: "No distortion", value: "no heavy distortion" },
-  { label: "No choir", value: "no choir" },
-  { label: "No orchestral", value: "no orchestral" },
-  { label: "No 8-bit", value: "no 8-bit,no chiptune" },
-  { label: "No drums", value: "no drums" },
-  { label: "No piano", value: "no piano" },
-  { label: "No synth", value: "no synthesizer" },
-  { label: "No EDM drops", value: "no EDM,no club beat" },
-  { label: "No strings", value: "no violin,no strings" },
-  { label: "No brass", value: "no brass,no horns" },
-  { label: "No trap beats", value: "no trap beats,no trap hi-hats" },
-  { label: "No falsetto", value: "no falsetto" },
-  { label: "No spoken word", value: "no spoken word" },
-  { label: "No lo-fi", value: "no lo-fi,no vinyl crackle" },
-  { label: "No heavy reverb", value: "no heavy reverb" },
-  { label: "No country", value: "no country" },
+  { label: "Rap", value: "no rap" },
+  { label: "Autotune", value: "no autotune" },
+  { label: "Distortion", value: "no heavy distortion" },
+  { label: "Choir", value: "no choir" },
+  { label: "Orchestral", value: "no orchestral" },
+  { label: "8-bit / Chiptune", value: "no 8-bit,no chiptune" },
+  { label: "Drums", value: "no drums" },
+  { label: "Piano", value: "no piano" },
+  { label: "Synth", value: "no synthesizer" },
+  { label: "EDM drops", value: "no EDM,no club beat" },
+  { label: "Strings", value: "no violin,no strings" },
+  { label: "Brass", value: "no brass,no horns" },
+  { label: "Trap beats", value: "no trap beats,no trap hi-hats" },
+  { label: "Falsetto", value: "no falsetto" },
+  { label: "Spoken word", value: "no spoken word" },
+  { label: "Lo-fi", value: "no lo-fi,no vinyl crackle" },
+  { label: "Heavy reverb", value: "no heavy reverb" },
+  { label: "Country", value: "no country" },
+  { label: "Guitar", value: "no guitar" },
+  { label: "Guitar solo", value: "no guitar solo" },
+  { label: "Screaming", value: "no screaming,no harsh vocals" },
+  { label: "Bass drop", value: "no bass drop,no sub bass" },
+  { label: "Long intro", value: "no long intro" },
+  { label: "Samples", value: "no samples,no sampling" },
+  { label: "Whistling", value: "no whistling" },
+  { label: "Crowd noise", value: "no crowd noise" },
+  { label: "Clapping", value: "no clapping" },
+  { label: "Saxophone", value: "no saxophone" },
+  { label: "Metal", value: "no metal" },
+  { label: "Hip-hop beats", value: "no hip-hop beats" },
+  { label: "Pitch shifting", value: "no pitch shifting" },
+  { label: "Breakdowns", value: "no breakdown" },
+  { label: "Voice FX", value: "no vocoder,no voice effects" },
+  { label: "Glitch FX", value: "no glitch,no glitch effects" },
+  { label: "Acoustic guitar", value: "no acoustic guitar" },
+  { label: "Flute", value: "no flute" },
+  { label: "Bass guitar", value: "no bass guitar" },
+  { label: "Jazz harmony", value: "no jazz chords" },
 ];
 
 interface GenreCategory {
@@ -1364,7 +1399,10 @@ export default function Home() {
                   {/* Element / instrument exclusions */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Elements & Instruments</p>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Elements & Instruments</p>
+                        <p className="font-mono text-[9px] text-zinc-700 tracking-wide mt-0.5">exclude from output</p>
+                      </div>
                       {ELEMENT_EXCLUSIONS.some((e) => e.value.split(",").some((v) => excludeTags.includes(v))) && (
                         <button type="button" onClick={() => setExcludeTags((p) => p.filter((t) => !ELEMENT_EXCLUSIONS.flatMap((e) => e.value.split(",")).includes(t)))} className="text-[11px] text-zinc-500 hover:text-destructive transition-colors">Clear</button>
                       )}
