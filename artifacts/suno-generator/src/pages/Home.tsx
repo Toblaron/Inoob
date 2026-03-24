@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import logoTrackTemplate from "@assets/logotracktemplateBilde-sharpen-denoise-text-lighting-remove-u_1774346189019.jpeg";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -862,15 +863,18 @@ export default function Home() {
           transition={{ duration: 0.4 }}
           className="w-full mb-8"
         >
-          {/* Compact header */}
-          <div className="flex items-center gap-3 mb-1">
+          {/* Logo + header */}
+          <div className="flex items-center gap-3 mb-3">
             <span className="font-mono text-[10px] text-primary/60 uppercase tracking-widest border border-primary/20 px-2 py-0.5">v2</span>
             <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">SUNO.AI PROMPT GENERATOR</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-            Track <span className="text-primary">→</span> Template
-          </h1>
-          <p className="mt-1.5 text-sm text-zinc-500 font-mono">
+          <img
+            src={logoTrackTemplate}
+            alt="Track → Template"
+            className="h-14 md:h-16 w-auto object-contain mb-2 -ml-1"
+            draggable={false}
+          />
+          <p className="mt-1 text-sm text-zinc-500 font-mono">
             Paste a YouTube link. AI extracts metadata + lyrics and builds a complete Suno prompt.
           </p>
         </motion.div>
