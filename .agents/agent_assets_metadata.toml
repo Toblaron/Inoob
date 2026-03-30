@@ -6,3 +6,9 @@ id = "TNmVIlYAGZyF1w1IgpfN-"
 uri = "file://DEPLOY.md"
 type = "text"
 title = "DietPi Deployment Guide"
+
+[[outputs]]
+id = "lOTeXGmx4D0OiooQq9XEd"
+uri = "file://track-template.tar.gz"
+type = "unspecified"
+title = "track-template (full project)"
