@@ -29,3 +29,15 @@ timeoutMs = 20000
 
 [userenv.shared]
 GENIUS_API_TOKEN = "k1i7U80SDY5aCDyygYlHtAyH9wwaWGq96MTkruOz1A50tN8d711XjQhnP8WkYfm0"
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 24323
+externalPort = 80
