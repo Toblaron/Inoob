@@ -9,6 +9,7 @@ export interface SuggestedDefaults {
 
 const INSTRUMENT_PATTERNS: [RegExp, string][] = [
   [/\bacoustic guitar\b/i, "Acoustic Guitar"],
+  [/\bacoustic\b/i, "Acoustic Guitar"],
   [/\belectric guitar\b/i, "Electric Guitar"],
   [/\b(lead |rhythm )?guitar\b/i, "Guitar"],
   [/\bpiano\b/i, "Piano"],

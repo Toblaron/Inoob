@@ -438,6 +438,8 @@ export default function Home() {
     else if (field === "era") setEra(val as typeof era);
     else if (field === "tempo") setTempo(val as "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper" | null);
     else if (field === "vocals") setVocalGender(val as typeof vocalGender);
+    else if (field === "genres") setSelectedGenres([val]);
+    else if (field === "instruments") setSelectedInstruments(val.split(",").filter(Boolean));
     setAutoFilledFields((prev) => { const next = new Set(prev); next.add(field); return next; });
   };
 
@@ -801,15 +803,15 @@ export default function Home() {
             if (Object.keys(newSavedValues).length > 0) {
               setAutoFillValues((prev) => ({ ...prev, ...newSavedValues }));
             }
-            if (d.instrumentHints && d.instrumentHints.length > 0) {
-              setSelectedInstruments((prev) => {
-                const merged = [...new Set([...prev, ...d.instrumentHints!])].slice(0, 6);
-                return merged;
-              });
+            if (d.instrumentHints && d.instrumentHints.length > 0 && selectedInstruments.length === 0) {
+              setSelectedInstruments(d.instrumentHints.slice(0, 6));
+              setAutoFilledFields((prev) => { const next = new Set(prev); next.add("instruments"); return next; });
+              setAutoFillValues((prev) => ({ ...prev, instruments: d.instrumentHints!.slice(0, 6).join(",") }));
             }
             if (d.languageGenreHint && selectedGenres.length === 0) {
               setSelectedGenres([d.languageGenreHint]);
               setAutoFilledFields((prev) => { const next = new Set(prev); next.add("genres"); return next; });
+              setAutoFillValues((prev) => ({ ...prev, genres: d.languageGenreHint! }));
             }
           }
           if (data.artist && (selectedGenres.length > 0 || era !== "auto" || energyLevel !== "auto")) {
@@ -1368,6 +1370,9 @@ export default function Home() {
                         <Tags className="w-3 h-3 text-secondary" /> Genres
                         <span className="text-[10px] text-zinc-600 font-normal normal-case tracking-normal">(up to {MAX_GENRES})</span>
                         {autoFilledFields.has("genres") && <AutoBadge />}
+                        {!autoFilledFields.has("genres") && autoFillValues["genres"] && (
+                          <ResetAutoFillButton value={autoFillValues["genres"]} onClick={() => resetAutoFill("genres")} />
+                        )}
                       </label>
                       {selectedGenres.length > 0 && (
                         <button type="button" onClick={() => setSelectedGenres([])} className="text-[11px] text-zinc-500 hover:text-destructive transition-colors">Clear all</button>
@@ -1594,9 +1599,32 @@ export default function Home() {
                     className="w-full px-3 py-2.5 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors resize-y font-mono leading-relaxed"
                   />
                   {manualLyrics.trim().length > 0 && (
-                    <button type="button" onClick={() => setManualLyrics("")} className="text-xs text-zinc-500 hover:text-destructive transition-colors">
-                      Clear lyrics
-                    </button>
+                    <div className="flex items-center justify-between">
+                      <button type="button" onClick={() => setManualLyrics("")} className="text-xs text-zinc-500 hover:text-destructive transition-colors">
+                        Clear lyrics
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+                            const resp = await fetch(`${apiBase}/api/suno/analyze-structure`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ lyrics: manualLyrics.trim() }),
+                            });
+                            if (resp.ok) {
+                              const structure = await resp.json() as LyricsStructure;
+                              setLyricsStructure(structure);
+                              setConfirmedStructure(null);
+                            }
+                          } catch {}
+                        }}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wider border border-primary/25 text-primary/70 hover:text-primary hover:border-primary/50 transition-all"
+                      >
+                        <Music2 className="w-3 h-3" /> Analyze structure
+                      </button>
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -1645,8 +1673,20 @@ export default function Home() {
         </motion.div>
       </div>
 
-      {/* Example gallery — shown only when nothing has been generated yet */}
-      {!currentTemplate && !isLoading && (
+      {/* Pre-generation Lyrics Structure Panel (from manual lyrics analyze) */}
+      {!currentTemplate && !isLoading && lyricsStructure && lyricsStructure.totalSections > 0 && (
+        <div className="relative z-10 px-4 max-w-6xl mx-auto w-full">
+          <LyricsStructurePanel
+            structure={lyricsStructure}
+            onConfirm={(sections) => setConfirmedStructure(sections)}
+            onClear={() => setConfirmedStructure(null)}
+            isLocked={confirmedStructure !== null}
+          />
+        </div>
+      )}
+
+      {/* Example gallery — shown only when nothing has been generated yet and no structure panel */}
+      {!currentTemplate && !isLoading && !lyricsStructure && (
         <div className="relative z-10 flex justify-center px-4">
           <ExampleGallery
             onSelect={(url) => {

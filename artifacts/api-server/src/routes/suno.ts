@@ -1432,4 +1432,24 @@ router.get("/youtube-preview", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/suno/analyze-structure
+ * Pre-generation endpoint: given raw lyrics text, returns a LyricsStructure analysis.
+ * Allows users to see and edit section layout before the first generation request.
+ */
+router.post("/analyze-structure", (req, res) => {
+  const { lyrics } = req.body as { lyrics?: string };
+  if (!lyrics || typeof lyrics !== "string" || lyrics.trim().length < 10) {
+    res.status(400).json({ error: "Provide at least 10 characters of lyrics text." });
+    return;
+  }
+  try {
+    const structure = analyzeLyricsStructure(lyrics);
+    res.json(structure);
+  } catch (err) {
+    console.error("analyze-structure error:", err);
+    res.status(500).json({ error: "Could not analyze lyrics structure." });
+  }
+});
+
 export default router;
