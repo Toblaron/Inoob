@@ -1433,7 +1433,32 @@ router.get("/youtube-preview", async (req, res) => {
 });
 
 /**
- * POST /api/suno/analyze-structure
+ * POST /api/pre-analyze-structure
+ * Pre-generation endpoint: fetches lyrics for a YouTube URL and returns a LyricsStructure.
+ * Called automatically after video preview loads, enabling structure editing BEFORE generation.
+ */
+router.post("/pre-analyze-structure", async (req, res) => {
+  const { youtubeUrl } = req.body as { youtubeUrl?: string };
+  if (!youtubeUrl || !isValidYouTubeUrl(youtubeUrl)) {
+    res.status(400).json({ error: "Provide a valid YouTube URL." });
+    return;
+  }
+  try {
+    const metadata = await fetchYouTubeMetadata(youtubeUrl);
+    if (!metadata.lyricsText || metadata.lyricsText.trim().length < 30) {
+      res.status(404).json({ error: "No lyrics found for this song." });
+      return;
+    }
+    const structure = analyzeLyricsStructure(metadata.lyricsText);
+    res.json(structure);
+  } catch (err) {
+    console.error("pre-analyze-structure error:", err);
+    res.status(500).json({ error: "Could not analyze song structure." });
+  }
+});
+
+/**
+ * POST /api/analyze-structure
  * Pre-generation endpoint: given raw lyrics text, returns a LyricsStructure analysis.
  * Allows users to see and edit section layout before the first generation request.
  */

@@ -512,6 +512,25 @@ export default function Home() {
             setTimeout(() => setArtistMemoryBanner(null), 5000);
           }
           fetchSuggestionsForSong(title, artist);
+          // Pre-generate structure analysis in background (non-blocking)
+          const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+          const targetId = extractVideoId(url);
+          fetch(`${apiBase}/api/pre-analyze-structure`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ youtubeUrl: url }),
+            signal: AbortSignal.timeout(25000),
+          })
+            .then((r) => r.ok ? r.json() : null)
+            .then((structure) => {
+              if (structure && structure.totalSections > 0) {
+                // Only set if this URL is still the active one
+                if (extractVideoId(form.getValues("youtubeUrl") ?? "") === targetId) {
+                  setLyricsStructure((prev) => prev ?? structure);
+                }
+              }
+            })
+            .catch(() => {});
         }
       }
     } catch {}

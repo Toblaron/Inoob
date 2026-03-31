@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Music2, RotateCcw, Check, Pencil, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -175,6 +175,11 @@ export function LyricsStructurePanel({
   const [expanded, setExpanded] = useState(false);
   const [sections, setSections] = useState<LyricsSection[]>(structure.sections);
   const [addingLabel, setAddingLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSections(structure.sections);
+    setAddingLabel(null);
+  }, [structure]);
 
   const handleLabelChange = (index: number, newLabel: string) => {
     setSections((prev) => {
