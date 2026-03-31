@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -6,12 +6,11 @@ import {
   GitMerge,
   Diff,
   Music,
-  Heading,
   Sparkles,
   Ban,
-  ChevronDown,
-  ChevronUp,
   Copy,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import type { SunoTemplate } from "@workspace/api-client-react";
@@ -32,20 +31,75 @@ interface VariationWorkshopProps {
   onClose: () => void;
 }
 
-function wordDiffTokens(
-  base: string,
-  changed: string
-): Array<{ token: string; isNew: boolean }> {
-  const baseSet = new Set(
-    base
-      .toLowerCase()
-      .split(/[\s,]+/)
-      .filter(Boolean)
+type DiffToken =
+  | { kind: "equal"; text: string }
+  | { kind: "added"; text: string }
+  | { kind: "removed"; text: string };
+
+function lcsWordDiff(base: string, changed: string): DiffToken[] {
+  const bWords = base.split(/(\s+)/);
+  const cWords = changed.split(/(\s+)/);
+  const n = bWords.length;
+  const m = cWords.length;
+
+  const dp: number[][] = Array.from({ length: n + 1 }, () =>
+    new Array(m + 1).fill(0)
   );
-  return changed.split(/(\s+|,+)/).map((token) => ({
-    token,
-    isNew: token.trim().length > 0 && !baseSet.has(token.toLowerCase().trim()),
-  }));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      if (bWords[i] === cWords[j]) {
+        dp[i][j] = 1 + dp[i + 1][j + 1];
+      } else {
+        dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+  }
+
+  const tokens: DiffToken[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n || j < m) {
+    if (i < n && j < m && bWords[i] === cWords[j]) {
+      tokens.push({ kind: "equal", text: bWords[i] });
+      i++;
+      j++;
+    } else if (j < m && (i >= n || dp[i][j + 1] >= dp[i + 1][j])) {
+      tokens.push({ kind: "added", text: cWords[j] });
+      j++;
+    } else {
+      tokens.push({ kind: "removed", text: bWords[i] });
+      i++;
+    }
+  }
+  return tokens;
+}
+
+function DiffText({ base, changed }: { base: string; changed: string }) {
+  const tokens = lcsWordDiff(base, changed);
+  return (
+    <span className="whitespace-pre-wrap break-words">
+      {tokens.map((t, i) => {
+        if (t.kind === "equal") return <span key={i}>{t.text}</span>;
+        if (t.kind === "added")
+          return (
+            <mark
+              key={i}
+              className="bg-emerald-500/20 text-emerald-300 not-italic rounded-sm"
+            >
+              {t.text}
+            </mark>
+          );
+        return (
+          <del
+            key={i}
+            className="bg-red-500/15 text-red-400 no-underline line-through rounded-sm opacity-70"
+          >
+            {t.text}
+          </del>
+        );
+      })}
+    </span>
+  );
 }
 
 function stringSimilarity(a: string, b: string): number {
@@ -64,321 +118,256 @@ function stringSimilarity(a: string, b: string): number {
   return Math.round((matches / bWords.length) * 100);
 }
 
-function DiffText({
-  base,
-  changed,
+function CharBadge({
+  count,
+  limit,
+  min,
 }: {
-  base: string;
-  changed: string;
+  count: number;
+  limit?: number;
+  min?: number;
 }) {
-  const tokens = wordDiffTokens(base, changed);
-  return (
-    <span>
-      {tokens.map((t, i) =>
-        t.isNew ? (
-          <mark
-            key={i}
-            className="bg-amber-400/20 text-amber-300 not-italic rounded-sm px-0.5"
-          >
-            {t.token}
-          </mark>
-        ) : (
-          <span key={i}>{t.token}</span>
-        )
-      )}
-    </span>
-  );
-}
-
-function VariationBadge({
-  index,
-  selected,
-}: {
-  index: number;
-  selected: boolean;
-}) {
+  const over = limit !== undefined && count > limit;
+  const under = min !== undefined && count < min;
   return (
     <span
       className={cn(
-        "font-mono text-[10px] px-2 py-0.5 uppercase tracking-widest font-bold border",
-        selected
-          ? "bg-primary text-black border-primary"
-          : "border-primary/30 text-primary/70"
+        "font-mono text-[9px] px-1.5 py-0.5 border tabular-nums",
+        over
+          ? "border-destructive/40 text-destructive"
+          : under
+            ? "border-yellow-500/30 text-yellow-500"
+            : "border-primary/20 text-primary/50"
       )}
     >
-      V{index + 1}
+      {count.toLocaleString()}
+      {limit ? `/${limit.toLocaleString()}` : ""}
     </span>
   );
 }
 
-interface SectionCardProps {
+interface ColumnProps {
   variationIdx: number;
-  isSelected: boolean;
   isReference: boolean;
+  variation: SunoTemplate;
+  reference: SunoTemplate;
+  selected: Selection;
   showDiff: boolean;
-  referenceText: string;
-  currentText: string;
-  charCount?: number;
-  charLimit?: number;
-  charMin?: number;
-  label: string;
-  icon: React.ReactNode;
-  preview?: string;
-  onSelect: () => void;
+  onSelect: (key: SectionKey) => void;
 }
 
-function SectionCard({
+function VariationColumn({
   variationIdx,
-  isSelected,
   isReference,
-  showDiff,
-  referenceText,
-  currentText,
-  charCount,
-  charLimit,
-  charMin,
-  label,
-  icon: _icon,
-  preview,
-  onSelect,
-}: SectionCardProps) {
-  const simPct =
-    !isReference && showDiff
-      ? stringSimilarity(referenceText, currentText)
-      : null;
-
-  const charOver = charLimit !== undefined && (charCount ?? 0) > charLimit;
-  const charUnder = charMin !== undefined && (charCount ?? 0) < charMin;
-
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "relative w-full text-left p-3 border transition-all group flex flex-col gap-2",
-        isSelected
-          ? "border-primary bg-primary/5"
-          : "border-primary/15 hover:border-primary/40 bg-card"
-      )}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 shrink-0">
-          <VariationBadge index={variationIdx} selected={isSelected} />
-          {isSelected && (
-            <span className="flex items-center gap-0.5 font-mono text-[9px] text-primary uppercase tracking-wider">
-              <Check className="w-2.5 h-2.5" /> Selected
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          {simPct !== null && (
-            <span
-              className={cn(
-                "font-mono text-[9px] px-1.5 py-0.5 border",
-                simPct >= 80
-                  ? "border-zinc-700 text-zinc-600"
-                  : simPct >= 50
-                    ? "border-amber-500/30 text-amber-500"
-                    : "border-primary/30 text-primary/80"
-              )}
-              title={`${simPct}% words match V1`}
-            >
-              {simPct}% match
-            </span>
-          )}
-          {charCount !== undefined && charLimit !== undefined && (
-            <span
-              className={cn(
-                "font-mono text-[9px] px-1.5 py-0.5 border",
-                charOver
-                  ? "border-destructive/40 text-destructive"
-                  : charUnder
-                    ? "border-yellow-500/30 text-yellow-500"
-                    : "border-primary/20 text-primary/50"
-              )}
-            >
-              {charCount.toLocaleString()}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-        {label}
-      </div>
-
-      <div
-        className={cn(
-          "text-xs leading-relaxed break-words text-zinc-300 line-clamp-4",
-          !isReference && showDiff ? "" : ""
-        )}
-      >
-        {!isReference && showDiff ? (
-          <DiffText base={referenceText} changed={preview ?? currentText} />
-        ) : (
-          <span>{preview ?? currentText}</span>
-        )}
-      </div>
-    </button>
-  );
-}
-
-interface SectionRowProps {
-  sectionKey: SectionKey;
-  label: string;
-  icon: React.ReactNode;
-  variations: SunoTemplate[];
-  selected: number;
-  showDiff: boolean;
-  onSelect: (idx: number) => void;
-  getText: (v: SunoTemplate) => string;
-  getPreview?: (v: SunoTemplate) => string;
-  charLimit?: number;
-  charMin?: number;
-  getCharCount?: (v: SunoTemplate) => number;
-  collapsible?: boolean;
-}
-
-function SectionRow({
-  sectionKey,
-  label,
-  icon,
-  variations,
+  variation,
+  reference,
   selected,
   showDiff,
   onSelect,
-  getText,
-  getPreview,
-  charLimit,
-  charMin,
-  getCharCount,
-  collapsible = false,
-}: SectionRowProps) {
-  const [collapsed, setCollapsed] = useState(collapsible);
-  const reference = variations[0];
+}: ColumnProps) {
+  const label = `V${variationIdx + 1}`;
+  const simStyle = isReference
+    ? null
+    : stringSimilarity(reference.styleOfMusic, variation.styleOfMusic);
+  const simLyrics = isReference
+    ? null
+    : stringSimilarity(reference.lyrics, variation.lyrics);
+  const simNeg = isReference
+    ? null
+    : stringSimilarity(reference.negativePrompt, variation.negativePrompt);
+
+  const selectionBorder = (key: SectionKey) =>
+    selected[key] === variationIdx
+      ? "border-primary bg-primary/5"
+      : "border-primary/10 hover:border-primary/35 bg-card cursor-pointer";
 
   return (
-    <div className="border border-primary/10 bg-background">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-primary/10">
-        <span className="text-primary/40">{icon}</span>
-        <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider font-medium">
-          {label}
-        </span>
-        {collapsible && (
-          <button
-            type="button"
-            onClick={() => setCollapsed((v) => !v)}
-            className="ml-auto p-0.5 text-zinc-600 hover:text-zinc-400 transition-colors"
-          >
-            {collapsed ? (
-              <ChevronDown className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronUp className="w-3.5 h-3.5" />
-            )}
-          </button>
+    <div className="flex flex-col gap-2 min-w-0">
+      {/* Column header */}
+      <div
+        className={cn(
+          "flex items-center justify-between px-3 py-2 border font-mono text-[11px] font-bold uppercase tracking-widest",
+          isReference
+            ? "border-zinc-700 text-zinc-400 bg-zinc-900"
+            : "border-primary/30 text-primary bg-primary/5"
         )}
-      </div>
-      <AnimatePresence initial={false}>
-        {!collapsed && (
-          <motion.div
-            key={`${sectionKey}-cards`}
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div
-              className="overflow-x-auto"
-              style={{ scrollbarWidth: "thin" }}
-            >
-              <div
-                className="grid gap-2 p-2"
-                style={{
-                  gridTemplateColumns: `repeat(${variations.length}, minmax(240px, 1fr))`,
-                  minWidth: `${variations.length * 250}px`,
-                }}
-              >
-                {variations.map((v, i) => (
-                  <SectionCard
-                    key={i}
-                    variationIdx={i}
-                    isSelected={selected === i}
-                    isReference={i === 0}
-                    showDiff={showDiff}
-                    referenceText={getText(reference)}
-                    currentText={getText(v)}
-                    charCount={getCharCount ? getCharCount(v) : undefined}
-                    charLimit={charLimit}
-                    charMin={charMin}
-                    label={`Variation ${i + 1}`}
-                    icon={null}
-                    preview={getPreview ? getPreview(v) : undefined}
-                    onSelect={() => onSelect(i)}
-                  />
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-function CompositePanelSection({
-  label,
-  fromVariation,
-  value,
-  charCount,
-  charLimit,
-  charMin,
-  mono = false,
-}: {
-  label: string;
-  fromVariation: number;
-  value: string;
-  charCount?: number;
-  charLimit?: number;
-  charMin?: number;
-  mono?: boolean;
-}) {
-  const charOver = charLimit !== undefined && (charCount ?? 0) > charLimit;
-  const charUnder = charMin !== undefined && (charCount ?? 0) < charMin;
-
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-          {label}
-        </span>
-        <span className="font-mono text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary/70 border border-primary/20">
-          from V{fromVariation + 1}
-        </span>
-        {charCount !== undefined && (
-          <span
-            className={cn(
-              "font-mono text-[9px] px-1.5 py-0.5 border ml-auto",
-              charOver
-                ? "border-destructive/40 text-destructive"
-                : charUnder
-                  ? "border-yellow-500/30 text-yellow-500"
-                  : "border-primary/20 text-primary/50"
-            )}
-          >
-            {charCount.toLocaleString()}
-            {charLimit ? ` / ${charLimit.toLocaleString()}` : ""}
+      >
+        <span>{label}</span>
+        {isReference && (
+          <span className="font-mono text-[9px] text-zinc-600 normal-case tracking-normal font-normal">
+            Reference
           </span>
         )}
       </div>
-      <p
+
+      {/* Style of Music */}
+      <button
+        type="button"
+        onClick={() => onSelect("styleOfMusic")}
         className={cn(
-          "text-xs text-zinc-300 leading-relaxed break-words line-clamp-3",
-          mono ? "font-mono" : ""
+          "relative w-full text-left p-3 border transition-all flex flex-col gap-1.5",
+          selectionBorder("styleOfMusic")
         )}
       >
-        {value}
-      </p>
+        <div className="flex items-center justify-between gap-1">
+          <span className="font-mono text-[9px] text-zinc-600 uppercase tracking-widest flex items-center gap-1">
+            <Music className="w-2.5 h-2.5" /> Style
+          </span>
+          <div className="flex items-center gap-1">
+            {simStyle !== null && (
+              <span
+                className={cn(
+                  "font-mono text-[9px] px-1 py-0.5",
+                  simStyle >= 80
+                    ? "text-zinc-600"
+                    : simStyle >= 50
+                      ? "text-amber-500"
+                      : "text-primary/80"
+                )}
+              >
+                {simStyle}%
+              </span>
+            )}
+            <CharBadge count={variation.styleOfMusic.length} limit={900} />
+          </div>
+        </div>
+        <p className="text-[11px] text-zinc-300 leading-relaxed break-words line-clamp-5">
+          {!isReference && showDiff ? (
+            <DiffText base={reference.styleOfMusic} changed={variation.styleOfMusic} />
+          ) : (
+            variation.styleOfMusic
+          )}
+        </p>
+        {selected.styleOfMusic === variationIdx && (
+          <span className="absolute top-1 right-1 flex items-center gap-0.5 font-mono text-[8px] text-primary">
+            <Check className="w-2.5 h-2.5" />
+          </span>
+        )}
+      </button>
+
+      {/* Title */}
+      <button
+        type="button"
+        onClick={() => onSelect("title")}
+        className={cn(
+          "relative w-full text-left p-3 border transition-all flex flex-col gap-1.5",
+          selectionBorder("title")
+        )}
+      >
+        <span className="font-mono text-[9px] text-zinc-600 uppercase tracking-widest">
+          Title
+        </span>
+        <p className="text-[11px] text-zinc-300 font-medium leading-snug break-words">
+          {!isReference && showDiff ? (
+            <DiffText base={reference.title} changed={variation.title} />
+          ) : (
+            variation.title
+          )}
+        </p>
+        {selected.title === variationIdx && (
+          <span className="absolute top-1 right-1 flex items-center gap-0.5 font-mono text-[8px] text-primary">
+            <Check className="w-2.5 h-2.5" />
+          </span>
+        )}
+      </button>
+
+      {/* Negative Prompt */}
+      <button
+        type="button"
+        onClick={() => onSelect("negativePrompt")}
+        className={cn(
+          "relative w-full text-left p-3 border transition-all flex flex-col gap-1.5",
+          selectionBorder("negativePrompt")
+        )}
+      >
+        <div className="flex items-center justify-between gap-1">
+          <span className="font-mono text-[9px] text-zinc-600 uppercase tracking-widest flex items-center gap-1">
+            <Ban className="w-2.5 h-2.5" /> Negative
+          </span>
+          <div className="flex items-center gap-1">
+            {simNeg !== null && (
+              <span
+                className={cn(
+                  "font-mono text-[9px] px-1 py-0.5",
+                  simNeg >= 80
+                    ? "text-zinc-600"
+                    : simNeg >= 50
+                      ? "text-amber-500"
+                      : "text-primary/80"
+                )}
+              >
+                {simNeg}%
+              </span>
+            )}
+            <CharBadge
+              count={variation.negativePrompt.length}
+              limit={199}
+              min={180}
+            />
+          </div>
+        </div>
+        <p className="text-[11px] font-mono text-zinc-300 leading-relaxed break-words line-clamp-4">
+          {!isReference && showDiff ? (
+            <DiffText base={reference.negativePrompt} changed={variation.negativePrompt} />
+          ) : (
+            variation.negativePrompt
+          )}
+        </p>
+        {selected.negativePrompt === variationIdx && (
+          <span className="absolute top-1 right-1 flex items-center gap-0.5 font-mono text-[8px] text-primary">
+            <Check className="w-2.5 h-2.5" />
+          </span>
+        )}
+      </button>
+
+      {/* Lyrics */}
+      <button
+        type="button"
+        onClick={() => onSelect("lyrics")}
+        className={cn(
+          "relative w-full text-left p-3 border transition-all flex flex-col gap-1.5 flex-1",
+          selectionBorder("lyrics")
+        )}
+      >
+        <div className="flex items-center justify-between gap-1">
+          <span className="font-mono text-[9px] text-zinc-600 uppercase tracking-widest flex items-center gap-1">
+            <Sparkles className="w-2.5 h-2.5" /> Lyrics
+          </span>
+          <div className="flex items-center gap-1">
+            {simLyrics !== null && (
+              <span
+                className={cn(
+                  "font-mono text-[9px] px-1 py-0.5",
+                  simLyrics >= 80
+                    ? "text-zinc-600"
+                    : simLyrics >= 50
+                      ? "text-amber-500"
+                      : "text-primary/80"
+                )}
+              >
+                {simLyrics}%
+              </span>
+            )}
+            <CharBadge
+              count={variation.lyrics.length}
+              limit={4999}
+              min={4900}
+            />
+          </div>
+        </div>
+        <p className="text-[11px] text-zinc-300 leading-relaxed break-words line-clamp-[12] whitespace-pre-line">
+          {!isReference && showDiff ? (
+            <DiffText base={reference.lyrics} changed={variation.lyrics} />
+          ) : (
+            variation.lyrics
+          )}
+        </p>
+        {selected.lyrics === variationIdx && (
+          <span className="absolute top-1 right-1 flex items-center gap-0.5 font-mono text-[8px] text-primary">
+            <Check className="w-2.5 h-2.5" />
+          </span>
+        )}
+      </button>
     </div>
   );
 }
@@ -390,12 +379,14 @@ export function VariationWorkshop({
 }: VariationWorkshopProps) {
   const { copy } = useCopyToClipboard();
   const [showDiff, setShowDiff] = useState(true);
+  const [mobileTab, setMobileTab] = useState(0);
   const [selected, setSelected] = useState<Selection>({
     styleOfMusic: 0,
     title: 0,
     lyrics: 0,
     negativePrompt: 0,
   });
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const selectSection = (key: SectionKey, idx: number) => {
     setSelected((prev) => ({ ...prev, [key]: idx }));
@@ -410,6 +401,13 @@ export function VariationWorkshop({
   };
 
   const anyNonDefault = Object.values(selected).some((v) => v !== 0);
+
+  const scrollLeft = () => {
+    scrollRef.current?.scrollBy({ left: -260, behavior: "smooth" });
+  };
+  const scrollRight = () => {
+    scrollRef.current?.scrollBy({ left: 260, behavior: "smooth" });
+  };
 
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-3">
@@ -432,11 +430,11 @@ export function VariationWorkshop({
           <button
             type="button"
             onClick={() => setShowDiff((v) => !v)}
-            title="Toggle word-level diff highlighting vs V1"
+            title="Toggle word-level diff highlighting"
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border transition-all",
               showDiff
-                ? "border-amber-500/40 text-amber-400 bg-amber-400/5"
+                ? "border-emerald-500/40 text-emerald-400 bg-emerald-400/5"
                 : "border-primary/20 text-zinc-500 hover:border-primary/40 hover:text-zinc-300"
             )}
           >
@@ -454,79 +452,153 @@ export function VariationWorkshop({
         </div>
       </div>
 
+      {/* Diff legend */}
       {showDiff && variations.length > 1 && (
-        <p className="font-mono text-[10px] text-zinc-600 px-1">
-          <span className="inline-block w-2 h-2 bg-amber-400/30 border border-amber-500/30 mr-1 align-middle" />
-          Highlighted words are unique to that variation vs V1 (the reference)
-        </p>
+        <div className="flex items-center gap-3 font-mono text-[10px] text-zinc-600 px-1">
+          <span className="flex items-center gap-1">
+            <span className="inline-block px-1 bg-emerald-500/20 text-emerald-300 rounded-sm">+added</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block px-1 bg-red-500/15 text-red-400 line-through rounded-sm opacity-70">-removed</span>
+          </span>
+          <span className="text-zinc-700">vs V1 (reference)</span>
+        </div>
       )}
 
-      {/* Section rows */}
-      <SectionRow
-        sectionKey="styleOfMusic"
-        label="Style of Music"
-        icon={<Music className="w-3.5 h-3.5" />}
-        variations={variations}
-        selected={selected.styleOfMusic}
-        showDiff={showDiff}
-        onSelect={(i) => selectSection("styleOfMusic", i)}
-        getText={(v) => v.styleOfMusic}
-        charLimit={900}
-        getCharCount={(v) => v.styleOfMusic.length}
-      />
+      {/* Click hint */}
+      <p className="font-mono text-[10px] text-zinc-700 px-1">
+        Click any section card to select that variation for your composite template.
+      </p>
 
-      <SectionRow
-        sectionKey="title"
-        label="Suno Title"
-        icon={<Heading className="w-3.5 h-3.5" />}
-        variations={variations}
-        selected={selected.title}
-        showDiff={showDiff}
-        onSelect={(i) => selectSection("title", i)}
-        getText={(v) => v.title}
-      />
+      {/* Mobile tabs */}
+      <div className="flex sm:hidden border border-primary/20 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+        {variations.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setMobileTab(i)}
+            className={cn(
+              "flex-1 min-w-[3.5rem] py-2 font-mono text-[11px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+              mobileTab === i
+                ? "bg-primary/10 text-primary border-b-2 border-primary"
+                : "text-zinc-600 hover:text-zinc-400"
+            )}
+          >
+            V{i + 1}
+            {i === 0 && (
+              <span className="text-[8px] text-zinc-700 block font-normal normal-case tracking-normal leading-none">
+                ref
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
-      <SectionRow
-        sectionKey="negativePrompt"
-        label="Negative Prompt"
-        icon={<Ban className="w-3.5 h-3.5" />}
-        variations={variations}
-        selected={selected.negativePrompt}
-        showDiff={showDiff}
-        onSelect={(i) => selectSection("negativePrompt", i)}
-        getText={(v) => v.negativePrompt}
-        charLimit={199}
-        charMin={180}
-        getCharCount={(v) => v.negativePrompt.length}
-      />
+      {/* Desktop: all columns side-by-side with scroll; Mobile: single tab */}
+      <div className="relative">
+        {/* Desktop scroll arrows */}
+        {variations.length > 2 && (
+          <>
+            <button
+              type="button"
+              onClick={scrollLeft}
+              className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 p-1 border border-primary/20 bg-background text-zinc-500 hover:text-zinc-300 transition-all"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={scrollRight}
+              className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 p-1 border border-primary/20 bg-background text-zinc-500 hover:text-zinc-300 transition-all"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </>
+        )}
 
-      <SectionRow
-        sectionKey="lyrics"
-        label="Lyrics / Metadata"
-        icon={<Sparkles className="w-3.5 h-3.5" />}
-        variations={variations}
-        selected={selected.lyrics}
-        showDiff={showDiff}
-        onSelect={(i) => selectSection("lyrics", i)}
-        getText={(v) => v.lyrics}
-        getPreview={(v) => v.lyrics.slice(0, 320) + (v.lyrics.length > 320 ? "…" : "")}
-        charLimit={4999}
-        charMin={4900}
-        getCharCount={(v) => v.lyrics.length}
-        collapsible
-      />
+        {/* Desktop: all columns */}
+        <div
+          ref={scrollRef}
+          className="hidden sm:grid gap-3 overflow-x-auto"
+          style={{
+            gridTemplateColumns: `repeat(${variations.length}, minmax(220px, 1fr))`,
+            scrollbarWidth: "thin",
+          }}
+        >
+          {variations.map((v, i) => (
+            <VariationColumn
+              key={i}
+              variationIdx={i}
+              isReference={i === 0}
+              variation={v}
+              reference={variations[0]}
+              selected={selected}
+              showDiff={showDiff}
+              onSelect={(key) => selectSection(key, i)}
+            />
+          ))}
+        </div>
+
+        {/* Mobile: single column for active tab */}
+        <div className="sm:hidden">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mobileTab}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.15 }}
+            >
+              <VariationColumn
+                variationIdx={mobileTab}
+                isReference={mobileTab === 0}
+                variation={variations[mobileTab]}
+                reference={variations[0]}
+                selected={selected}
+                showDiff={showDiff}
+                onSelect={(key) => selectSection(key, mobileTab)}
+              />
+            </motion.div>
+          </AnimatePresence>
+          {/* Mobile prev/next */}
+          <div className="flex gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => setMobileTab((t) => Math.max(0, t - 1))}
+              disabled={mobileTab === 0}
+              className="flex items-center gap-1 px-3 py-1.5 font-mono text-[11px] border border-primary/20 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 transition-all"
+            >
+              <ChevronLeft className="w-3 h-3" /> Prev
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab((t) => Math.min(variations.length - 1, t + 1))}
+              disabled={mobileTab === variations.length - 1}
+              className="flex items-center gap-1 px-3 py-1.5 font-mono text-[11px] border border-primary/20 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 transition-all"
+            >
+              Next <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Composite Panel */}
       <div className="border border-primary/25 bg-card">
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-primary/10">
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-primary/10 flex-wrap gap-y-2">
           <div className="flex items-center gap-2">
             <GitMerge className="w-3.5 h-3.5 text-primary/60" />
             <span className="font-mono text-[11px] text-primary/70 uppercase tracking-wider font-medium">
               Your Composite
             </span>
-            {anyNonDefault && (
+            {anyNonDefault ? (
               <span className="font-mono text-[9px] px-1.5 py-0.5 bg-primary/10 border border-primary/20 text-primary/60">
                 Mixed
+              </span>
+            ) : (
+              <span className="font-mono text-[9px] px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-600">
+                All V1
               </span>
             )}
           </div>
@@ -547,7 +619,7 @@ export function VariationWorkshop({
               className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider border border-primary/20 text-zinc-500 hover:border-primary/40 hover:text-zinc-300 transition-all"
             >
               <Copy className="w-3 h-3" />
-              Copy
+              Copy All
             </button>
             <button
               type="button"
@@ -560,36 +632,59 @@ export function VariationWorkshop({
           </div>
         </div>
 
-        <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <CompositePanelSection
-            label="Style of Music"
-            fromVariation={selected.styleOfMusic}
-            value={merged.styleOfMusic}
-            charCount={merged.styleOfMusic.length}
-            charLimit={900}
-          />
-          <CompositePanelSection
-            label="Title"
-            fromVariation={selected.title}
-            value={merged.title}
-          />
-          <CompositePanelSection
-            label="Negative Prompt"
-            fromVariation={selected.negativePrompt}
-            value={merged.negativePrompt}
-            charCount={merged.negativePrompt.length}
-            charLimit={199}
-            charMin={180}
-            mono
-          />
-          <CompositePanelSection
-            label="Lyrics"
-            fromVariation={selected.lyrics}
-            value={merged.lyrics.slice(0, 200) + "…"}
-            charCount={merged.lyrics.length}
-            charLimit={4999}
-            charMin={4900}
-          />
+        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {(
+            [
+              {
+                label: "Style of Music",
+                key: "styleOfMusic" as SectionKey,
+                limit: 900,
+              },
+              { label: "Title", key: "title" as SectionKey },
+              {
+                label: "Negative Prompt",
+                key: "negativePrompt" as SectionKey,
+                limit: 199,
+                min: 180,
+                mono: true,
+              },
+              {
+                label: "Lyrics",
+                key: "lyrics" as SectionKey,
+                limit: 4999,
+                min: 4900,
+              },
+            ] as Array<{
+              label: string;
+              key: SectionKey;
+              limit?: number;
+              min?: number;
+              mono?: boolean;
+            }>
+          ).map(({ label, key, limit, min, mono }) => {
+            const val = merged[key as keyof SunoTemplate] as string;
+            return (
+              <div key={key} className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
+                    {label}
+                  </span>
+                  <span className="font-mono text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary/70 border border-primary/20">
+                    from V{selected[key] + 1}
+                  </span>
+                  <CharBadge count={val.length} limit={limit} min={min} />
+                </div>
+                <p
+                  className={cn(
+                    "text-[11px] text-zinc-300 leading-relaxed break-words line-clamp-4",
+                    mono ? "font-mono" : ""
+                  )}
+                >
+                  {key === "lyrics" ? val.slice(0, 300) + (val.length > 300 ? "…" : "") : val}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

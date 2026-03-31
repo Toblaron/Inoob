@@ -1784,31 +1784,38 @@ export default function Home() {
             >
               {/* Action bar above results */}
               <div className="flex flex-wrap gap-2 mb-4 max-w-6xl mx-auto px-1 items-center">
-                <div className="flex items-center border border-primary/20">
-                  <button
-                    type="button"
-                    onClick={handleGenerateVariations}
-                    disabled={isGeneratingVariations}
-                    className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-zinc-500 hover:text-primary transition-all disabled:opacity-30 border-r border-primary/20"
-                  >
-                    <Layers className="w-3 h-3" /> Generate Variations
-                  </button>
-                  {([2, 3, 4] as const).map((n) => (
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center border border-primary/20">
                     <button
-                      key={n}
                       type="button"
-                      onClick={() => setVariationCount(n)}
-                      className={cn(
-                        "px-2.5 py-1.5 font-mono text-[11px] transition-all",
-                        variationCount === n
-                          ? "text-primary bg-primary/10"
-                          : "text-zinc-600 hover:text-zinc-400",
-                        n < 4 ? "border-r border-primary/20" : ""
-                      )}
+                      onClick={handleGenerateVariations}
+                      disabled={isGeneratingVariations}
+                      className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-zinc-500 hover:text-primary transition-all disabled:opacity-30 border-r border-primary/20"
                     >
-                      {n}×
+                      <Layers className="w-3 h-3" /> Generate Variations
                     </button>
-                  ))}
+                    {([2, 3, 4] as const).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        onClick={() => setVariationCount(n)}
+                        className={cn(
+                          "px-2.5 py-1.5 font-mono text-[11px] transition-all",
+                          variationCount === n
+                            ? "text-primary bg-primary/10"
+                            : "text-zinc-600 hover:text-zinc-400",
+                          n < 4 ? "border-r border-primary/20" : ""
+                        )}
+                      >
+                        {n}×
+                      </button>
+                    ))}
+                  </div>
+                  {variationCount === 4 && (
+                    <p className="font-mono text-[10px] text-amber-500/80 px-0.5">
+                      ⚠ 4 variations = ~4× API cost and ~60–90s wait
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"
