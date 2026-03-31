@@ -885,51 +885,25 @@ export default function Home() {
     setVariationPending(Array(count).fill(true));
     setApiError(null);
 
-    const results: (SunoTemplate | null)[] = Array(count).fill(null);
-    let settled = 0;
-
-    for (let i = 0; i < count; i++) {
-      const idx = i;
-      mainMutation.mutate(
-        {
-          data: {
-            youtubeUrl: lastUrlRef.current!,
-            ...(opts as object),
-            variationIndex: idx,
-          },
+    variationsMutation.mutate(
+      { data: { youtubeUrl: lastUrlRef.current!, ...(opts as object), count } },
+      {
+        onSuccess: (data) => {
+          setVariationWorkshop(data.variations);
+          setVariationPending([]);
+          setIsGeneratingVariations(false);
         },
-        {
-          onSuccess: (data) => {
-            results[idx] = data;
-            setVariationPending((prev) => {
-              const next = [...prev];
-              next[idx] = false;
-              return next;
-            });
-            setVariationWorkshop(
-              results.some((r) => r !== null) ? [...results] : null
-            );
-            settled++;
-            if (settled === count) setIsGeneratingVariations(false);
-          },
-          onError: () => {
-            setVariationPending((prev) => {
-              const next = [...prev];
-              next[idx] = false;
-              return next;
-            });
-            settled++;
-            if (settled === count) {
-              if (results.every((r) => r === null)) {
-                setApiError("All variation requests failed.");
-                setVariationWorkshop(null);
-              }
-              setIsGeneratingVariations(false);
-            }
-          },
-        }
-      );
-    }
+        onError: (err) => {
+          setApiError(
+            (err as { data?: { error?: string }; message?: string })?.data?.error ??
+            (err as Error)?.message ??
+            "Failed to generate variations"
+          );
+          setVariationPending([]);
+          setIsGeneratingVariations(false);
+        },
+      }
+    );
   };
 
   const handleMergeVariation = (merged: SunoTemplate) => {
@@ -1781,7 +1755,7 @@ export default function Home() {
             >
               <LoadingEq />
             </motion.div>
-          ) : (variationWorkshop && variationWorkshop.some((v) => v !== null)) || (isGeneratingVariations && variationPending.length > 0) ? (
+          ) : (variationWorkshop && variationWorkshop.length > 0) || (isGeneratingVariations && variationPending.length > 0) ? (
             <motion.div
               key="workshop"
               initial={{ opacity: 0 }}
@@ -1790,7 +1764,7 @@ export default function Home() {
               className="w-full max-w-6xl mx-auto px-1"
             >
               <VariationWorkshop
-                variations={(variationWorkshop ?? []).filter((v): v is SunoTemplate => v !== null)}
+                variations={variationWorkshop ?? []}
                 pending={variationPending}
                 totalCount={variationPending.length || variationWorkshop?.length || 0}
                 onMerge={handleMergeVariation}
