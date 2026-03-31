@@ -1440,6 +1440,11 @@ router.post("/batch", async (req, res) => {
   let clientDisconnected = false;
   req.on("close", () => { clientDisconnected = true; });
 
+  // Send periodic SSE heartbeat comments to prevent proxy idle timeouts
+  const heartbeat = setInterval(() => {
+    if (!clientDisconnected) res.write(": heartbeat\n\n");
+  }, 20000);
+
   const sendEvent = (type: string, data: unknown) => {
     if (!clientDisconnected) {
       res.write(`data: ${JSON.stringify({ type, ...( typeof data === "object" && data !== null ? data : { data }) })}\n\n`);
@@ -1520,6 +1525,7 @@ router.post("/batch", async (req, res) => {
     console.error("[batch] unexpected error:", err);
   }
 
+  clearInterval(heartbeat);
   sendEvent("done", { totalCount: tracks.length });
   res.end();
 });

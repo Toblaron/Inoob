@@ -984,6 +984,11 @@ export default function Home() {
   const handleStartBatch = useCallback(async () => {
     const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+    // Seed metadata map from any existing playlist preview
+    const metaByUrl = new Map<string, { title?: string; thumbnail?: string }>(
+      playlistPreview?.map((t) => [t.url, { title: t.title, thumbnail: t.thumbnail }]) ?? []
+    );
+
     // If input contains a playlist URL, expand it first before proceeding
     const playlistUrl = detectPlaylistUrl(batchUrlsText);
     let resolvedText = batchUrlsText;
@@ -1000,7 +1005,15 @@ export default function Home() {
         }
         const data = await resp.json() as { tracks: PlaylistTrack[]; totalCount: number; capped: boolean };
         setPlaylistPreview(data.tracks);
-        resolvedText = data.tracks.map((t) => t.url).join("\n");
+        // Build expanded URLs from playlist tracks, preserving the metadata
+        data.tracks.forEach((t) => metaByUrl.set(t.url, { title: t.title, thumbnail: t.thumbnail }));
+        // Merge: replace the playlist URL with expanded track URLs; keep other individual URLs
+        const nonPlaylistUrls = parseBatchUrls(batchUrlsText).filter(
+          (u) => !u.includes("list=")
+        );
+        const expandedUrls = data.tracks.map((t) => t.url);
+        const merged = [...new Set([...expandedUrls, ...nonPlaylistUrls])].slice(0, 20);
+        resolvedText = merged.join("\n");
         setBatchUrlsText(resolvedText);
       } catch (err) {
         setPlaylistError((err as Error).message ?? "Failed to load playlist");
@@ -1035,12 +1048,19 @@ export default function Home() {
       return m ? m[1] : "";
     };
 
-    const initialTracks: BatchTrackResult[] = urls.map((url, index) => ({
-      url,
-      videoId: videoIdFromUrl(url),
-      status: "queued",
-      index,
-    }));
+    const initialTracks: BatchTrackResult[] = urls.map((url, index) => {
+      const meta = metaByUrl.get(url);
+      const videoId = videoIdFromUrl(url);
+      return {
+        url,
+        videoId,
+        status: "queued",
+        index,
+        // Pre-seed title and thumbnail from playlist preview if available
+        title: meta?.title,
+        thumbnail: meta?.thumbnail ?? (videoId ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : undefined),
+      };
+    });
     setBatchTracks(initialTracks);
 
     try {
@@ -1101,7 +1121,7 @@ export default function Home() {
     } finally {
       setIsBatchRunning(false);
     }
-  }, [batchUrlsText, parseBatchUrls, detectPlaylistUrl, vocalGender, energyLevel, era, mode, selectedGenres, selectedMoods, selectedInstruments, excludeTags, genreNudge]);
+  }, [batchUrlsText, parseBatchUrls, detectPlaylistUrl, playlistPreview, vocalGender, energyLevel, era, mode, selectedGenres, selectedMoods, selectedInstruments, excludeTags, genreNudge]);
 
   const handleBatchRetry = useCallback((track: BatchTrackResult) => {
     const urls = [track.url];
