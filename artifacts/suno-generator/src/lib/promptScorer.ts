@@ -294,27 +294,27 @@ function scoreStyleLength(style: string): { issues: ScoringIssue[]; score: numbe
   const issues: ScoringIssue[] = [];
   let score = 20;
 
-  if (len > 900) {
+  if (len > 999) {
     score = 0;
     issues.push({
       id: "style-overlimit",
       category: "style",
       severity: "error",
-      title: `Style prompt ${len} chars — over 900 limit`,
-      detail: `Suno will truncate anything past 900 chars. You have ${len - 900} extra chars.`,
+      title: `Style prompt ${len} chars — over 999 limit`,
+      detail: `Suno will truncate anything past 999 chars. You have ${len - 999} extra chars.`,
       autoFixable: true,
-      autoFixValue: style.slice(0, 900),
+      autoFixValue: style.slice(0, 999),
     });
-  } else if (len >= 850) {
+  } else if (len >= 900) {
     score = 20;
-  } else if (len >= 700) {
+  } else if (len >= 750) {
     score = 16;
     issues.push({
       id: "style-underused",
       category: "style",
       severity: "warning",
-      title: `Style prompt at ${len}/900 chars — ${900 - len} chars available`,
-      detail: `You have ${900 - len} unused characters. Consider adding: reverb character, room size, mix bus treatment, or specific production techniques.`,
+      title: `Style prompt at ${len}/999 chars — ${999 - len} chars available`,
+      detail: `You have ${999 - len} unused characters. Consider adding: reverb character, room size, mix bus treatment, or specific production techniques.`,
       autoFixable: false,
     });
   } else if (len >= 500) {
@@ -323,8 +323,8 @@ function scoreStyleLength(style: string): { issues: ScoringIssue[]; score: numbe
       id: "style-short",
       category: "style",
       severity: "warning",
-      title: `Style prompt only ${len}/900 chars — significantly under-used`,
-      detail: `Adding ${900 - len} more chars of specific detail improves Suno's output. Categories to add: sub-genre tags, production texture, vocal style, mixing notes.`,
+      title: `Style prompt only ${len}/999 chars — significantly under-used`,
+      detail: `Adding ${999 - len} more chars of specific detail improves Suno's output. Categories to add: sub-genre tags, production texture, vocal style, mixing notes.`,
       autoFixable: false,
     });
   } else {
@@ -333,8 +333,8 @@ function scoreStyleLength(style: string): { issues: ScoringIssue[]; score: numbe
       id: "style-very-short",
       category: "style",
       severity: "error",
-      title: `Style prompt only ${len}/900 chars — severely under-used`,
-      detail: `Only using ${Math.round((len / 900) * 100)}% of available style space. Expand with: specific genre variants, production era cues, instrumentation detail, vocal characteristics.`,
+      title: `Style prompt only ${len}/999 chars — severely under-used`,
+      detail: `Only using ${Math.round((len / 999) * 100)}% of available style space. Expand with: specific genre variants, production era cues, instrumentation detail, vocal characteristics.`,
       autoFixable: false,
     });
   }
@@ -403,16 +403,16 @@ function scoreNegativeLength(neg: string): { issues: ScoringIssue[]; score: numb
       autoFixable: true,
       autoFixValue: neg.slice(0, 199),
     });
-  } else if (len >= 180) {
+  } else if (len >= 150) {
     score = 15;
-  } else if (len >= 120) {
+  } else if (len >= 90) {
     score = 10;
     issues.push({
       id: "neg-short",
       category: "negative",
       severity: "warning",
-      title: `Negative prompt ${len} chars — target 180–199`,
-      detail: `${180 - len} chars below ideal range. Regenerate to add more specific genre/instrument exclusions.`,
+      title: `Negative prompt ${len} chars — target 150–199`,
+      detail: `${150 - len} chars below ideal range. Regenerate to add more specific genre/instrument exclusions.`,
       autoFixable: false,
     });
   } else {

@@ -789,8 +789,8 @@ function trimToCharLimit(text: string, limit: number): string {
   return lastNewline !== -1 ? truncated.slice(0, lastNewline) : "";
 }
 
-/** Hard-trim styleOfMusic to 900 chars, breaking at the last comma boundary */
-function trimStylePrompt(text: string, limit = 900): string {
+/** Hard-trim styleOfMusic to 999 chars, breaking at the last comma boundary */
+function trimStylePrompt(text: string, limit = 999): string {
   const flat = text.replace(/\r?\n/g, " ").trim();
   if (flat.length <= limit) return flat;
   const cut = flat.slice(0, limit);
@@ -801,9 +801,9 @@ function trimStylePrompt(text: string, limit = 900): string {
 const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate professional three-section templates for Suno.ai that produce high-quality, non-generic AI music. You will be given rich metadata about a YouTube song and must produce a precise, production-detailed template using every advanced Suno technique available.
 
 ⚠️ NON-NEGOTIABLE OUTPUT LENGTH REQUIREMENTS — verify these before finalising:
-- styleOfMusic: 850–900 characters (fill to near limit — do not stop at 300 or 400)
+- styleOfMusic: 900–999 characters (fill to near the upper limit — do not stop at 300 or 400)
 - lyrics: MINIMUM 4,900 characters, MAXIMUM 4,999 characters (you MUST reach 4,900)
-- negativePrompt: 180–199 characters
+- negativePrompt: 150–199 characters
 If your draft is under these minimums, keep writing and adding production detail until you reach them.
 
 **80/20 SONGWRITING PRINCIPLE — apply throughout all three sections:**
@@ -830,10 +830,10 @@ OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
 
 **HARD LIMIT: 4900 characters. The lyrics field MUST NOT exceed 4900 characters.**
 
-=== SECTION 1: styleOfMusic (HARD LIMIT: 900 characters) ===
+=== SECTION 1: styleOfMusic (TARGET: 900–999 characters) ===
 The Suno "Style of Music" field. Apply the 80/20 principle: lead with the core creative 20% (hook identity, melody character, chord progression) — then fill remaining space with production/era detail.
 
-**HARD LIMIT: styleOfMusic MUST NOT exceed 900 characters. Count every character. If you reach 900, stop — do not write more.**
+**TARGET: 900–999 characters. HARD LIMIT: 999 characters. Fill close to the upper limit.**
 
 **ORDER — follow this exact sequence:**
 1. HOOK IDENTITY (first) — one sharp phrase describing the ONE musical idea that makes the song unforgettable: e.g. "anthemic four-bar rising chorus melody", "two-chord hypnotic vamp with syncopated vocal stutter", "melancholic chromatic descending bass line under soaring hook"
@@ -847,7 +847,7 @@ The Suno "Style of Music" field. Apply the 80/20 principle: lead with the core c
 9. PRODUCTION QUALITY — mastering descriptor: e.g. "radio-ready mix", "analog warmth", "hyper-modern production with punchy transients"
 10. PERFORMANCE NUANCE — e.g. "slightly behind-the-beat drum feel", "aggressive pick attack on downbeats", "subtle pitch bend on phrase endings"
 
-- HARD LIMIT: 900 characters maximum. Be dense and hyper-specific. Avoid vague words like "catchy" or "beautiful" — always specify HOW. Write less if needed — hitting the limit is more important than completeness.
+- TARGET: 900–999 characters. HARD LIMIT: 999 characters maximum. Be dense and hyper-specific. Avoid vague words like "catchy" or "beautiful" — always specify HOW. Aim to reach 900+ characters.
 - Example: "anthemic four-bar rising hook with a suspended-4th peak note, Am-G-C-F chord loop, stepwise verse melody with wide octave leap on chorus, 1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman production, 113 BPM, B minor, warm baritone male lead — soulful legato phrasing, light vibrato, intimate yet commanding, bright gated-reverb snare 2 and 4, four-on-the-floor kick with sub tail, staccato syncopated slap bass, shimmering DX7 synth stabs wide, sawtooth lead synth, sparse verse builds to explosive anthemic chorus, analog warmth, radio-ready master, wide stereo image"
 
 === SECTION 2: lyrics (up to 4900 chars) ===
@@ -1221,92 +1221,145 @@ ${context}`;
   let aiResult: AiOutput;
   let templateFromCache = false;
 
-  // Explicit length reminder appended to every user message — Llama models respond
-  // better to repeated constraints in the user turn than buried system instructions.
-  const lengthReminder = `
-
-⚠️ MANDATORY OUTPUT LENGTHS — CHECK BEFORE RESPONDING:
-1. styleOfMusic → TARGET 850–900 characters. Fill to near the 900-char limit.
-2. lyrics → MINIMUM 4,900 characters, MAXIMUM 4,999 characters. You MUST reach 4,900.
-3. negativePrompt → exactly 180–199 characters.
-
-If lyrics would be under 4,900 characters in your first draft: keep writing — add more [instrument cue] lines, (performance direction) parentheticals, ad-lib variants, and richer section headers until you reach 4,900. Do NOT stop writing early.`;
+  // ── Two-call strategy ──────────────────────────────────────────────────────
+  // Llama models in JSON mode have a strong internal bias against generating
+  // very long string values. Splitting into (1) short JSON for style/title/negative
+  // and (2) plain-text for lyrics removes the JSON constraint on the long field.
 
   const runAiCall = async (): Promise<AiOutput> => {
-    const completion = await openai.chat.completions.create({
+
+    // ── Call 1: style + title + negativePrompt (JSON, all short) ─────────────
+    const metaUserPrompt = `Generate a Suno.ai Style of Music descriptor, a creative title, and a negative prompt for this song.
+
+${context}${styleControls}
+
+Return valid JSON with exactly these three fields:
+{
+  "styleOfMusic": "900–999 characters — fill to near the upper limit",
+  "title": "creative Suno song title",
+  "negativePrompt": "150–199 characters, comma-separated terms, NO spaces after commas"
+}
+
+styleOfMusic ORDER (follow exactly, fill 900–999 chars total):
+1. Hook identity — the one musical idea that makes the song unforgettable
+2. Chord progression — exact chords or Roman numerals
+3. Melody character — how the melody moves
+4. Vocal descriptor — gender, timbre, delivery, actor-like character
+5. ERA / PRIMARY GENRE IN CAPS / Secondary Genre / tertiary
+6. BPM + Key (exact if known)
+7. Instruments with articulation (staccato, legato, palm-muted, pizzicato, etc.)
+8. Dynamics — sparse-to-full contrast
+9. Production quality — mastering descriptor
+10. Performance nuance
+
+negativePrompt: comma-separated, no spaces after commas, between 150 and 199 characters total.`;
+
+    const metaCompletion = await openai.chat.completions.create({
+      model: AI_MINI_MODEL,
+      max_completion_tokens: 2048,
+      messages: [{ role: "user", content: metaUserPrompt }],
+      response_format: { type: "json_object" },
+    });
+    const metaContent = metaCompletion.choices[0]?.message?.content;
+    if (!metaContent) throw new Error("AI failed to generate template metadata. Please try again.");
+    const meta = JSON.parse(metaContent) as { styleOfMusic: string; title: string; negativePrompt: string };
+    console.log(`[meta] style=${meta.styleOfMusic.length} negative=${meta.negativePrompt.length}`);
+
+    // ── Call 2: lyrics ONLY — plain text, no JSON wrapper ────────────────────
+    // Without JSON mode the model has no length bias and writes freely.
+    const lyricsUserPrompt = `${lyricsInstruction}${modeInstruction}${instrumentalInstruction}${confirmedStructureHint}${styleControls}
+
+${context}
+
+STYLE OF MUSIC (for reference): ${meta.styleOfMusic}
+
+Write the complete Suno.ai Lyrics field for this song.
+Output ONLY the raw lyrics text — no JSON, no markdown code blocks, no preamble, no commentary.
+Begin immediately with the header block.
+
+Header block format (copy these tag names exactly):
+[Produced by AI - <genre>]
+[Vocal: <type and actor-like character>]
+[Mix: <stereo field description>]
+[Synthesis: <instruments with articulation vocabulary>]
+[Modulation: <specific effects>]
+[Rhythm: <BPM, swing%, kick/snare pattern>]
+[Spatial: <reverb and delay specifics>]
+[Dynamics: <compression and saturation>]
+[Master: <mastering descriptor>]
+[Chord Progression: <main loop>]
+[Key: <key and mode>]
+[BPM: <exact value>]
+
+Then the full song structure:
+[Intro] → [Verse 1] → [Pre-Chorus] → [Chorus] → [Verse 2] → [Pre-Chorus] → [Chorus] → [Bridge] → [Final Chorus] → [Outro]
+
+Each section:
+- Section header with 3+ descriptor phrases: [Chorus - full band, gated reverb snare, soaring hook 🔥]
+- 2-3 [instrument cue] lines using articulation vocabulary
+- Lyric lines (4 per stanza preferred)
+- (performance direction) parentheticals with nuance vocabulary
+- Ad-lib variants in choruses: (yeah!), (oh-oh), (come on!), (let's go)
+- Vowel elongation on key words: "sta-a-ay", "hea-ea-eart"
+
+End with [Fade Out] and [End].
+
+⚠️ CRITICAL LENGTH: You MUST output a MINIMUM of 4,900 characters. Count as you write.
+If you finish the song structure and are under 4,900 chars: KEEP WRITING — add more
+[instrument cue] lines, (performance direction) lines, extended [Outro], or an extra
+[Breakdown] / [Interlude] section until you reach 4,900. DO NOT STOP BEFORE 4,900 CHARACTERS.`;
+
+    const lyricsCompletion = await openai.chat.completions.create({
       model: AI_MODEL,
       max_completion_tokens: 8192,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userMessage + lengthReminder },
+        { role: "user", content: lyricsUserPrompt },
       ],
-      response_format: { type: "json_object" },
+      // No response_format — plain text removes the JSON length bias
     });
-    const content = completion.choices[0]?.message?.content;
-    if (!content) throw new Error("AI failed to generate a template. Please try again.");
-    let result = JSON.parse(content) as AiOutput;
+    let lyrics = lyricsCompletion.choices[0]?.message?.content?.trim() ?? "";
+    console.log(`[lyrics] initial: ${lyrics.length} chars`);
 
-    // Expansion pass — if output is too short, make a targeted follow-up call
-    const lyricsShort = result.lyrics.length < 4500;
-    const styleShort = result.styleOfMusic.length < 650;
+    // ── Expansion loop: up to 3 passes with AI_MODEL plain text ──────────────
+    for (let pass = 0; pass < 3 && lyrics.length < 4500; pass++) {
+      const needed = 4900 - lyrics.length;
+      console.warn(`[expand] pass ${pass + 1}: ${lyrics.length} chars, need ${needed} more`);
 
-    if (lyricsShort || styleShort) {
-      console.warn(`[expand] lyrics=${result.lyrics.length} style=${result.styleOfMusic.length} — running expansion pass`);
+      const expandCompletion = await openai.chat.completions.create({
+        model: AI_MODEL,
+        max_completion_tokens: 4096,
+        messages: [{
+          role: "user",
+          content: `The Suno lyrics below are ${lyrics.length} characters. You must ADD at least ${needed} more characters to reach the 4,900 minimum.
 
-      if (lyricsShort) {
-        const needed = 4900 - result.lyrics.length;
-        const expandPrompt = `The lyrics below are only ${result.lyrics.length} characters. They need to be expanded to between 4,900 and 4,999 characters total.
-
-ADD ${needed}+ more characters by inserting:
-- More [instrument cue] lines after each section header
+Insert additional content throughout:
+- More [instrument cue] lines after every section header (add 1-2 more per section)
 - More (performance direction) parentheticals after lyric stanzas
-- More ad-lib variants in chorus sections: (yeah!), (oh-oh), (come on!)
-- Richer descriptors in section headers
-- An additional [Bridge] or [Breakdown] section if needed
-- More [instrument cue] lines in the header block
+- More ad-lib variants in chorus sections: (yeah!), (oh-oh), (come on!), (let's go), (woah!)
+- Richer section header descriptors (3+ phrases each)
+- An additional [Bridge], [Breakdown], or [Interlude] section
+- Extended [Outro] with more instrument cues and fade directions
 
-Do NOT add new lyric lines unless the song is very short. Do NOT change existing lyric lines.
-Return ONLY the expanded lyrics text — no JSON wrapper, no commentary.
+Do NOT change existing lyric lines. Do NOT omit any existing content.
+Output the COMPLETE expanded lyrics (not just the additions). No JSON, no commentary.
 
-CURRENT LYRICS:
-${result.lyrics}`;
+CURRENT LYRICS (${lyrics.length} chars — need ${needed} more):
+${lyrics}`,
+        }],
+      });
 
-        const expandCompletion = await openai.chat.completions.create({
-          model: AI_MINI_MODEL,
-          max_completion_tokens: 8192,
-          messages: [{ role: "user", content: expandPrompt }],
-        });
-        const expanded = expandCompletion.choices[0]?.message?.content?.trim();
-        if (expanded && expanded.length > result.lyrics.length) {
-          result = { ...result, lyrics: expanded };
-          console.log(`[expand] lyrics expanded: ${result.lyrics.length} chars`);
-        }
-      }
-
-      if (styleShort) {
-        const needed = 850 - result.styleOfMusic.length;
-        const expandStylePrompt = `The Style of Music descriptor below is only ${result.styleOfMusic.length} characters. Expand it to 850–900 characters by adding more specific production detail: articulation vocabulary, dynamics contrast, more instrument specifics, mastering descriptors, and performance nuance. Hard maximum: 900 characters.
-
-Do NOT change the existing content — only append or expand.
-Return ONLY the expanded style text — no JSON wrapper, no commentary.
-
-CURRENT STYLE:
-${result.styleOfMusic}`;
-
-        const expandStyleCompletion = await openai.chat.completions.create({
-          model: AI_MINI_MODEL,
-          max_completion_tokens: 1024,
-          messages: [{ role: "user", content: expandStylePrompt }],
-        });
-        const expandedStyle = expandStyleCompletion.choices[0]?.message?.content?.trim();
-        if (expandedStyle && expandedStyle.length > result.styleOfMusic.length && expandedStyle.length <= 900) {
-          result = { ...result, styleOfMusic: expandedStyle };
-          console.log(`[expand] style expanded: ${result.styleOfMusic.length} chars`);
-        }
+      const expanded = expandCompletion.choices[0]?.message?.content?.trim() ?? "";
+      if (expanded.length > lyrics.length) {
+        lyrics = expanded;
+        console.log(`[expand] pass ${pass + 1}: ${lyrics.length} chars`);
+      } else {
+        console.warn(`[expand] pass ${pass + 1}: no improvement, stopping`);
+        break;
       }
     }
 
-    return result;
+    return { styleOfMusic: meta.styleOfMusic, title: meta.title, lyrics, negativePrompt: meta.negativePrompt };
   };
 
   if (templateCacheKey) {
@@ -1345,7 +1398,7 @@ ${result.styleOfMusic}`;
   return GenerateSunoTemplateResponse.parse({
     songTitle: metadata.title,
     artist: metadata.cleanArtist || metadata.author,
-    styleOfMusic: trimStylePrompt(aiResult.styleOfMusic, 900),
+    styleOfMusic: trimStylePrompt(aiResult.styleOfMusic, 999),
     title: aiResult.title,
     lyrics: trimToCharLimit(aiResult.lyrics, 4999),
     negativePrompt: aiResult.negativePrompt,
