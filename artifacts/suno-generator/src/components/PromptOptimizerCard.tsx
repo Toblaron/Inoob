@@ -17,7 +17,7 @@ import type { SunoTemplate } from "@workspace/api-client-react";
 
 interface PromptOptimizerCardProps {
   template: SunoTemplate;
-  onApplyFix: (field: "styleOfMusic" | "negativePrompt", value: string) => void;
+  onApplyFix: (patches: Partial<Record<"styleOfMusic" | "negativePrompt" | "lyrics", string>>) => void;
 }
 
 function CircularScore({ score }: { score: number }) {
@@ -33,12 +33,7 @@ function CircularScore({ score }: { score: number }) {
   return (
     <div className="relative w-16 h-16 shrink-0">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 72 72">
-        <circle
-          cx="36" cy="36" r={radius}
-          fill="none"
-          stroke="hsl(0 0% 10%)"
-          strokeWidth="5"
-        />
+        <circle cx="36" cy="36" r={radius} fill="none" stroke="hsl(0 0% 10%)" strokeWidth="5" />
         <circle
           cx="36" cy="36" r={radius}
           fill="none"
@@ -51,9 +46,7 @@ function CircularScore({ score }: { score: number }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-mono text-xs font-bold leading-none" style={{ color }}>
-          {score}
-        </span>
+        <span className="font-mono text-xs font-bold leading-none" style={{ color }}>{score}</span>
         <span className="font-mono text-[8px] text-zinc-600 leading-none mt-0.5">/ 100</span>
       </div>
     </div>
@@ -119,22 +112,22 @@ function IssueRow({ issue }: { issue: ScoringIssue }) {
 
 function CategoryBar({ label, score, maxScore, passed }: { label: string; score: number; maxScore: number; passed: boolean }) {
   const pct = (score / maxScore) * 100;
-  const color = passed
+  const barColor = passed
     ? "bg-green-500/70"
     : pct >= 60 ? "bg-yellow-500/70" : "bg-red-500/60";
 
   return (
     <div className="flex items-center gap-2">
-      <div className="w-24 shrink-0 flex items-center gap-1">
+      <div className="w-28 shrink-0 flex items-center gap-1">
         {passed
           ? <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
           : <AlertTriangle className="w-3 h-3 text-yellow-500 shrink-0" />
         }
         <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wide truncate">{label}</span>
       </div>
-      <div className="flex-1 bg-zinc-900 h-1.5 rounded-sm overflow-hidden">
+      <div className="flex-1 bg-zinc-900 h-1.5 overflow-hidden">
         <motion.div
-          className={cn("h-full rounded-sm", color)}
+          className={cn("h-full", barColor)}
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.5, delay: 0.1 }}
@@ -156,17 +149,26 @@ export function PromptOptimizerCard({ template, onApplyFix }: PromptOptimizerCar
     [template]
   );
 
-  const hasAutoFixes = score.autoFixStyle !== null || score.autoFixNegative !== null;
+  const hasAutoFixes =
+    score.autoFixStyle !== null ||
+    score.autoFixNegative !== null ||
+    score.autoFixLyrics !== null ||
+    score.autoFixStyleClicheFree !== null;
 
   const handleFixAll = () => {
-    if (score.autoFixStyle !== null) {
-      onApplyFix("styleOfMusic", score.autoFixStyle);
+    const patches: Partial<Record<"styleOfMusic" | "negativePrompt" | "lyrics", string>> = {};
+
+    if (score.autoFixStyle !== null) patches.styleOfMusic = score.autoFixStyle;
+    else if (score.autoFixStyleClicheFree !== null) patches.styleOfMusic = score.autoFixStyleClicheFree;
+
+    if (score.autoFixNegative !== null) patches.negativePrompt = score.autoFixNegative;
+    if (score.autoFixLyrics !== null) patches.lyrics = score.autoFixLyrics;
+
+    if (Object.keys(patches).length > 0) {
+      onApplyFix(patches);
+      setFixApplied(true);
+      setTimeout(() => setFixApplied(false), 3000);
     }
-    if (score.autoFixNegative !== null) {
-      onApplyFix("negativePrompt", score.autoFixNegative);
-    }
-    setFixApplied(true);
-    setTimeout(() => setFixApplied(false), 3000);
   };
 
   const sortedIssues = [...score.issues].sort((a, b) => {
@@ -177,12 +179,19 @@ export function PromptOptimizerCard({ template, onApplyFix }: PromptOptimizerCar
   const errorCount = score.issues.filter((i) => i.severity === "error").length;
   const warningCount = score.issues.filter((i) => i.severity === "warning").length;
 
+  const autoFixCount = [
+    score.autoFixStyle,
+    score.autoFixNegative,
+    score.autoFixLyrics,
+    score.autoFixStyleClicheFree,
+  ].filter(Boolean).length;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 280, damping: 26 }}
-      className="w-full max-w-5xl mx-auto bg-card border border-primary/15 overflow-hidden"
+      className="w-full bg-card border border-primary/15 overflow-hidden"
     >
       <button
         onClick={() => setExpanded((v) => !v)}
@@ -270,7 +279,7 @@ export function PromptOptimizerCard({ template, onApplyFix }: PromptOptimizerCar
                             {fixApplied ? (
                               <><CheckCircle2 className="w-3 h-3" /> Applied</>
                             ) : (
-                              <><Wrench className="w-3 h-3" /> Fix All</>
+                              <><Wrench className="w-3 h-3" /> Fix All ({autoFixCount})</>
                             )}
                           </button>
                         )}
@@ -284,7 +293,7 @@ export function PromptOptimizerCard({ template, onApplyFix }: PromptOptimizerCar
                         <div className="px-4 py-2 border-t border-primary/8">
                           <p className="font-mono text-[10px] text-zinc-600">
                             <Zap className="w-2.5 h-2.5 inline mr-1 text-primary/40" />
-                            Fix All applies auto-fixable issues (truncations) without re-generating.
+                            Fix All applies safe fixes (truncations, cliché removal) without re-generating.
                           </p>
                         </div>
                       )}

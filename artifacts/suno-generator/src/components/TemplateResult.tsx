@@ -19,19 +19,63 @@ import {
 } from "lucide-react";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import type { SunoTemplate } from "@workspace/api-client-react";
+import { ANTI_CLICHE_WORDS, detectConflicts } from "@/lib/promptScorer";
 import { cn } from "@/lib/utils";
-
-const ANTI_CLICHE_WORDS = [
-  "pulsating", "ethereal tapestry", "sonic journey", "haunting melody",
-  "sonic landscape", "musical tapestry", "immersive experience", "captivating",
-  "mesmerizing", "transcendent", "otherworldly", "hypnotic", "ethereal",
-  "lush tapestry", "sonic palette", "evocative", "ineffable", "sumptuous",
-  "gossamer", "shimmering tapestry", "wistful reverie",
-];
 
 function detectAntiCliches(text: string): string[] {
   const lower = text.toLowerCase();
   return ANTI_CLICHE_WORDS.filter((w) => lower.includes(w.toLowerCase()));
+}
+
+/**
+ * Renders style text with conflict terms highlighted in amber spans with tooltip.
+ * Clipboard copy still uses the raw plain text (preserving exact content).
+ */
+function StyleWithConflictHighlight({ text, className }: { text: string; className?: string }) {
+  const conflicts = detectConflicts(text);
+  if (conflicts.length === 0) {
+    return <p className={className}>{text}</p>;
+  }
+
+  const conflictTerms = new Map<string, string>();
+  for (const pair of conflicts) {
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes(pair.a.toLowerCase())) {
+      conflictTerms.set(pair.a.toLowerCase(), pair.reason);
+    }
+    if (lowerText.includes(pair.b.toLowerCase())) {
+      conflictTerms.set(pair.b.toLowerCase(), pair.reason);
+    }
+  }
+
+  if (conflictTerms.size === 0) return <p className={className}>{text}</p>;
+
+  const allTermsSorted = [...conflictTerms.keys()].sort((a, b) => b.length - a.length);
+  const escapedTerms = allTermsSorted.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`(${escapedTerms.join("|")})`, "gi");
+
+  const parts = text.split(regex);
+
+  return (
+    <p className={className}>
+      {parts.map((part, i) => {
+        const lowerPart = part.toLowerCase();
+        const tooltipText = conflictTerms.get(lowerPart);
+        if (tooltipText) {
+          return (
+            <span
+              key={i}
+              title={`⚠ Conflict: ${tooltipText}`}
+              className="bg-amber-500/15 text-amber-300 border-b border-amber-400/50 cursor-help px-0.5"
+            >
+              {part}
+            </span>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </p>
+  );
 }
 
 interface TemplateResultProps {
@@ -238,6 +282,9 @@ export function TemplateResult({
           onRegenerate={() => onRegenerateSection("styleOfMusic")}
           isRegenerating={regeneratingSection === "styleOfMusic"}
           mono={false}
+          renderContent={(cls) => (
+            <StyleWithConflictHighlight text={template.styleOfMusic} className={cls} />
+          )}
         />
         <div className="flex flex-col gap-4">
           <SectionCard
@@ -401,6 +448,7 @@ function SectionCard({
   variants,
   mono,
   accent,
+  renderContent,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -416,9 +464,14 @@ function SectionCard({
   variants: Variants;
   mono: boolean;
   accent?: "destructive";
+  renderContent?: (className: string) => React.ReactNode;
 }) {
   const borderColor = accent === "destructive" ? "border-destructive/20" : "border-primary/15";
   const labelColor = accent === "destructive" ? "text-destructive/50" : "text-primary/50";
+  const contentClassName = cn(
+    "text-zinc-300 leading-relaxed break-words text-sm",
+    mono ? "font-mono" : ""
+  );
 
   return (
     <motion.div
@@ -457,15 +510,10 @@ function SectionCard({
           <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
           <span className="font-mono text-[11px] text-primary/50">Regenerating...</span>
         </div>
+      ) : renderContent ? (
+        renderContent(contentClassName)
       ) : (
-        <p
-          className={cn(
-            "text-zinc-300 leading-relaxed break-words text-sm",
-            mono ? "font-mono" : ""
-          )}
-        >
-          {content}
-        </p>
+        <p className={contentClassName}>{content}</p>
       )}
     </motion.div>
   );

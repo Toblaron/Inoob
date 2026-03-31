@@ -46,6 +46,7 @@ import { LoadingEq } from "@/components/LoadingEq";
 import { ExampleGallery } from "@/components/ExampleGallery";
 import { SongDnaPanel } from "@/components/SongDnaPanel";
 import { PromptOptimizerCard } from "@/components/PromptOptimizerCard";
+import { scoreTemplate } from "@/lib/promptScorer";
 import { cn } from "@/lib/utils";
 
 const HISTORY_KEY = "suno-template-history";
@@ -291,6 +292,7 @@ interface HistoryEntry {
   template: SunoTemplate;
   rating?: number | null;
   usedOptions?: UsedOptions;
+  qualityScore?: number;
 }
 
 interface VideoPreview {
@@ -641,6 +643,7 @@ export default function Home() {
   }, [urlValue, fetchVideoPreview]);
 
   const addToHistory = (url: string, template: SunoTemplate, opts?: UsedOptions) => {
+    const { overall: qualityScore } = scoreTemplate(template);
     const entry: HistoryEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       timestamp: Date.now(),
@@ -648,6 +651,7 @@ export default function Home() {
       template,
       rating: null,
       usedOptions: opts,
+      qualityScore,
     };
     setHistory((prev) => {
       const next = [entry, ...prev.filter((e) => e.youtubeUrl !== url)].slice(0, MAX_HISTORY);
@@ -1229,8 +1233,8 @@ export default function Home() {
     saveHistory([]);
   };
 
-  const handleApplyOptimizerFix = (field: "styleOfMusic" | "negativePrompt", value: string) => {
-    setCurrentTemplate((prev) => prev ? { ...prev, [field]: value } : prev);
+  const handleApplyOptimizerFix = (patches: Partial<Record<"styleOfMusic" | "negativePrompt" | "lyrics", string>>) => {
+    setCurrentTemplate((prev) => prev ? { ...prev, ...patches } : prev);
   };
 
   const isLoading = mainMutation.isPending && !regeneratingSection && !isGeneratingVariations;
@@ -2150,7 +2154,20 @@ export default function Home() {
                             <p className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">{entry.template.songTitle}</p>
                             <p className="text-xs text-zinc-500 mt-0.5">{entry.template.artist}</p>
                           </div>
-                          <span className="text-xs text-zinc-600 shrink-0 mt-0.5">{formatRelativeTime(entry.timestamp)}</span>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <span className="text-xs text-zinc-600">{formatRelativeTime(entry.timestamp)}</span>
+                            {entry.qualityScore !== undefined && (
+                              <span className={cn(
+                                "font-mono text-[9px] px-1 py-0.5 border",
+                                entry.qualityScore >= 85 ? "text-green-400 border-green-500/25 bg-green-500/5" :
+                                entry.qualityScore >= 65 ? "text-primary border-primary/25 bg-primary/5" :
+                                entry.qualityScore >= 45 ? "text-yellow-400 border-yellow-500/25 bg-yellow-500/5" :
+                                "text-red-400 border-red-500/25 bg-red-500/5"
+                              )}>
+                                Q:{entry.qualityScore}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </button>
                     ))}
