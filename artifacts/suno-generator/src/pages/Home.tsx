@@ -52,7 +52,6 @@ import { SongDnaPanel } from "@/components/SongDnaPanel";
 import { PromptOptimizerCard } from "@/components/PromptOptimizerCard";
 import { RemixToolbar, TRANSFORM_PRESETS } from "@/components/RemixToolbar";
 import { RemixChain, type RemixSnapshot } from "@/components/RemixChain";
-import { SunoMusicPlayer } from "@/components/SunoMusicPlayer";
 import { scoreTemplate } from "@/lib/promptScorer";
 import { cn } from "@/lib/utils";
 
@@ -2458,9 +2457,6 @@ export default function Home() {
                 regeneratingSection={regeneratingSection}
                 onRegenerateSection={handleRegenerateSection}
               />
-
-              {/* Suno Music Generation */}
-              <SunoMusicPlayer template={currentTemplate} />
 
               {/* Remix Chain breadcrumbs */}
               <RemixChain
