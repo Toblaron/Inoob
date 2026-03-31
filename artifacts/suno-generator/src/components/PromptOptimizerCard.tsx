@@ -11,7 +11,7 @@ import {
   Wrench,
   Sparkles,
 } from "lucide-react";
-import { scoreTemplate, type PromptScore, type ScoringIssue } from "@/lib/promptScorer";
+import { scoreTemplate, ANTI_CLICHE_WORDS, type PromptScore, type ScoringIssue } from "@/lib/promptScorer";
 import { cn } from "@/lib/utils";
 import type { SunoTemplate } from "@workspace/api-client-react";
 
@@ -158,8 +158,25 @@ export function PromptOptimizerCard({ template, onApplyFix }: PromptOptimizerCar
   const handleFixAll = () => {
     const patches: Partial<Record<"styleOfMusic" | "negativePrompt" | "lyrics", string>> = {};
 
-    if (score.autoFixStyle !== null) patches.styleOfMusic = score.autoFixStyle;
-    else if (score.autoFixStyleClicheFree !== null) patches.styleOfMusic = score.autoFixStyleClicheFree;
+    let stylePatch: string | null = null;
+    if (score.autoFixStyle !== null) {
+      stylePatch = score.autoFixStyle;
+    }
+    if (score.autoFixStyleClicheFree !== null) {
+      const base = stylePatch ?? template.styleOfMusic;
+      const clichesInBase = ANTI_CLICHE_WORDS.filter((w: string) => base.toLowerCase().includes(w.toLowerCase()));
+      if (clichesInBase.length > 0) {
+        let cleaned = base;
+        for (const cliche of clichesInBase) {
+          const escaped = cliche.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const re = new RegExp(`(,\\s*${escaped}|${escaped}\\s*,?\\s*)`, "gi");
+          cleaned = cleaned.replace(re, "");
+        }
+        cleaned = cleaned.replace(/,\s*,/g, ",").replace(/^,\s*/, "").replace(/,\s*$/, "").trim();
+        stylePatch = cleaned;
+      }
+    }
+    if (stylePatch !== null) patches.styleOfMusic = stylePatch;
 
     if (score.autoFixNegative !== null) patches.negativePrompt = score.autoFixNegative;
     if (score.autoFixLyrics !== null) patches.lyrics = score.autoFixLyrics;
