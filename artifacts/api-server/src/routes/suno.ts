@@ -1374,7 +1374,7 @@ async function fetchPlaylistTracks(
 }
 
 /**
- * GET /api/suno/playlist-info?url=...
+ * GET /api/playlist-info?url=...
  * Fetches playlist metadata (video IDs, titles, thumbnails) for a YouTube playlist URL.
  */
 router.get("/playlist-info", async (req, res) => {
@@ -1415,7 +1415,7 @@ router.get("/playlist-info", async (req, res) => {
 const BATCH_CONCURRENCY = 3;
 
 /**
- * POST /api/suno/batch
+ * POST /api/batch
  * Accepts an array of YouTube URLs (up to 20) and streams progress via Server-Sent Events.
  * Each SSE event is a JSON object: { type: "progress" | "done" | "error", track: BatchTrackResult }
  * Processes up to BATCH_CONCURRENCY tracks at a time.
@@ -1855,7 +1855,7 @@ router.get("/suggest", async (req, res) => {
 });
 
 /**
- * GET /api/suno/youtube-preview?url=...
+ * GET /api/youtube-preview?url=...
  * Lightweight endpoint — returns just thumbnail, title, author for the song preview card.
  * Does NOT fetch lyrics or call AI.
  */
