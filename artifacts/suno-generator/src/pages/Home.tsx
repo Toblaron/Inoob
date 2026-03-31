@@ -32,12 +32,16 @@ import {
   Sparkles,
   X,
   RotateCcw,
+  List,
+  Link,
+  XCircle,
 } from "lucide-react";
 import { useGenerateSunoTemplate, useGenerateVariations } from "@workspace/api-client-react";
-import type { SunoTemplate, LyricsStructure, SuggestedDefaults } from "@workspace/api-client-react";
+import type { SunoTemplate, LyricsStructure, SuggestedDefaults, BatchTrackResult, PlaylistTrack } from "@workspace/api-client-react";
 import { TemplateResult } from "@/components/TemplateResult";
 import { LyricsStructurePanel, type ConfirmedSection } from "@/components/LyricsStructurePanel";
 import { VariationWorkshop } from "@/components/VariationWorkshop";
+import { BatchDashboard } from "@/components/BatchDashboard";
 import { LoadingEq } from "@/components/LoadingEq";
 import { ExampleGallery } from "@/components/ExampleGallery";
 import { cn } from "@/lib/utils";
@@ -408,6 +412,15 @@ export default function Home() {
   const [variationPending, setVariationPending] = useState<boolean[]>([]);
   const [variationCount, setVariationCount] = useState<2 | 3 | 4>(2);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
+
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchUrlsText, setBatchUrlsText] = useState("");
+  const [batchTracks, setBatchTracks] = useState<BatchTrackResult[] | null>(null);
+  const [isBatchRunning, setIsBatchRunning] = useState(false);
+  const [playlistPreview, setPlaylistPreview] = useState<PlaylistTrack[] | null>(null);
+  const [playlistLoading, setPlaylistLoading] = useState(false);
+  const [playlistError, setPlaylistError] = useState<string | null>(null);
+  const batchAbortRef = useRef<AbortController | null>(null);
 
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [artistMemoryBanner, setArtistMemoryBanner] = useState<string | null>(null);
@@ -930,6 +943,195 @@ export default function Home() {
     navigator.clipboard.writeText(allText).catch(() => undefined);
   };
 
+  const parseBatchUrls = useCallback((text: string): string[] => {
+    const lines = text.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    return lines.filter((url) => url.includes("youtube.com") || url.includes("youtu.be"));
+  }, []);
+
+  const detectPlaylistUrl = useCallback((text: string): string | null => {
+    const lines = text.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
+    const first = lines[0] ?? "";
+    try {
+      const u = new URL(first);
+      return u.searchParams.get("list") ? first : null;
+    } catch { return null; }
+  }, []);
+
+  const fetchPlaylistPreview = useCallback(async (playlistUrl: string) => {
+    setPlaylistLoading(true);
+    setPlaylistError(null);
+    setPlaylistPreview(null);
+    try {
+      const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const resp = await fetch(`${apiBase}/api/suno/playlist-info?url=${encodeURIComponent(playlistUrl)}`);
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({ error: "Failed to fetch playlist" })) as { error?: string };
+        throw new Error(body.error ?? "Failed to fetch playlist");
+      }
+      const data = await resp.json() as { tracks: PlaylistTrack[]; totalCount: number; capped: boolean };
+      setPlaylistPreview(data.tracks);
+      setBatchUrlsText(data.tracks.map((t) => t.url).join("\n"));
+    } catch (err) {
+      setPlaylistError((err as Error).message ?? "Failed to load playlist");
+    } finally {
+      setPlaylistLoading(false);
+    }
+  }, []);
+
+  const handleStartBatch = useCallback(async () => {
+    const urls = parseBatchUrls(batchUrlsText);
+    if (urls.length === 0) {
+      setApiError("No valid YouTube URLs found. Paste video URLs, one per line.");
+      return;
+    }
+    if (urls.length > 20) {
+      setApiError("Maximum 20 URLs per batch. Please trim your list.");
+      return;
+    }
+
+    batchAbortRef.current?.abort();
+    const abort = new AbortController();
+    batchAbortRef.current = abort;
+
+    setIsBatchRunning(true);
+    setApiError(null);
+    setCurrentTemplate(null);
+    setVariationWorkshop(null);
+
+    const videoIdFromUrl = (u: string): string => {
+      const m = u.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
+      return m ? m[1] : "";
+    };
+
+    const initialTracks: BatchTrackResult[] = urls.map((url, index) => ({
+      url,
+      videoId: videoIdFromUrl(url),
+      status: "queued",
+      index,
+    }));
+    setBatchTracks(initialTracks);
+
+    try {
+      const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const resp = await fetch(`${apiBase}/api/suno/batch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          urls,
+          vocalGender: vocalGender !== "auto" ? vocalGender : undefined,
+          energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
+          era: era !== "auto" ? era : undefined,
+          mode: mode ?? undefined,
+          genres: selectedGenres.length > 0 ? selectedGenres : undefined,
+          moods: selectedMoods.length > 0 ? selectedMoods : undefined,
+          instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
+          excludeTags: excludeTags.length > 0 ? excludeTags : undefined,
+          genreNudge: genreNudge.trim() || undefined,
+        }),
+        signal: abort.signal,
+      });
+
+      if (!resp.ok || !resp.body) {
+        const text = await resp.text().catch(() => "Unknown error");
+        throw new Error(text);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const events = buf.split("\n\n");
+        buf = events.pop() ?? "";
+        for (const event of events) {
+          const line = event.replace(/^data: /, "").trim();
+          if (!line) continue;
+          try {
+            const msg = JSON.parse(line) as { type: string; track?: BatchTrackResult };
+            if (msg.type === "progress" && msg.track) {
+              setBatchTracks((prev) => {
+                if (!prev) return prev;
+                const next = [...prev];
+                next[msg.track!.index] = msg.track!;
+                return next;
+              });
+            }
+          } catch {}
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        setApiError((err as Error).message ?? "Batch generation failed");
+      }
+    } finally {
+      setIsBatchRunning(false);
+    }
+  }, [batchUrlsText, parseBatchUrls, vocalGender, energyLevel, era, mode, selectedGenres, selectedMoods, selectedInstruments, excludeTags, genreNudge]);
+
+  const handleBatchRetry = useCallback((track: BatchTrackResult) => {
+    const urls = [track.url];
+    setBatchTracks((prev) =>
+      prev ? prev.map((t) => t.index === track.index ? { ...t, status: "queued" } : t) : prev
+    );
+
+    const videoIdFromUrl = (u: string): string => {
+      const m = u.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
+      return m ? m[1] : "";
+    };
+
+    const retryTrack: BatchTrackResult = { ...track, status: "analyzing" };
+    setBatchTracks((prev) =>
+      prev ? prev.map((t) => t.index === track.index ? retryTrack : t) : prev
+    );
+
+    const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${apiBase}/api/suno/batch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        urls,
+        vocalGender: vocalGender !== "auto" ? vocalGender : undefined,
+        energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
+        era: era !== "auto" ? era : undefined,
+        mode: mode ?? undefined,
+      }),
+    })
+      .then(async (resp) => {
+        if (!resp.ok || !resp.body) return;
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const events = buf.split("\n\n");
+          buf = events.pop() ?? "";
+          for (const event of events) {
+            const line = event.replace(/^data: /, "").trim();
+            if (!line) continue;
+            try {
+              const msg = JSON.parse(line) as { type: string; track?: BatchTrackResult };
+              if (msg.type === "progress" && msg.track) {
+                const updatedTrack = { ...msg.track, index: track.index };
+                setBatchTracks((prev) =>
+                  prev ? prev.map((t) => t.index === track.index ? updatedTrack : t) : prev
+                );
+              }
+            } catch {}
+          }
+        }
+      })
+      .catch(() => {
+        setBatchTracks((prev) =>
+          prev ? prev.map((t) => t.index === track.index ? { ...t, status: "failed", error: "Retry failed" } : t) : prev
+        );
+      });
+  }, [vocalGender, energyLevel, era, mode]);
+
   const handleRegenerateSection = (section: keyof SunoTemplate) => {
     if (!lastUrlRef.current) return;
     setRegeneratingSection(section as string);
@@ -1067,47 +1269,165 @@ export default function Home() {
             </div>
           </div>
 
-          {/* URL input row */}
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-2 relative">
-            <div className="relative flex-1">
-              <div className="flex items-center bg-card border border-primary/25 focus-within:border-primary/70 transition-all overflow-hidden">
-                <div className="pl-4 pr-2 text-primary/40">
-                  <Youtube className="w-4 h-4" />
+          {/* Batch mode toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setBatchMode((prev) => !prev);
+                setBatchTracks(null);
+                setPlaylistPreview(null);
+                setPlaylistError(null);
+              }}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider border transition-all",
+                batchMode
+                  ? "border-primary text-primary bg-primary/10"
+                  : "border-primary/20 text-zinc-500 hover:border-primary/50 hover:text-primary"
+              )}
+            >
+              {batchMode ? <Link className="w-3 h-3" /> : <List className="w-3 h-3" />}
+              {batchMode ? "Single URL" : "Batch Mode"}
+            </button>
+            {batchMode && (
+              <span className="font-mono text-[10px] text-zinc-600">
+                Paste multiple URLs or a playlist link — up to 20 tracks
+              </span>
+            )}
+          </div>
+
+          {/* URL input row — single or batch */}
+          {!batchMode ? (
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col sm:flex-row gap-2 relative">
+              <div className="relative flex-1">
+                <div className="flex items-center bg-card border border-primary/25 focus-within:border-primary/70 transition-all overflow-hidden">
+                  <div className="pl-4 pr-2 text-primary/40">
+                    <Youtube className="w-4 h-4" />
+                  </div>
+                  <input
+                    {...form.register("youtubeUrl")}
+                    placeholder="https://youtube.com/watch?v=..."
+                    className="w-full py-3 pr-4 bg-transparent border-none text-foreground placeholder:text-zinc-700 focus:outline-none focus:ring-0 text-sm font-mono"
+                    autoComplete="off"
+                    disabled={isLoading}
+                  />
                 </div>
-                <input
-                  {...form.register("youtubeUrl")}
-                  placeholder="https://youtube.com/watch?v=..."
-                  className="w-full py-3 pr-4 bg-transparent border-none text-foreground placeholder:text-zinc-700 focus:outline-none focus:ring-0 text-sm font-mono"
-                  autoComplete="off"
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSurpriseMe}
+                  title="Surprise Me — randomise all settings"
+                  className="shrink-0 px-3 py-3 sm:py-0 font-mono text-xs uppercase tracking-wider text-zinc-500 border border-primary/20 hover:border-primary/50 hover:text-primary transition-all flex items-center gap-1.5"
+                >
+                  <Shuffle className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Surprise</span>
+                </button>
+
+                <button
+                  type="submit"
                   disabled={isLoading}
+                  className="shrink-0 px-6 py-3 sm:py-0 font-mono font-bold text-sm uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2"><span className="animate-pulse">◈</span> Analyzing</span>
+                  ) : (
+                    <><Wand2 className="w-3.5 h-3.5" /> Generate</>
+                  )}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="relative">
+                <textarea
+                  value={batchUrlsText}
+                  onChange={(e) => {
+                    setBatchUrlsText(e.target.value);
+                    setPlaylistPreview(null);
+                    setPlaylistError(null);
+                  }}
+                  onBlur={() => {
+                    const playlistUrl = detectPlaylistUrl(batchUrlsText);
+                    if (playlistUrl && !playlistPreview) {
+                      fetchPlaylistPreview(playlistUrl);
+                    }
+                  }}
+                  placeholder={"Paste YouTube URLs, one per line:\nhttps://youtube.com/watch?v=...\nhttps://youtube.com/watch?v=...\n\nOr paste a playlist URL:\nhttps://youtube.com/playlist?list=..."}
+                  rows={5}
+                  disabled={isBatchRunning}
+                  className="w-full bg-card border border-primary/25 focus:border-primary/70 transition-all text-sm font-mono text-foreground placeholder:text-zinc-700 px-4 py-3 focus:outline-none resize-none"
                 />
+                {batchUrlsText.trim() && (
+                  <div className="absolute top-2 right-2">
+                    <span className="font-mono text-[10px] text-zinc-600 bg-card px-1.5 py-0.5 border border-zinc-800">
+                      {parseBatchUrls(batchUrlsText).length} URL{parseBatchUrls(batchUrlsText).length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {playlistLoading && (
+                <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-500">
+                  <span className="animate-spin">◈</span> Loading playlist...
+                </div>
+              )}
+
+              {playlistError && (
+                <div className="flex items-center gap-2 font-mono text-[11px] text-red-400 border border-red-500/20 px-3 py-2 bg-red-500/5">
+                  <XCircle className="w-3 h-3 shrink-0" />
+                  {playlistError}
+                </div>
+              )}
+
+              {playlistPreview && playlistPreview.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  className="flex flex-col gap-1.5 border border-primary/20 bg-card px-3 py-2.5"
+                >
+                  <p className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
+                    Playlist — {playlistPreview.length} track{playlistPreview.length !== 1 ? "s" : ""} detected
+                  </p>
+                  <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                    {playlistPreview.map((t) => (
+                      <div key={t.videoId} className="flex items-center gap-2">
+                        {t.thumbnail && (
+                          <img src={t.thumbnail} alt={t.title} className="w-10 h-7 object-cover flex-shrink-0 border border-zinc-800" />
+                        )}
+                        <span className="font-mono text-[11px] text-zinc-300 truncate">{t.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleStartBatch}
+                  disabled={isBatchRunning || parseBatchUrls(batchUrlsText).length === 0}
+                  className="flex items-center gap-2 px-5 py-2.5 font-mono font-bold text-sm uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isBatchRunning ? (
+                    <><span className="animate-pulse">◈</span> Processing...</>
+                  ) : (
+                    <><List className="w-3.5 h-3.5" /> Generate Batch ({parseBatchUrls(batchUrlsText).length})</>
+                  )}
+                </button>
+                {isBatchRunning && (
+                  <button
+                    type="button"
+                    onClick={() => { batchAbortRef.current?.abort(); setIsBatchRunning(false); }}
+                    className="px-3 py-2.5 font-mono text-[11px] uppercase tracking-wider border border-red-500/30 text-red-400 hover:border-red-500 transition-all"
+                  >
+                    Cancel
+                  </button>
+                )}
               </div>
             </div>
-
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleSurpriseMe}
-                title="Surprise Me — randomise all settings"
-                className="shrink-0 px-3 py-3 sm:py-0 font-mono text-xs uppercase tracking-wider text-zinc-500 border border-primary/20 hover:border-primary/50 hover:text-primary transition-all flex items-center gap-1.5"
-              >
-                <Shuffle className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Surprise</span>
-              </button>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="shrink-0 px-6 py-3 sm:py-0 font-mono font-bold text-sm uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2"><span className="animate-pulse">◈</span> Analyzing</span>
-                ) : (
-                  <><Wand2 className="w-3.5 h-3.5" /> Generate</>
-                )}
-              </button>
-            </div>
-          </form>
+          )}
 
           {/* Video preview card */}
           <AnimatePresence>
@@ -1772,6 +2092,25 @@ export default function Home() {
               className="w-full flex justify-center py-12"
             >
               <LoadingEq />
+            </motion.div>
+          ) : batchTracks && batchTracks.length > 0 ? (
+            <motion.div
+              key="batch"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="w-full max-w-3xl mx-auto px-4 py-4"
+            >
+              <BatchDashboard
+                tracks={batchTracks}
+                onRetry={handleBatchRetry}
+                onUseTemplate={(template) => {
+                  setCurrentTemplate(template);
+                  setBatchMode(false);
+                  setBatchTracks(null);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
             </motion.div>
           ) : (variationWorkshop && variationWorkshop.length > 0) || (isGeneratingVariations && variationPending.length > 0) ? (
             <motion.div

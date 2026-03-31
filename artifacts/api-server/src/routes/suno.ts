@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { GenerateSunoTemplateBody, GenerateSunoTemplateResponse, GenerateVariationsBody } from "@workspace/api-zod";
+import { GenerateSunoTemplateBody, GenerateSunoTemplateResponse, GenerateVariationsBody, BatchGenerateBody } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import ytdl from "@distube/ytdl-core";
 import { parse as parseHtml } from "node-html-parser";
@@ -1306,6 +1306,216 @@ router.post("/generate-variations", async (req, res) => {
       message.includes("Could not fetch video metadata");
     res.status(isClientError ? 400 : 500).json({ error: message });
   }
+});
+
+// ─── Playlist info endpoint ────────────────────────────────────────────────────
+
+const PLAYLIST_CAP = 20;
+
+/**
+ * Extract playlist ID from a YouTube playlist or video URL with list= param.
+ */
+function extractPlaylistId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    return u.searchParams.get("list") ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch playlist video IDs and titles using the YouTube oEmbed API + RSS feed.
+ * Uses the public YouTube RSS feed which doesn't require an API key.
+ * Cap at PLAYLIST_CAP (20) videos.
+ */
+async function fetchPlaylistTracks(
+  playlistId: string
+): Promise<{ videoId: string; title: string; url: string; thumbnail?: string }[]> {
+  const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
+  const resp = await fetch(feedUrl, {
+    headers: { "User-Agent": "SunoTemplateGenerator/1.0" },
+    signal: AbortSignal.timeout(12000),
+  });
+  if (!resp.ok) throw new Error(`Could not fetch playlist feed (status ${resp.status})`);
+
+  const xml = await resp.text();
+
+  const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+  const videoIdRegex = /<yt:videoId>([^<]+)<\/yt:videoId>/;
+  const titleRegex = /<title>([^<]+)<\/title>/;
+
+  const tracks: { videoId: string; title: string; url: string; thumbnail?: string }[] = [];
+  let match;
+  while ((match = entryRegex.exec(xml)) !== null && tracks.length < PLAYLIST_CAP) {
+    const entry = match[1];
+    const videoIdMatch = videoIdRegex.exec(entry);
+    const titleMatch = titleRegex.exec(entry);
+    if (!videoIdMatch || !titleMatch) continue;
+    const videoId = videoIdMatch[1].trim();
+    const rawTitle = titleMatch[1]
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .trim();
+    tracks.push({
+      videoId,
+      title: rawTitle,
+      url: `https://www.youtube.com/watch?v=${videoId}`,
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+    });
+  }
+  return tracks;
+}
+
+/**
+ * GET /api/suno/playlist-info?url=...
+ * Fetches playlist metadata (video IDs, titles, thumbnails) for a YouTube playlist URL.
+ */
+router.get("/playlist-info", async (req, res) => {
+  const url = String(req.query.url ?? "");
+  if (!url) {
+    res.status(400).json({ error: "Missing url query parameter" });
+    return;
+  }
+
+  const playlistId = extractPlaylistId(url);
+  if (!playlistId) {
+    res.status(400).json({ error: "URL does not contain a valid YouTube playlist ID (list= param)" });
+    return;
+  }
+
+  try {
+    const tracks = await fetchPlaylistTracks(playlistId);
+    if (tracks.length === 0) {
+      res.status(404).json({ error: "Playlist is empty or could not be read. Make sure it is public." });
+      return;
+    }
+
+    const allTracks = tracks;
+    const capped = false; // RSS feed already caps at ~15; PLAYLIST_CAP guards over that
+
+    res.json({
+      playlistId,
+      tracks: allTracks,
+      totalCount: allTracks.length,
+      capped,
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to fetch playlist";
+    console.error("[playlist-info] error:", message);
+    res.status(500).json({ error: message });
+  }
+});
+
+// ─── Batch generate endpoint (SSE streaming) ──────────────────────────────────
+
+const BATCH_CONCURRENCY = 3;
+
+/**
+ * POST /api/suno/batch
+ * Accepts an array of YouTube URLs (up to 20) and streams progress via Server-Sent Events.
+ * Each SSE event is a JSON object: { type: "progress" | "done" | "error", track: BatchTrackResult }
+ * Processes up to BATCH_CONCURRENCY tracks at a time.
+ */
+router.post("/batch", async (req, res) => {
+  const parsed = BatchGenerateBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request. Provide an array of urls (1–20)." });
+    return;
+  }
+
+  const { urls, ...sharedOpts } = parsed.data;
+
+  // Set SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  const sendEvent = (type: string, data: unknown) => {
+    res.write(`data: ${JSON.stringify({ type, ...( typeof data === "object" && data !== null ? data : { data }) })}\n\n`);
+  };
+
+  // Send initial queued status for all tracks
+  const videoIdFromUrl = (u: string): string => {
+    const m = u.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
+    return m ? m[1] : "";
+  };
+
+  const urlList: string[] = urls;
+  const tracks = urlList.map((url: string, index: number) => ({
+    url,
+    videoId: videoIdFromUrl(url),
+    status: "queued" as const,
+    index,
+  }));
+
+  for (const t of tracks) {
+    sendEvent("progress", { track: { ...t, status: "queued" } });
+  }
+
+  // Process with concurrency limit
+  let idx = 0;
+  const results: Record<number, unknown> = {};
+
+  async function processNext(): Promise<void> {
+    if (idx >= tracks.length) return;
+    const track = tracks[idx++];
+
+    sendEvent("progress", { track: { ...track, status: "analyzing" } });
+
+    try {
+      sendEvent("progress", { track: { ...track, status: "generating" } });
+
+      const template = await generateOneTemplate({
+        youtubeUrl: track.url,
+        ...sharedOpts,
+      });
+
+      // Try to grab thumbnail from ytdl or ytimg
+      const thumbnailUrl = `https://i.ytimg.com/vi/${track.videoId}/mqdefault.jpg`;
+
+      const result = {
+        ...track,
+        title: template.songTitle,
+        thumbnail: thumbnailUrl,
+        status: "done" as const,
+        template,
+      };
+      results[track.index] = result;
+      sendEvent("progress", { track: result });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Generation failed";
+      const result = {
+        ...track,
+        status: "failed" as const,
+        error: message,
+      };
+      results[track.index] = result;
+      sendEvent("progress", { track: result });
+    }
+  }
+
+  try {
+    const workers: Promise<void>[] = [];
+    for (let w = 0; w < Math.min(BATCH_CONCURRENCY, urls.length); w++) {
+      workers.push((async () => {
+        while (idx < tracks.length) {
+          await processNext();
+        }
+      })());
+    }
+    await Promise.all(workers);
+  } catch (err) {
+    console.error("[batch] unexpected error:", err);
+  }
+
+  sendEvent("done", { totalCount: tracks.length });
+  res.end();
 });
 
 // ─── Genre suggestion helpers ─────────────────────────────────────────────────

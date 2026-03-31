@@ -115,3 +115,44 @@ export interface VariationsResponse {
   slots: VariationSlot[];
   variations: SunoTemplate[];
 }
+
+export interface PlaylistTrack {
+  videoId: string;
+  title: string;
+  url: string;
+  thumbnail?: string;
+}
+
+export interface PlaylistInfoResponse {
+  playlistId: string;
+  playlistTitle?: string;
+  tracks: PlaylistTrack[];
+  totalCount: number;
+  capped: boolean;
+}
+
+export interface BatchGenerateRequest {
+  urls: string[];
+  vocalGender?: GenerateTemplateRequest["vocalGender"];
+  energyLevel?: GenerateTemplateRequest["energyLevel"];
+  era?: GenerateTemplateRequest["era"];
+  mode?: GenerateTemplateRequest["mode"];
+  genres?: string[];
+  moods?: string[];
+  instruments?: string[];
+  excludeTags?: string[];
+  genreNudge?: string;
+}
+
+export type BatchTrackStatus = "queued" | "analyzing" | "generating" | "done" | "failed";
+
+export interface BatchTrackResult {
+  url: string;
+  videoId: string;
+  title?: string;
+  thumbnail?: string;
+  status: BatchTrackStatus;
+  template?: SunoTemplate;
+  error?: string;
+  index: number;
+}

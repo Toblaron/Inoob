@@ -97,6 +97,32 @@ export const GenerateVariationsBody = GenerateSunoTemplateBody.extend({
   count: zod.number().int().min(1).max(4).optional().describe("Number of variations to generate (1–4, default 2)"),
 });
 
+export const PlaylistInfoResponse = zod.object({
+  playlistId: zod.string(),
+  playlistTitle: zod.string().optional(),
+  tracks: zod.array(zod.object({
+    videoId: zod.string(),
+    title: zod.string(),
+    url: zod.string(),
+    thumbnail: zod.string().optional(),
+  })),
+  totalCount: zod.number().int(),
+  capped: zod.boolean().describe("True if the playlist was truncated to 20 entries"),
+});
+
+export const BatchGenerateBody = zod.object({
+  urls: zod.array(zod.string()).min(1).max(20).describe("List of YouTube video URLs to process"),
+  vocalGender: GenerateSunoTemplateBody.shape.vocalGender,
+  energyLevel: GenerateSunoTemplateBody.shape.energyLevel,
+  era: GenerateSunoTemplateBody.shape.era,
+  mode: GenerateSunoTemplateBody.shape.mode,
+  genres: GenerateSunoTemplateBody.shape.genres,
+  moods: GenerateSunoTemplateBody.shape.moods,
+  instruments: GenerateSunoTemplateBody.shape.instruments,
+  excludeTags: GenerateSunoTemplateBody.shape.excludeTags,
+  genreNudge: GenerateSunoTemplateBody.shape.genreNudge,
+});
+
 export const VariationSlot = zod.object({
   variationIndex: zod.number().int().describe("1-based slot index, stable even if generation failed"),
   template: GenerateSunoTemplateResponse.optional().describe("The generated template, present when the slot succeeded"),
