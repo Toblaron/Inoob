@@ -1,0 +1,63 @@
+dietpi@DietPi:/opt/suno-generator$ sudo systemctl status suno-generator
+● suno-generator.service - Track → Template (Suno Generator)
+     Loaded: loaded (/etc/systemd/system/suno-generator.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Tue 2026-03-31 14:10:06 UTC; 660ms ago
+ Invocation: d8b85fc455004e52bbb25e98d8c11c01
+    Process: 34937 ExecStart=/usr/bin/node /opt/suno-generator/artifacts/api-server/dist/index.cjs (code=exited, status=1/FAILURE)
+   Main PID: 34937 (code=exited, status=1/FAILURE)
+   Mem peak: 47.1M
+        CPU: 360ms
+dietpi@DietPi:/opt/suno-generator$ sudo journalctl -u suno-generator -n 50 --no-pager
+Mar 31 14:09:55 DietPi node[34918]:     at node:internal/main/run_main_module:36:49 {
+Mar 31 14:09:55 DietPi node[34918]:   code: 'ERR_INVALID_ARG_TYPE'
+Mar 31 14:09:55 DietPi node[34918]: }
+Mar 31 14:09:55 DietPi node[34918]: Node.js v22.22.1
+Mar 31 14:09:55 DietPi systemd[1]: suno-generator.service: Main process exited, code=exited, status=1/FAILURE
+Mar 31 14:09:55 DietPi systemd[1]: suno-generator.service: Failed with result 'exit-code'.
+Mar 31 14:10:00 DietPi systemd[1]: suno-generator.service: Scheduled restart job, restart counter is at 49.
+Mar 31 14:10:00 DietPi systemd[1]: Started suno-generator.service - Track → Template (Suno Generator).
+Mar 31 14:10:01 DietPi node[34928]: node:internal/url:1605
+Mar 31 14:10:01 DietPi node[34928]:     throw new ERR_INVALID_ARG_TYPE('path', ['string', 'URL'], path);
+Mar 31 14:10:01 DietPi node[34928]:     ^
+Mar 31 14:10:01 DietPi node[34928]: TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of URL. Received undefined
+Mar 31 14:10:01 DietPi node[34928]:     at fileURLToPath (node:internal/url:1605:11)
+Mar 31 14:10:01 DietPi node[34928]:     at Object.<anonymous> (/opt/suno-generator/artifacts/api-server/dist/index.cjs:83:4873)
+Mar 31 14:10:01 DietPi node[34928]:     at Module._compile (node:internal/modules/cjs/loader:1705:14)
+Mar 31 14:10:01 DietPi node[34928]:     at Object..js (node:internal/modules/cjs/loader:1838:10)
+Mar 31 14:10:01 DietPi node[34928]:     at Module.load (node:internal/modules/cjs/loader:1441:32)
+Mar 31 14:10:01 DietPi node[34928]:     at Function._load (node:internal/modules/cjs/loader:1263:12)
+Mar 31 14:10:01 DietPi node[34928]:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+Mar 31 14:10:01 DietPi node[34928]:     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+Mar 31 14:10:01 DietPi node[34928]:     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+Mar 31 14:10:01 DietPi node[34928]:     at node:internal/main/run_main_module:36:49 {
+Mar 31 14:10:01 DietPi node[34928]:   code: 'ERR_INVALID_ARG_TYPE'
+Mar 31 14:10:01 DietPi node[34928]: }
+Mar 31 14:10:01 DietPi node[34928]: Node.js v22.22.1
+Mar 31 14:10:01 DietPi systemd[1]: suno-generator.service: Main process exited, code=exited, status=1/FAILURE
+Mar 31 14:10:01 DietPi systemd[1]: suno-generator.service: Failed with result 'exit-code'.
+Mar 31 14:10:06 DietPi systemd[1]: suno-generator.service: Scheduled restart job, restart counter is at 50.
+Mar 31 14:10:06 DietPi systemd[1]: Started suno-generator.service - Track → Template (Suno Generator).
+Mar 31 14:10:06 DietPi node[34937]: node:internal/url:1605
+Mar 31 14:10:06 DietPi node[34937]:     throw new ERR_INVALID_ARG_TYPE('path', ['string', 'URL'], path);
+Mar 31 14:10:06 DietPi node[34937]:     ^
+Mar 31 14:10:06 DietPi node[34937]: TypeError [ERR_INVALID_ARG_TYPE]: The "path" argument must be of type string or an instance of URL. Received undefined
+Mar 31 14:10:06 DietPi node[34937]:     at fileURLToPath (node:internal/url:1605:11)
+Mar 31 14:10:06 DietPi node[34937]:     at Object.<anonymous> (/opt/suno-generator/artifacts/api-server/dist/index.cjs:83:4873)
+Mar 31 14:10:06 DietPi node[34937]:     at Module._compile (node:internal/modules/cjs/loader:1705:14)
+Mar 31 14:10:06 DietPi node[34937]:     at Object..js (node:internal/modules/cjs/loader:1838:10)
+Mar 31 14:10:06 DietPi node[34937]:     at Module.load (node:internal/modules/cjs/loader:1441:32)
+Mar 31 14:10:06 DietPi node[34937]:     at Function._load (node:internal/modules/cjs/loader:1263:12)
+Mar 31 14:10:06 DietPi node[34937]:     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+Mar 31 14:10:06 DietPi node[34937]:     at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+Mar 31 14:10:06 DietPi node[34937]:     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+Mar 31 14:10:06 DietPi node[34937]:     at node:internal/main/run_main_module:36:49 {
+Mar 31 14:10:06 DietPi node[34937]:   code: 'ERR_INVALID_ARG_TYPE'
+Mar 31 14:10:06 DietPi node[34937]: }
+Mar 31 14:10:06 DietPi node[34937]: Node.js v22.22.1
+Mar 31 14:10:06 DietPi systemd[1]: suno-generator.service: Main process exited, code=exited, status=1/FAILURE
+Mar 31 14:10:06 DietPi systemd[1]: suno-generator.service: Failed with result 'exit-code'.
+Mar 31 14:10:11 DietPi systemd[1]: suno-generator.service: Scheduled restart job, restart counter is at 51.
+Mar 31 14:10:11 DietPi systemd[1]: Started suno-generator.service - Track → Template (Suno Generator).
+dietpi@DietPi:/opt/suno-generator$ ls -la /opt/suno-generator/artifacts/api-server/dist/index.cjs
+-rw-r--r-- 1 dietpi dietpi 1067118 Mar 31 14:05 /opt/suno-generator/artifacts/api-server/dist/index.cjs
+dietpi@DietPi:/opt/suno-generator$
