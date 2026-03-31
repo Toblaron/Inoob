@@ -45,6 +45,7 @@ import { BatchDashboard } from "@/components/BatchDashboard";
 import { LoadingEq } from "@/components/LoadingEq";
 import { ExampleGallery } from "@/components/ExampleGallery";
 import { SongDnaPanel } from "@/components/SongDnaPanel";
+import { PromptOptimizerCard } from "@/components/PromptOptimizerCard";
 import { cn } from "@/lib/utils";
 
 const HISTORY_KEY = "suno-template-history";
@@ -1228,6 +1229,10 @@ export default function Home() {
     saveHistory([]);
   };
 
+  const handleApplyOptimizerFix = (field: "styleOfMusic" | "negativePrompt", value: string) => {
+    setCurrentTemplate((prev) => prev ? { ...prev, [field]: value } : prev);
+  };
+
   const isLoading = mainMutation.isPending && !regeneratingSection && !isGeneratingVariations;
 
   const styleActiveCount = [
@@ -2289,6 +2294,14 @@ export default function Home() {
                 regeneratingSection={regeneratingSection}
                 onRegenerateSection={handleRegenerateSection}
               />
+
+              {/* Prompt Quality Optimizer */}
+              <div className="max-w-5xl mx-auto w-full mt-4">
+                <PromptOptimizerCard
+                  template={currentTemplate}
+                  onApplyFix={handleApplyOptimizerFix}
+                />
+              </div>
 
               {/* Song DNA Fingerprint Panel */}
               {currentTemplate.fingerprint && (
