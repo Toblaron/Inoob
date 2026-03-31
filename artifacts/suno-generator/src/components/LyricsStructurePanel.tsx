@@ -280,14 +280,15 @@ export function LyricsStructurePanel({
                     key={i}
                     section={section}
                     index={i}
-                    onLabelChange={handleLabelChange}
+                    onLabelChange={isLocked ? () => {} : handleLabelChange}
                     onRemove={handleRemove}
-                    canRemove={sections.length > 1}
+                    canRemove={!isLocked && sections.length > 1}
                   />
                 ))}
 
-                {/* Add section button */}
-                <div className="border border-dashed border-primary/15 bg-transparent flex items-center justify-center">
+                {/* Add section button — hidden when locked */}
+                {isLocked && null}
+                {!isLocked && <div className="border border-dashed border-primary/15 bg-transparent flex items-center justify-center">
                   {addingLabel === null ? (
                     <button
                       type="button"
@@ -343,7 +344,7 @@ export function LyricsStructurePanel({
                       </div>
                     </div>
                   )}
-                </div>
+                </div>}
               </div>
 
               {structure.sentimentArc.length >= 2 && (

@@ -1915,8 +1915,11 @@ function ChipButton({ active, onClick, children }: { active: boolean; onClick: (
 
 function AutoBadge() {
   return (
-    <span className="font-mono text-[9px] px-1 py-0.5 bg-primary/15 text-primary border border-primary/25 tracking-normal normal-case font-normal">
-      AI
+    <span
+      className="font-mono text-[9px] px-1 py-0.5 bg-primary/15 text-primary border border-primary/25 tracking-normal normal-case font-normal"
+      title="Auto-filled from song data"
+    >
+      AUTO
     </span>
   );
 }
