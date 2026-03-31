@@ -1339,6 +1339,10 @@ export default function Home() {
                     <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                       <Piano className="w-3 h-3 text-secondary" /> Instruments
                       <span className="text-[10px] text-zinc-600 font-normal normal-case tracking-normal">(up to {MAX_INSTRUMENTS})</span>
+                      {autoFilledFields.has("instruments") && <AutoBadge />}
+                      {!autoFilledFields.has("instruments") && autoFillValues["instruments"] && (
+                        <ResetAutoFillButton value="restore" onClick={() => resetAutoFill("instruments")} />
+                      )}
                     </label>
                     <div className="flex flex-wrap gap-1.5">
                       {INSTRUMENT_TAGS.map((inst) => {
@@ -1348,7 +1352,7 @@ export default function Home() {
                           <button
                             key={inst}
                             type="button"
-                            onClick={() => !isDisabled && setSelectedInstruments((p) => toggleSet(p, inst, MAX_INSTRUMENTS))}
+                            onClick={() => { if (!isDisabled) { setSelectedInstruments((p) => toggleSet(p, inst, MAX_INSTRUMENTS)); clearAutoFill("instruments"); } }}
                             className={cn(
                               "px-2.5 py-0.5 font-mono text-[11px] border transition-all",
                               isSelected ? "border-primary text-primary bg-primary/10"
@@ -1375,7 +1379,7 @@ export default function Home() {
                         )}
                       </label>
                       {selectedGenres.length > 0 && (
-                        <button type="button" onClick={() => setSelectedGenres([])} className="text-[11px] text-zinc-500 hover:text-destructive transition-colors">Clear all</button>
+                        <button type="button" onClick={() => { setSelectedGenres([]); clearAutoFill("genres"); }} className="text-[11px] text-zinc-500 hover:text-destructive transition-colors">Clear all</button>
                       )}
                     </div>
                     {selectedGenres.length > 0 && (
@@ -1608,7 +1612,7 @@ export default function Home() {
                         onClick={async () => {
                           try {
                             const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
-                            const resp = await fetch(`${apiBase}/api/suno/analyze-structure`, {
+                            const resp = await fetch(`${apiBase}/api/analyze-structure`, {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ lyrics: manualLyrics.trim() }),
