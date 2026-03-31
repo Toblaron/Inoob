@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Music2, RotateCcw, Check, Pencil } from "lucide-react";
+import { ChevronDown, Music2, RotateCcw, Check, Pencil, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LyricsStructure, LyricsSection } from "@workspace/api-client-react";
 
@@ -68,10 +68,14 @@ function SectionPill({
   section,
   index,
   onLabelChange,
+  onRemove,
+  canRemove,
 }: {
   section: LyricsSection;
   index: number;
   onLabelChange: (index: number, newLabel: string) => void;
+  onRemove: (index: number) => void;
+  canRemove: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(section.label);
@@ -89,7 +93,7 @@ function SectionPill({
   return (
     <div
       className={cn(
-        "flex items-start gap-2 p-2.5 border transition-all",
+        "flex items-start gap-2 p-2.5 border transition-all group",
         section.isHook
           ? "border-primary/30 bg-primary/5"
           : "border-primary/10 bg-card"
@@ -142,9 +146,25 @@ function SectionPill({
           {section.lines.filter((l) => l.trim()).length} lines
         </p>
       </div>
+
+      {canRemove && (
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          className="opacity-0 group-hover:opacity-100 p-0.5 text-zinc-700 hover:text-rose-400 transition-all shrink-0"
+          title="Remove section"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
     </div>
   );
 }
+
+const SECTION_LABEL_PRESETS = [
+  "Verse", "Pre-Chorus", "Chorus", "Bridge", "Outro", "Intro",
+  "Hook", "Breakdown", "Build", "Drop", "Interlude", "Coda",
+];
 
 export function LyricsStructurePanel({
   structure,
@@ -154,6 +174,7 @@ export function LyricsStructurePanel({
 }: LyricsStructurePanelProps) {
   const [expanded, setExpanded] = useState(false);
   const [sections, setSections] = useState<LyricsSection[]>(structure.sections);
+  const [addingLabel, setAddingLabel] = useState<string | null>(null);
 
   const handleLabelChange = (index: number, newLabel: string) => {
     setSections((prev) => {
@@ -163,11 +184,31 @@ export function LyricsStructurePanel({
     });
   };
 
-  const handleReset = () => {
-    setSections(structure.sections);
+  const handleRemove = (index: number) => {
+    setSections((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const hasChanges = sections.some((s, i) => s.label !== structure.sections[i]?.label);
+  const handleAddSection = (label: string) => {
+    const newSection: LyricsSection = {
+      label,
+      lines: [],
+      rhymeScheme: "-",
+      sentiment: 0,
+      isHook: label.toLowerCase().includes("chorus") || label.toLowerCase().includes("hook"),
+      repetitionKey: label.toLowerCase().replace(/\s+/g, "_"),
+    };
+    setSections((prev) => [...prev, newSection]);
+    setAddingLabel(null);
+  };
+
+  const handleReset = () => {
+    setSections(structure.sections);
+    setAddingLabel(null);
+  };
+
+  const hasChanges =
+    sections.length !== structure.sections.length ||
+    sections.some((s, i) => s.label !== structure.sections[i]?.label);
 
   const confirmPayload: ConfirmedSection[] = sections.map((s) => ({
     label: s.label,
@@ -187,7 +228,7 @@ export function LyricsStructurePanel({
             Lyrics Structure
           </span>
           <span className="font-mono text-[10px] text-zinc-600">
-            · {structure.totalSections} sections
+            · {sections.length} sections
             {structure.hookRepetitions > 1 ? ` · hook ×${structure.hookRepetitions}` : ""}
             {structure.dominantScheme !== "-" ? ` · ${structure.dominantScheme} scheme` : ""}
           </span>
@@ -220,7 +261,7 @@ export function LyricsStructurePanel({
                   {structure.hasTaggedStructure
                     ? "Structure detected from section tags"
                     : "Structure estimated from blank-line separation"}
-                  {" · "}Click a section label to rename it.
+                  {" · "}Click a label to rename · hover to remove.
                 </p>
                 {hasChanges && (
                   <button
@@ -240,8 +281,69 @@ export function LyricsStructurePanel({
                     section={section}
                     index={i}
                     onLabelChange={handleLabelChange}
+                    onRemove={handleRemove}
+                    canRemove={sections.length > 1}
                   />
                 ))}
+
+                {/* Add section button */}
+                <div className="border border-dashed border-primary/15 bg-transparent flex items-center justify-center">
+                  {addingLabel === null ? (
+                    <button
+                      type="button"
+                      onClick={() => setAddingLabel("")}
+                      className="w-full h-full min-h-[3.5rem] flex flex-col items-center justify-center gap-1 text-zinc-700 hover:text-primary/60 hover:border-primary/30 transition-colors"
+                      title="Add a section"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span className="font-mono text-[9px] uppercase tracking-widest">Add section</span>
+                    </button>
+                  ) : (
+                    <div className="p-2 w-full space-y-1.5">
+                      <div className="flex flex-wrap gap-1">
+                        {SECTION_LABEL_PRESETS.map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => handleAddSection(preset)}
+                            className="font-mono text-[9px] px-1.5 py-0.5 bg-zinc-800 text-zinc-400 hover:bg-primary/20 hover:text-primary border border-zinc-700 hover:border-primary/30 transition-colors"
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-1">
+                        <input
+                          autoFocus
+                          value={addingLabel}
+                          onChange={(e) => setAddingLabel(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && addingLabel.trim()) handleAddSection(addingLabel.trim());
+                            if (e.key === "Escape") setAddingLabel(null);
+                          }}
+                          placeholder="Custom label…"
+                          className="flex-1 font-mono text-[10px] bg-transparent border-b border-primary/30 focus:outline-none text-primary placeholder-zinc-700 min-w-0"
+                        />
+                        {addingLabel.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => handleAddSection(addingLabel.trim())}
+                            className="font-mono text-[9px] text-primary hover:text-primary/80 px-1 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setAddingLabel(null)}
+                          className="font-mono text-[9px] text-zinc-600 hover:text-zinc-400 px-1 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {structure.sentimentArc.length >= 2 && (

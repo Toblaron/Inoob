@@ -31,6 +31,7 @@ import {
   BrainCircuit,
   Sparkles,
   X,
+  RotateCcw,
 } from "lucide-react";
 import { useGenerateSunoTemplate } from "@workspace/api-client-react";
 import type { SunoTemplate, LyricsStructure, SuggestedDefaults } from "@workspace/api-client-react";
@@ -421,12 +422,23 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState<SuggestedControls | null>(null);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  const [autoFillValues, setAutoFillValues] = useState<Record<string, string>>({});
   const [lyricsStructure, setLyricsStructure] = useState<LyricsStructure | null>(null);
   const [confirmedStructure, setConfirmedStructure] = useState<ConfirmedSection[] | null>(null);
   const [suggestedDefaults, setSuggestedDefaults] = useState<SuggestedDefaults | null>(null);
 
   const clearAutoFill = (field: string) => {
     setAutoFilledFields((prev) => { const next = new Set(prev); next.delete(field); return next; });
+  };
+
+  const resetAutoFill = (field: string) => {
+    const val = autoFillValues[field];
+    if (!val) return;
+    if (field === "energy") setEnergyLevel(val as typeof energyLevel);
+    else if (field === "era") setEra(val as typeof era);
+    else if (field === "tempo") setTempo(val as "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper" | null);
+    else if (field === "vocals") setVocalGender(val as typeof vocalGender);
+    setAutoFilledFields((prev) => { const next = new Set(prev); next.add(field); return next; });
   };
 
   const lastUrlRef = useRef<string>("");
@@ -517,12 +529,14 @@ export default function Home() {
       if (!hasAny) return;
       setSuggestions(data);
       const autoFilled = new Set<string>();
+      const savedValues: Record<string, string> = {};
       if (data.genres.length > 0) { setSelectedGenres(data.genres); autoFilled.add("genres"); }
-      if (data.era) { setEra(data.era as typeof era); autoFilled.add("era"); }
-      if (data.energy) { setEnergyLevel(data.energy as typeof energyLevel); autoFilled.add("energy"); }
-      if (data.tempo) { setTempo(data.tempo as typeof tempo); autoFilled.add("tempo"); }
-      if (data.vocals) { setVocalGender(data.vocals as typeof vocalGender); autoFilled.add("vocals"); }
+      if (data.era) { setEra(data.era as typeof era); autoFilled.add("era"); savedValues["era"] = data.era; }
+      if (data.energy) { setEnergyLevel(data.energy as typeof energyLevel); autoFilled.add("energy"); savedValues["energy"] = data.energy; }
+      if (data.tempo) { setTempo(data.tempo as typeof tempo); autoFilled.add("tempo"); savedValues["tempo"] = data.tempo; }
+      if (data.vocals) { setVocalGender(data.vocals as typeof vocalGender); autoFilled.add("vocals"); savedValues["vocals"] = data.vocals; }
       setAutoFilledFields(autoFilled);
+      setAutoFillValues(savedValues);
     } catch {}
     finally {
       setSuggestLoading(false);
@@ -539,6 +553,7 @@ export default function Home() {
       setSuggestions(null);
       setSuggestLoading(false);
       setAutoFilledFields(new Set());
+      setAutoFillValues({});
       setLyricsStructure(null);
       setConfirmedStructure(null);
       setSuggestedDefaults(null);
@@ -755,22 +770,39 @@ export default function Home() {
           if (data.suggestedDefaults) {
             setSuggestedDefaults(data.suggestedDefaults);
             const d = data.suggestedDefaults;
+            const newSavedValues: Record<string, string> = {};
             setAutoFilledFields((prev) => {
               const next = new Set(prev);
               if (d.energy && energyLevel === "auto" && !next.has("energy")) {
                 setEnergyLevel(d.energy as typeof energyLevel);
                 next.add("energy");
+                newSavedValues["energy"] = d.energy;
               }
               if (d.era && era === "auto" && !next.has("era")) {
                 setEra(d.era as typeof era);
                 next.add("era");
+                newSavedValues["era"] = d.era;
               }
               if (d.tempo && !tempo && !next.has("tempo")) {
                 setTempo(d.tempo as "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper" | null);
                 next.add("tempo");
+                newSavedValues["tempo"] = d.tempo;
               }
               return next;
             });
+            if (Object.keys(newSavedValues).length > 0) {
+              setAutoFillValues((prev) => ({ ...prev, ...newSavedValues }));
+            }
+            if (d.instrumentHints && d.instrumentHints.length > 0) {
+              setSelectedInstruments((prev) => {
+                const merged = [...new Set([...prev, ...d.instrumentHints!])].slice(0, 6);
+                return merged;
+              });
+            }
+            if (d.languageGenreHint && selectedGenres.length === 0) {
+              setSelectedGenres([d.languageGenreHint]);
+              setAutoFilledFields((prev) => { const next = new Set(prev); next.add("genres"); return next; });
+            }
           }
           if (data.artist && (selectedGenres.length > 0 || era !== "auto" || energyLevel !== "auto")) {
             saveArtistStyle(data.artist, {
@@ -1191,6 +1223,9 @@ export default function Home() {
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Mic2 className="w-3 h-3 text-secondary" /> Vocals
                         {autoFilledFields.has("vocals") && <AutoBadge />}
+                        {!autoFilledFields.has("vocals") && autoFillValues["vocals"] && (
+                          <ResetAutoFillButton value={autoFillValues["vocals"]} onClick={() => resetAutoFill("vocals")} />
+                        )}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(["auto", ...ALL_VOCALS] as const).map((v) => (
@@ -1204,6 +1239,9 @@ export default function Home() {
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Zap className="w-3 h-3 text-secondary" /> Energy
                         {autoFilledFields.has("energy") && <AutoBadge />}
+                        {!autoFilledFields.has("energy") && autoFillValues["energy"] && (
+                          <ResetAutoFillButton value={autoFillValues["energy"]} onClick={() => resetAutoFill("energy")} />
+                        )}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(["auto", ...ALL_ENERGIES] as const).map((v) => (
@@ -1221,6 +1259,9 @@ export default function Home() {
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Gauge className="w-3 h-3 text-secondary" /> Tempo
                         {autoFilledFields.has("tempo") && <AutoBadge />}
+                        {!autoFilledFields.has("tempo") && autoFillValues["tempo"] && (
+                          <ResetAutoFillButton value={autoFillValues["tempo"]} onClick={() => resetAutoFill("tempo")} />
+                        )}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(ALL_TEMPOS as readonly string[]).map((v) => {
@@ -1240,6 +1281,9 @@ export default function Home() {
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Clock className="w-3 h-3 text-secondary" /> Era
                         {autoFilledFields.has("era") && <AutoBadge />}
+                        {!autoFilledFields.has("era") && autoFillValues["era"] && (
+                          <ResetAutoFillButton value={autoFillValues["era"]} onClick={() => resetAutoFill("era")} />
+                        )}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(["auto", ...ALL_ERAS] as const).map((v) => (
@@ -1866,6 +1910,20 @@ function AutoBadge() {
     <span className="font-mono text-[9px] px-1 py-0.5 bg-primary/15 text-primary border border-primary/25 tracking-normal normal-case font-normal">
       AI
     </span>
+  );
+}
+
+function ResetAutoFillButton({ value, onClick }: { value: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Restore AI suggestion: ${value}`}
+      className="flex items-center gap-0.5 font-mono text-[9px] px-1 py-0.5 text-zinc-600 border border-zinc-800 hover:text-primary hover:border-primary/30 tracking-normal normal-case font-normal transition-colors"
+    >
+      <RotateCcw className="w-2 h-2" />
+      {value}
+    </button>
   );
 }
 
