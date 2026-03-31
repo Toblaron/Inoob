@@ -7,9 +7,8 @@ Wants=network-online.target
 Type=simple
 User=dietpi
 WorkingDirectory=/opt/suno-generator
-EnvironmentFile=/opt/suno-generator/.env
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node artifacts/api-server/dist/index.cjs
+ExecStart=/usr/bin/node --env-file=/opt/suno-generator/.env artifacts/api-server/dist/index.cjs
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal

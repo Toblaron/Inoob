@@ -109,9 +109,8 @@ Wants=network-online.target
 Type=simple
 User=dietpi
 WorkingDirectory=${INSTALL_DIR}
-EnvironmentFile=${INSTALL_DIR}/.env
 Environment=NODE_ENV=production
-ExecStart=$(which node) ${INSTALL_DIR}/artifacts/api-server/dist/index.cjs
+ExecStart=$(which node) --env-file=${INSTALL_DIR}/.env ${INSTALL_DIR}/artifacts/api-server/dist/index.cjs
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal
