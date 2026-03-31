@@ -93,6 +93,8 @@ export interface SunoTemplate {
   lyricsStructure?: LyricsStructure;
   /** Smart defaults computed from BPM, era, and language data */
   suggestedDefaults?: SuggestedDefaults;
+  /** True when this result was served from the server-side cache */
+  fromCache?: boolean;
 }
 
 export interface ErrorResponse {

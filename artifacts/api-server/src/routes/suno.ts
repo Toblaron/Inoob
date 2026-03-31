@@ -6,6 +6,7 @@ import { parse as parseHtml } from "node-html-parser";
 import { detectAudioFeatures, type AudioFeatures } from "../lib/audioFeatures.js";
 import { analyzeLyricsStructure } from "../lib/lyricsStructure.js";
 import { computeSuggestedDefaults } from "../lib/suggestedDefaults.js";
+import { cacheGet, cacheSet, cacheStats, hashParams, TTL } from "../lib/cache.js";
 
 const router: IRouter = Router();
 
@@ -582,6 +583,19 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
   return { ...base, lyricsText: null, lyricsSource: "none" };
 }
 
+function videoIdFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "youtu.be") return parsed.pathname.slice(1).split("?")[0] || null;
+    const v = parsed.searchParams.get("v");
+    if (v) return v;
+    const shortMatch = parsed.pathname.match(/\/(?:shorts|embed)\/([^/?]+)/);
+    return shortMatch?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function isValidYouTubeUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -974,13 +988,36 @@ router.post("/generate-template", async (req, res) => {
       return;
     }
 
+    const videoId = videoIdFromUrl(youtubeUrl);
+
+    // ── Cache: metadata ──────────────────────────────────────────────────────
     let metadata: VideoMetadata;
-    try {
-      metadata = await fetchYouTubeMetadata(youtubeUrl);
-    } catch (fetchErr) {
-      console.error("Failed to fetch YouTube metadata:", fetchErr);
-      res.status(400).json({ error: "Could not fetch video metadata. Make sure the URL is a valid, public YouTube video." });
-      return;
+    let metadataFromCache = false;
+    if (videoId) {
+      const cached = cacheGet<VideoMetadata>(`metadata:${videoId}`);
+      if (cached) {
+        metadata = cached;
+        metadataFromCache = true;
+        console.log(`[cache] metadata HIT for ${videoId}`);
+      } else {
+        try {
+          metadata = await fetchYouTubeMetadata(youtubeUrl);
+          cacheSet(`metadata:${videoId}`, metadata, TTL.METADATA);
+          console.log(`[cache] metadata SET for ${videoId}`);
+        } catch (fetchErr) {
+          console.error("Failed to fetch YouTube metadata:", fetchErr);
+          res.status(400).json({ error: "Could not fetch video metadata. Make sure the URL is a valid, public YouTube video." });
+          return;
+        }
+      }
+    } else {
+      try {
+        metadata = await fetchYouTubeMetadata(youtubeUrl);
+      } catch (fetchErr) {
+        console.error("Failed to fetch YouTube metadata:", fetchErr);
+        res.status(400).json({ error: "Could not fetch video metadata. Make sure the URL is a valid, public YouTube video." });
+        return;
+      }
     }
 
     // Override lyrics with user-provided lyrics if supplied
@@ -1035,28 +1072,62 @@ router.post("/generate-template", async (req, res) => {
 
 ${context}`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
-      max_completion_tokens: 8192,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userMessage }
-      ],
-      response_format: { type: "json_object" },
-    });
+    // ── Cache: template (AI output) — keyed by videoId + generation params ──
+    // feedbackContext is excluded from the hash (personalised, not shareable).
+    // manualLyrics with user-override are not cached (unique per request).
+    const useTemplateCache = videoId && metadata.lyricsSource !== "user-override";
+    const templateCacheKey = useTemplateCache
+      ? `template:${videoId}:${hashParams({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, isInstrumental, confirmedStructure })}`
+      : null;
 
-    const content = completion.choices[0]?.message?.content;
-    if (!content) {
-      res.status(500).json({ error: "AI failed to generate a template. Please try again." });
-      return;
+    type AiOutput = { styleOfMusic: string; title: string; lyrics: string; negativePrompt: string };
+    let aiResult: AiOutput;
+    let templateFromCache = false;
+
+    if (templateCacheKey) {
+      const cached = cacheGet<AiOutput>(templateCacheKey);
+      if (cached) {
+        aiResult = cached;
+        templateFromCache = true;
+        console.log(`[cache] template HIT for ${videoId}`);
+      } else {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-5.2",
+          max_completion_tokens: 8192,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userMessage }
+          ],
+          response_format: { type: "json_object" },
+        });
+        const content = completion.choices[0]?.message?.content;
+        if (!content) {
+          res.status(500).json({ error: "AI failed to generate a template. Please try again." });
+          return;
+        }
+        aiResult = JSON.parse(content) as AiOutput;
+        cacheSet(templateCacheKey, aiResult, TTL.TEMPLATE);
+        console.log(`[cache] template SET for ${videoId}`);
+      }
+    } else {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_completion_tokens: 8192,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userMessage }
+        ],
+        response_format: { type: "json_object" },
+      });
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        res.status(500).json({ error: "AI failed to generate a template. Please try again." });
+        return;
+      }
+      aiResult = JSON.parse(content) as AiOutput;
     }
 
-    const aiResult = JSON.parse(content) as {
-      styleOfMusic: string;
-      title: string;
-      lyrics: string;
-      negativePrompt: string;
-    };
+    const fromCache = metadataFromCache && templateFromCache;
 
     const template = GenerateSunoTemplateResponse.parse({
       songTitle: metadata.title,
@@ -1068,6 +1139,7 @@ ${context}`;
       tags: [],
       lyricsStructure: lyricsStructure ?? undefined,
       suggestedDefaults: Object.keys(suggestedDefaults.sources).length > 0 ? suggestedDefaults : undefined,
+      fromCache,
     });
 
     res.json(template);
@@ -1444,7 +1516,19 @@ router.post("/pre-analyze-structure", async (req, res) => {
     return;
   }
   try {
-    const metadata = await fetchYouTubeMetadata(youtubeUrl);
+    const vid = videoIdFromUrl(youtubeUrl);
+    let metadata: VideoMetadata;
+    if (vid) {
+      const cached = cacheGet<VideoMetadata>(`metadata:${vid}`);
+      if (cached) {
+        metadata = cached;
+      } else {
+        metadata = await fetchYouTubeMetadata(youtubeUrl);
+        cacheSet(`metadata:${vid}`, metadata, TTL.METADATA);
+      }
+    } else {
+      metadata = await fetchYouTubeMetadata(youtubeUrl);
+    }
     if (!metadata.lyricsText || metadata.lyricsText.trim().length < 30) {
       res.status(404).json({ error: "No lyrics found for this song." });
       return;
@@ -1475,6 +1559,23 @@ router.post("/analyze-structure", (req, res) => {
     console.error("analyze-structure error:", err);
     res.status(500).json({ error: "Could not analyze lyrics structure." });
   }
+});
+
+/**
+ * GET /api/cache/stats
+ * Returns cache size and hit/miss statistics for the current process.
+ * Protected by ADMIN_KEY environment variable when set.
+ */
+router.get("/cache/stats", (req, res) => {
+  const adminKey = process.env.ADMIN_KEY;
+  if (adminKey) {
+    const provided = req.headers["x-admin-key"] ?? req.query.key;
+    if (provided !== adminKey) {
+      res.status(401).json({ error: "Unauthorized — provide x-admin-key header or ?key= query param." });
+      return;
+    }
+  }
+  res.json(cacheStats());
 });
 
 export default router;

@@ -144,6 +144,14 @@ export function TemplateResult({
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <span className="font-mono text-[10px] text-primary/50 uppercase tracking-widest">Template Ready</span>
+            {template.fromCache && (
+              <span
+                title="Metadata and AI output served from cache — no API calls made"
+                className="flex items-center gap-0.5 font-mono text-[10px] uppercase tracking-wider text-cyan-400 border border-cyan-400/30 bg-cyan-400/5 px-1.5 py-0.5"
+              >
+                ⚡ Instant (cached)
+              </span>
+            )}
           </div>
           <h2 className="text-xl font-bold text-white leading-tight">
             {template.songTitle}

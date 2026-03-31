@@ -90,4 +90,5 @@ export const GenerateSunoTemplateResponse = zod.object({
     .describe("Additional tags for mood, instruments, tempo"),
   lyricsStructure: LyricsStructureSchema.optional().describe("Analyzed structure of the source lyrics"),
   suggestedDefaults: SuggestedDefaultsSchema.optional().describe("Smart defaults computed from BPM, era, and language data"),
+  fromCache: zod.boolean().optional().describe("True when this result was served from the server-side cache"),
 });

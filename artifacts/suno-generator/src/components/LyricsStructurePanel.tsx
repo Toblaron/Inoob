@@ -292,64 +292,65 @@ export function LyricsStructurePanel({
                 ))}
 
                 {/* Add section button — hidden when locked */}
-                {isLocked && null}
-                {!isLocked && <div className="border border-dashed border-primary/15 bg-transparent flex items-center justify-center">
-                  {addingLabel === null ? (
-                    <button
-                      type="button"
-                      onClick={() => setAddingLabel("")}
-                      className="w-full h-full min-h-[3.5rem] flex flex-col items-center justify-center gap-1 text-zinc-700 hover:text-primary/60 hover:border-primary/30 transition-colors"
-                      title="Add a section"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span className="font-mono text-[9px] uppercase tracking-widest">Add section</span>
-                    </button>
-                  ) : (
-                    <div className="p-2 w-full space-y-1.5">
-                      <div className="flex flex-wrap gap-1">
-                        {SECTION_LABEL_PRESETS.map((preset) => (
+                {!isLocked && (
+                  <div className="border border-dashed border-primary/15 bg-transparent flex items-center justify-center">
+                    {addingLabel === null ? (
+                      <button
+                        type="button"
+                        onClick={() => setAddingLabel("")}
+                        className="w-full h-full min-h-[3.5rem] flex flex-col items-center justify-center gap-1 text-zinc-700 hover:text-primary/60 hover:border-primary/30 transition-colors"
+                        title="Add a section"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span className="font-mono text-[9px] uppercase tracking-widest">Add section</span>
+                      </button>
+                    ) : (
+                      <div className="p-2 w-full space-y-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {SECTION_LABEL_PRESETS.map((preset) => (
+                            <button
+                              key={preset}
+                              type="button"
+                              onClick={() => handleAddSection(preset)}
+                              className="font-mono text-[9px] px-1.5 py-0.5 bg-zinc-800 text-zinc-400 hover:bg-primary/20 hover:text-primary border border-zinc-700 hover:border-primary/30 transition-colors"
+                            >
+                              {preset}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-1">
+                          <input
+                            autoFocus
+                            value={addingLabel}
+                            onChange={(e) => setAddingLabel(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && addingLabel.trim()) handleAddSection(addingLabel.trim());
+                              if (e.key === "Escape") setAddingLabel(null);
+                            }}
+                            placeholder="Custom label…"
+                            className="flex-1 font-mono text-[10px] bg-transparent border-b border-primary/30 focus:outline-none text-primary placeholder-zinc-700 min-w-0"
+                          />
+                          {addingLabel.trim() && (
+                            <button
+                              type="button"
+                              onClick={() => handleAddSection(addingLabel.trim())}
+                              className="font-mono text-[9px] text-primary hover:text-primary/80 px-1 transition-colors"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          )}
                           <button
-                            key={preset}
                             type="button"
-                            onClick={() => handleAddSection(preset)}
-                            className="font-mono text-[9px] px-1.5 py-0.5 bg-zinc-800 text-zinc-400 hover:bg-primary/20 hover:text-primary border border-zinc-700 hover:border-primary/30 transition-colors"
+                            onClick={() => setAddingLabel(null)}
+                            className="font-mono text-[9px] text-zinc-600 hover:text-zinc-400 px-1 transition-colors"
                           >
-                            {preset}
+                            <X className="w-3 h-3" />
                           </button>
-                        ))}
+                        </div>
                       </div>
-                      <div className="flex gap-1">
-                        <input
-                          autoFocus
-                          value={addingLabel}
-                          onChange={(e) => setAddingLabel(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && addingLabel.trim()) handleAddSection(addingLabel.trim());
-                            if (e.key === "Escape") setAddingLabel(null);
-                          }}
-                          placeholder="Custom label…"
-                          className="flex-1 font-mono text-[10px] bg-transparent border-b border-primary/30 focus:outline-none text-primary placeholder-zinc-700 min-w-0"
-                        />
-                        {addingLabel.trim() && (
-                          <button
-                            type="button"
-                            onClick={() => handleAddSection(addingLabel.trim())}
-                            className="font-mono text-[9px] text-primary hover:text-primary/80 px-1 transition-colors"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setAddingLabel(null)}
-                          className="font-mono text-[9px] text-zinc-600 hover:text-zinc-400 px-1 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>}
+                    )}
+                  </div>
+                )}
               </div>
 
               {structure.sentimentArc.length >= 2 && (
