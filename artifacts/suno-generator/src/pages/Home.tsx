@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { usePWA } from "@/hooks/usePWA";
 import logoTrackTemplate from "@assets/logotracktemplateBilde-sharpen-denoise-text-lighting-remove-u_1774346189019.jpeg";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -35,6 +36,9 @@ import {
   List,
   Link,
   XCircle,
+  Download,
+  WifiOff,
+  Share,
 } from "lucide-react";
 import { useGenerateSunoTemplate, useGenerateVariations } from "@workspace/api-client-react";
 import type { SunoTemplate, LyricsStructure, SuggestedDefaults, BatchTrackResult, PlaylistTrack } from "@workspace/api-client-react";
@@ -380,6 +384,9 @@ function formatRelativeTime(ts: number): string {
 export default function Home() {
   const mainMutation = useGenerateSunoTemplate();
   const variationsMutation = useGenerateVariations();
+  const { isOnline, isInstallable, isIOS, promptInstall } = usePWA();
+  const [showIOSInstallTip, setShowIOSInstallTip] = useState(false);
+  const [installDismissed, setInstallDismissed] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -1347,6 +1354,57 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 px-4 py-2 bg-zinc-900 border-b border-yellow-500/30 text-yellow-400 font-mono text-[11px] uppercase tracking-wider">
+          <WifiOff className="w-3.5 h-3.5 shrink-0" />
+          <span>You&apos;re offline — showing cached templates only. Generation requires a connection.</span>
+        </div>
+      )}
+
+      {/* Install prompt (Chrome/Edge) */}
+      {isInstallable && !installDismissed && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 bg-card border border-primary/30 shadow-2xl">
+          <Download className="w-4 h-4 text-primary shrink-0" />
+          <span className="font-mono text-[11px] text-zinc-300">Install app for offline access</span>
+          <button
+            onClick={promptInstall}
+            className="font-mono text-[11px] px-3 py-1 border border-primary text-primary hover:bg-primary hover:text-black transition-all uppercase tracking-wider"
+          >
+            Install
+          </button>
+          <button
+            onClick={() => setInstallDismissed(true)}
+            className="text-zinc-600 hover:text-zinc-400 transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* iOS "Add to Home Screen" tip */}
+      {isIOS && !installDismissed && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm flex flex-col gap-2 px-4 py-3 bg-card border border-primary/30 shadow-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Share className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="font-mono text-[11px] text-primary uppercase tracking-wider">Add to Home Screen</span>
+            </div>
+            <button
+              onClick={() => setInstallDismissed(true)}
+              className="text-zinc-600 hover:text-zinc-400 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="font-mono text-[10px] text-zinc-500 leading-relaxed">
+            Tap the <span className="text-zinc-300">Share</span> button in Safari, then tap <span className="text-zinc-300">&quot;Add to Home Screen&quot;</span> to install this app.
+          </p>
+        </div>
+      )}
+
       <div className="relative z-10 w-full max-w-3xl flex flex-col items-center mb-8">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -2218,6 +2276,12 @@ export default function Home() {
                       <Trash2 className="w-3 h-3" /> Clear all
                     </button>
                   </div>
+                  {!isOnline && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/5 border border-yellow-500/20 text-yellow-500 font-mono text-[10px] uppercase tracking-wider">
+                      <WifiOff className="w-3 h-3 shrink-0" />
+                      <span>Offline — showing cached templates only</span>
+                    </div>
+                  )}
                   <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
                     {history.map((entry) => (
                       <button
