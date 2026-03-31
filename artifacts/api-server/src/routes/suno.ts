@@ -1263,7 +1263,7 @@ router.post("/generate-variations", async (req, res) => {
     return;
   }
 
-  const count = Math.min(Math.max(Math.round(parsed.data.count ?? 2), 1), 4);
+  const count = Math.min(Math.max(Math.round(parsed.data.count ?? 2), 2), 4);
 
   console.log(`[variations] Generating ${count} variations for ${parsed.data.youtubeUrl}`);
 

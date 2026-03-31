@@ -501,6 +501,7 @@ export function VariationWorkshop({
   const { copy } = useCopyToClipboard();
   const [showDiff, setShowDiff] = useState(true);
   const [mobileTab, setMobileTab] = useState(0);
+  const touchStartXRef = useRef<number | null>(null);
   const [selected, setSelected] = useState<Selection>({
     styleOfMusic: 0,
     title: 0,
@@ -697,8 +698,19 @@ export function VariationWorkshop({
           })}
         </div>
 
-        {/* Mobile: single column for active tab */}
-        <div className="sm:hidden">
+        {/* Mobile: single column for active tab — supports left/right swipe gestures */}
+        <div
+          className="sm:hidden"
+          onTouchStart={(e) => { touchStartXRef.current = e.touches[0].clientX; }}
+          onTouchEnd={(e) => {
+            if (touchStartXRef.current === null) return;
+            const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+            touchStartXRef.current = null;
+            if (Math.abs(dx) < 40) return;
+            if (dx < 0) setMobileTab((t) => Math.min(numTotal - 1, t + 1));
+            else setMobileTab((t) => Math.max(0, t - 1));
+          }}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={mobileTab}
