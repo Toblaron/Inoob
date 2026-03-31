@@ -1515,7 +1515,8 @@ router.post("/batch", async (req, res) => {
     const workers: Promise<void>[] = [];
     for (let w = 0; w < Math.min(BATCH_CONCURRENCY, urls.length); w++) {
       workers.push((async () => {
-        while (idx < tracks.length) {
+        // Guard outer loop against disconnect to prevent infinite spin
+        while (!clientDisconnected && idx < tracks.length) {
           await processNext();
         }
       })());
@@ -1523,11 +1524,14 @@ router.post("/batch", async (req, res) => {
     await Promise.all(workers);
   } catch (err) {
     console.error("[batch] unexpected error:", err);
+  } finally {
+    // Always clean up heartbeat and close stream, even on error or early exit
+    clearInterval(heartbeat);
+    if (!clientDisconnected) {
+      sendEvent("done", { totalCount: tracks.length });
+      res.end();
+    }
   }
-
-  clearInterval(heartbeat);
-  sendEvent("done", { totalCount: tracks.length });
-  res.end();
 });
 
 // ─── Genre suggestion helpers ─────────────────────────────────────────────────

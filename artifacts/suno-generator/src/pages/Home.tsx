@@ -418,6 +418,7 @@ export default function Home() {
   const [batchTracks, setBatchTracks] = useState<BatchTrackResult[] | null>(null);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
   const [playlistPreview, setPlaylistPreview] = useState<PlaylistTrack[] | null>(null);
+  const [playlistCapped, setPlaylistCapped] = useState(false);
   const [playlistLoading, setPlaylistLoading] = useState(false);
   const [playlistError, setPlaylistError] = useState<string | null>(null);
   const batchAbortRef = useRef<AbortController | null>(null);
@@ -973,6 +974,7 @@ export default function Home() {
       }
       const data = await resp.json() as { tracks: PlaylistTrack[]; totalCount: number; capped: boolean };
       setPlaylistPreview(data.tracks);
+      setPlaylistCapped(data.capped);
       setBatchUrlsText(data.tracks.map((t) => t.url).join("\n"));
     } catch (err) {
       setPlaylistError((err as Error).message ?? "Failed to load playlist");
@@ -1005,6 +1007,7 @@ export default function Home() {
         }
         const data = await resp.json() as { tracks: PlaylistTrack[]; totalCount: number; capped: boolean };
         setPlaylistPreview(data.tracks);
+        setPlaylistCapped(data.capped);
         // Build expanded URLs from playlist tracks, preserving the metadata
         data.tracks.forEach((t) => metaByUrl.set(t.url, { title: t.title, thumbnail: t.thumbnail }));
         // Merge: replace the playlist URL with expanded track URLs; keep other individual URLs
@@ -1446,6 +1449,9 @@ export default function Home() {
                 >
                   <p className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
                     Playlist — {playlistPreview.length} track{playlistPreview.length !== 1 ? "s" : ""} detected
+                    {playlistCapped && (
+                      <span className="ml-2 text-yellow-500/80"> · truncated to 20</span>
+                    )}
                   </p>
                   <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
                     {playlistPreview.map((t) => (
