@@ -405,6 +405,7 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
 
   const [variationWorkshop, setVariationWorkshop] = useState<SunoTemplate[] | null>(null);
+  const [variationPending, setVariationPending] = useState<boolean[]>([]);
   const [variationCount, setVariationCount] = useState<2 | 3 | 4>(2);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
 
@@ -878,27 +879,57 @@ export default function Home() {
   const handleGenerateVariations = () => {
     if (!lastUrlRef.current) return;
     const opts = lastOptionsRef.current as object;
+    const count = variationCount;
     setIsGeneratingVariations(true);
     setVariationWorkshop(null);
+    setVariationPending(Array(count).fill(true));
     setApiError(null);
 
-    variationsMutation.mutate(
-      { data: { youtubeUrl: lastUrlRef.current, ...opts, count: variationCount } },
-      {
-        onSuccess: (data) => {
-          setVariationWorkshop(data.variations);
-          setIsGeneratingVariations(false);
+    const results: (SunoTemplate | null)[] = Array(count).fill(null);
+    let settled = 0;
+
+    for (let i = 0; i < count; i++) {
+      const idx = i;
+      mainMutation.mutate(
+        {
+          data: {
+            youtubeUrl: lastUrlRef.current!,
+            ...(opts as object),
+            variationIndex: idx,
+          },
         },
-        onError: (err) => {
-          setApiError(
-            (err as { data?: { error?: string }; message?: string })?.data?.error ??
-            (err as Error)?.message ??
-            "Failed to generate variations"
-          );
-          setIsGeneratingVariations(false);
-        },
-      }
-    );
+        {
+          onSuccess: (data) => {
+            results[idx] = data;
+            setVariationPending((prev) => {
+              const next = [...prev];
+              next[idx] = false;
+              return next;
+            });
+            setVariationWorkshop(
+              results.some((r) => r !== null) ? [...results] : null
+            );
+            settled++;
+            if (settled === count) setIsGeneratingVariations(false);
+          },
+          onError: () => {
+            setVariationPending((prev) => {
+              const next = [...prev];
+              next[idx] = false;
+              return next;
+            });
+            settled++;
+            if (settled === count) {
+              if (results.every((r) => r === null)) {
+                setApiError("All variation requests failed.");
+                setVariationWorkshop(null);
+              }
+              setIsGeneratingVariations(false);
+            }
+          },
+        }
+      );
+    }
   };
 
   const handleMergeVariation = (merged: SunoTemplate) => {
@@ -1750,18 +1781,7 @@ export default function Home() {
             >
               <LoadingEq />
             </motion.div>
-          ) : isGeneratingVariations ? (
-            <motion.div
-              key="var-loading"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              className="w-full flex flex-col items-center py-12 gap-4"
-            >
-              <LoadingEq />
-              <p className="text-sm text-zinc-500">Generating {variationCount} variations in parallel…</p>
-            </motion.div>
-          ) : variationWorkshop && variationWorkshop.length > 0 ? (
+          ) : (variationWorkshop && variationWorkshop.some((v) => v !== null)) || (isGeneratingVariations && variationPending.length > 0) ? (
             <motion.div
               key="workshop"
               initial={{ opacity: 0 }}
@@ -1770,9 +1790,11 @@ export default function Home() {
               className="w-full max-w-6xl mx-auto px-1"
             >
               <VariationWorkshop
-                variations={variationWorkshop}
+                variations={(variationWorkshop ?? []).filter((v): v is SunoTemplate => v !== null)}
+                pending={variationPending}
+                totalCount={variationPending.length || variationWorkshop?.length || 0}
                 onMerge={handleMergeVariation}
-                onClose={() => setVariationWorkshop(null)}
+                onClose={() => { setVariationWorkshop(null); setIsGeneratingVariations(false); setVariationPending([]); }}
               />
             </motion.div>
           ) : currentTemplate ? (

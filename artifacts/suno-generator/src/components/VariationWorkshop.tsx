@@ -27,6 +27,8 @@ interface Selection {
 
 interface VariationWorkshopProps {
   variations: SunoTemplate[];
+  pending?: boolean[];
+  totalCount?: number;
   onMerge: (merged: SunoTemplate) => void;
   onClose: () => void;
 }
@@ -231,7 +233,7 @@ function VariationColumn({
             <CharBadge count={variation.styleOfMusic.length} limit={900} />
           </div>
         </div>
-        <p className="text-[11px] text-zinc-300 leading-relaxed break-words line-clamp-5">
+        <p className="text-[11px] text-zinc-300 leading-relaxed break-words">
           {!isReference && showDiff ? (
             <DiffText base={reference.styleOfMusic} changed={variation.styleOfMusic} />
           ) : (
@@ -306,7 +308,7 @@ function VariationColumn({
             />
           </div>
         </div>
-        <p className="text-[11px] font-mono text-zinc-300 leading-relaxed break-words line-clamp-4">
+        <p className="text-[11px] font-mono text-zinc-300 leading-relaxed break-words">
           {!isReference && showDiff ? (
             <DiffText base={reference.negativePrompt} changed={variation.negativePrompt} />
           ) : (
@@ -355,7 +357,7 @@ function VariationColumn({
             />
           </div>
         </div>
-        <p className="text-[11px] text-zinc-300 leading-relaxed break-words line-clamp-[12] whitespace-pre-line">
+        <p className="text-[11px] text-zinc-300 leading-relaxed break-words whitespace-pre-line">
           {!isReference && showDiff ? (
             <DiffText base={reference.lyrics} changed={variation.lyrics} />
           ) : (
@@ -372,8 +374,35 @@ function VariationColumn({
   );
 }
 
+function SkeletonColumn({ variationIdx }: { variationIdx: number }) {
+  return (
+    <div className="flex flex-col gap-2 min-w-0 opacity-60 animate-pulse">
+      <div className="flex items-center justify-between px-3 py-2 border border-primary/30 font-mono text-[11px] font-bold uppercase tracking-widest bg-primary/5 text-primary">
+        <span>V{variationIdx + 1}</span>
+        <span className="font-mono text-[9px] text-zinc-600 normal-case tracking-normal font-normal">Generating…</span>
+      </div>
+      {[60, 20, 36, 180].map((h, i) => (
+        <div
+          key={i}
+          className="w-full p-3 border border-primary/10 bg-card flex flex-col gap-2"
+          style={{ minHeight: h }}
+        >
+          <div className="h-2 w-16 bg-zinc-800 rounded" />
+          <div className="space-y-1.5">
+            <div className="h-2 w-full bg-zinc-800 rounded" />
+            <div className="h-2 w-4/5 bg-zinc-800 rounded" />
+            <div className="h-2 w-3/5 bg-zinc-800 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function VariationWorkshop({
   variations,
+  pending = [],
+  totalCount,
   onMerge,
   onClose,
 }: VariationWorkshopProps) {
@@ -392,13 +421,23 @@ export function VariationWorkshop({
     setSelected((prev) => ({ ...prev, [key]: idx }));
   };
 
-  const merged: SunoTemplate = {
-    ...variations[0],
-    styleOfMusic: variations[selected.styleOfMusic].styleOfMusic,
-    title: variations[selected.title].title,
-    lyrics: variations[selected.lyrics].lyrics,
-    negativePrompt: variations[selected.negativePrompt].negativePrompt,
-  };
+  const numTotal = totalCount || variations.length;
+  const isStillLoading = pending.some(Boolean);
+
+  const safeVariation = (idx: number) => variations[idx] ?? variations[0];
+  const selIdx = (key: SectionKey) =>
+    Math.min(selected[key], variations.length - 1);
+
+  const merged: SunoTemplate =
+    variations.length > 0
+      ? {
+          ...variations[0],
+          styleOfMusic: safeVariation(selIdx("styleOfMusic")).styleOfMusic,
+          title: safeVariation(selIdx("title")).title,
+          lyrics: safeVariation(selIdx("lyrics")).lyrics,
+          negativePrompt: safeVariation(selIdx("negativePrompt")).negativePrompt,
+        }
+      : ({} as SunoTemplate);
 
   const anyNonDefault = Object.values(selected).some((v) => v !== 0);
 
@@ -419,11 +458,18 @@ export function VariationWorkshop({
           </span>
           <div className="flex items-center gap-2 mt-0.5">
             <h2 className="text-base font-bold text-white leading-tight">
-              {variations[0].songTitle}
+              {variations[0]?.songTitle ?? "Variation Workshop"}
             </h2>
             <span className="font-mono text-[10px] text-zinc-600">
-              {variations.length} variations
+              {isStillLoading
+                ? `${variations.length}/${numTotal} ready`
+                : `${variations.length} variations`}
             </span>
+            {isStillLoading && (
+              <span className="font-mono text-[9px] text-amber-400/80 animate-pulse">
+                loading…
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -472,32 +518,44 @@ export function VariationWorkshop({
 
       {/* Mobile tabs */}
       <div className="flex sm:hidden border border-primary/20 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-        {variations.map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setMobileTab(i)}
-            className={cn(
-              "flex-1 min-w-[3.5rem] py-2 font-mono text-[11px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
-              mobileTab === i
-                ? "bg-primary/10 text-primary border-b-2 border-primary"
-                : "text-zinc-600 hover:text-zinc-400"
-            )}
-          >
-            V{i + 1}
-            {i === 0 && (
-              <span className="text-[8px] text-zinc-700 block font-normal normal-case tracking-normal leading-none">
-                ref
-              </span>
-            )}
-          </button>
-        ))}
+        {Array.from({ length: numTotal }).map((_, i) => {
+          const isReady = i < variations.length;
+          const isPendingTab = pending[i] !== false && !isReady;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => isReady && setMobileTab(i)}
+              disabled={!isReady}
+              className={cn(
+                "flex-1 min-w-[3.5rem] py-2 font-mono text-[11px] font-bold uppercase tracking-widest transition-all whitespace-nowrap",
+                mobileTab === i && isReady
+                  ? "bg-primary/10 text-primary border-b-2 border-primary"
+                  : isReady
+                    ? "text-zinc-600 hover:text-zinc-400"
+                    : "text-zinc-800 cursor-not-allowed"
+              )}
+            >
+              V{i + 1}
+              {i === 0 && isReady && (
+                <span className="text-[8px] text-zinc-700 block font-normal normal-case tracking-normal leading-none">
+                  ref
+                </span>
+              )}
+              {isPendingTab && (
+                <span className="text-[8px] text-zinc-700 block font-normal normal-case tracking-normal leading-none animate-pulse">
+                  …
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Desktop: all columns side-by-side with scroll; Mobile: single tab */}
       <div className="relative">
         {/* Desktop scroll arrows */}
-        {variations.length > 2 && (
+        {numTotal > 2 && (
           <>
             <button
               type="button"
@@ -518,27 +576,33 @@ export function VariationWorkshop({
           </>
         )}
 
-        {/* Desktop: all columns */}
+        {/* Desktop: all columns (real + skeleton placeholders) */}
         <div
           ref={scrollRef}
           className="hidden sm:grid gap-3 overflow-x-auto"
           style={{
-            gridTemplateColumns: `repeat(${variations.length}, minmax(220px, 1fr))`,
+            gridTemplateColumns: `repeat(${numTotal}, minmax(220px, 1fr))`,
             scrollbarWidth: "thin",
           }}
         >
-          {variations.map((v, i) => (
-            <VariationColumn
-              key={i}
-              variationIdx={i}
-              isReference={i === 0}
-              variation={v}
-              reference={variations[0]}
-              selected={selected}
-              showDiff={showDiff}
-              onSelect={(key) => selectSection(key, i)}
-            />
-          ))}
+          {Array.from({ length: numTotal }).map((_, i) => {
+            const v = variations[i];
+            if (!v) {
+              return <SkeletonColumn key={i} variationIdx={i} />;
+            }
+            return (
+              <VariationColumn
+                key={i}
+                variationIdx={i}
+                isReference={i === 0}
+                variation={v}
+                reference={variations[0]}
+                selected={selected}
+                showDiff={showDiff}
+                onSelect={(key) => selectSection(key, i)}
+              />
+            );
+          })}
         </div>
 
         {/* Mobile: single column for active tab */}
@@ -551,15 +615,19 @@ export function VariationWorkshop({
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.15 }}
             >
-              <VariationColumn
-                variationIdx={mobileTab}
-                isReference={mobileTab === 0}
-                variation={variations[mobileTab]}
-                reference={variations[0]}
-                selected={selected}
-                showDiff={showDiff}
-                onSelect={(key) => selectSection(key, mobileTab)}
-              />
+              {variations[mobileTab] ? (
+                <VariationColumn
+                  variationIdx={mobileTab}
+                  isReference={mobileTab === 0}
+                  variation={variations[mobileTab]}
+                  reference={variations[0]}
+                  selected={selected}
+                  showDiff={showDiff}
+                  onSelect={(key) => selectSection(key, mobileTab)}
+                />
+              ) : (
+                <SkeletonColumn variationIdx={mobileTab} />
+              )}
             </motion.div>
           </AnimatePresence>
           {/* Mobile prev/next */}
@@ -574,8 +642,8 @@ export function VariationWorkshop({
             </button>
             <button
               type="button"
-              onClick={() => setMobileTab((t) => Math.min(variations.length - 1, t + 1))}
-              disabled={mobileTab === variations.length - 1}
+              onClick={() => setMobileTab((t) => Math.min(numTotal - 1, t + 1))}
+              disabled={mobileTab === numTotal - 1}
               className="flex items-center gap-1 px-3 py-1.5 font-mono text-[11px] border border-primary/20 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 transition-all"
             >
               Next <ChevronRight className="w-3 h-3" />
@@ -676,7 +744,7 @@ export function VariationWorkshop({
                 </div>
                 <p
                   className={cn(
-                    "text-[11px] text-zinc-300 leading-relaxed break-words line-clamp-4",
+                    "text-[11px] text-zinc-300 leading-relaxed break-words",
                     mono ? "font-mono" : ""
                   )}
                 >
