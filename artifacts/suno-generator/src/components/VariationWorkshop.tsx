@@ -374,6 +374,98 @@ function VariationColumn({
   );
 }
 
+interface CompositePanelReadyProps {
+  merged: SunoTemplate;
+  selected: Selection;
+  anyNonDefault: boolean;
+  onCopy: () => void;
+  onMerge: () => void;
+}
+
+type CompositeSectionSpec = {
+  label: string;
+  key: SectionKey;
+  limit?: number;
+  min?: number;
+  mono?: boolean;
+};
+
+const COMPOSITE_SECTIONS: CompositeSectionSpec[] = [
+  { label: "Style of Music", key: "styleOfMusic", limit: 900 },
+  { label: "Title", key: "title" },
+  { label: "Negative Prompt", key: "negativePrompt", limit: 199, min: 180, mono: true },
+  { label: "Lyrics", key: "lyrics", limit: 4999, min: 4900 },
+];
+
+function CompositePanelReady({ merged, selected, anyNonDefault, onCopy, onMerge }: CompositePanelReadyProps) {
+  return (
+    <div className="border border-primary/25 bg-card">
+      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-primary/10 flex-wrap gap-y-2">
+        <div className="flex items-center gap-2">
+          <GitMerge className="w-3.5 h-3.5 text-primary/60" />
+          <span className="font-mono text-[11px] text-primary/70 uppercase tracking-wider font-medium">
+            Your Composite
+          </span>
+          {anyNonDefault ? (
+            <span className="font-mono text-[9px] px-1.5 py-0.5 bg-primary/10 border border-primary/20 text-primary/60">
+              Mixed
+            </span>
+          ) : (
+            <span className="font-mono text-[9px] px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-600">
+              All V1
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onCopy}
+            className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider border border-primary/20 text-zinc-500 hover:border-primary/40 hover:text-zinc-300 transition-all"
+          >
+            <Copy className="w-3 h-3" />
+            Copy All
+          </button>
+          <button
+            type="button"
+            onClick={onMerge}
+            className="flex items-center gap-1.5 px-4 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all"
+          >
+            <Check className="w-3 h-3" />
+            Use This Template
+          </button>
+        </div>
+      </div>
+
+      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {COMPOSITE_SECTIONS.map(({ label, key, limit, min, mono }) => {
+          const val = (merged[key as keyof SunoTemplate] as string) ?? "";
+          return (
+            <div key={key} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
+                  {label}
+                </span>
+                <span className="font-mono text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary/70 border border-primary/20">
+                  from V{selected[key] + 1}
+                </span>
+                <CharBadge count={val.length} limit={limit} min={min} />
+              </div>
+              <p
+                className={cn(
+                  "text-[11px] text-zinc-300 leading-relaxed break-words",
+                  mono ? "font-mono" : ""
+                )}
+              >
+                {key === "lyrics" ? val.slice(0, 300) + (val.length > 300 ? "…" : "") : val}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function SkeletonColumn({ variationIdx }: { variationIdx: number }) {
   return (
     <div className="flex flex-col gap-2 min-w-0 opacity-60 animate-pulse">
@@ -652,109 +744,33 @@ export function VariationWorkshop({
         </div>
       </div>
 
-      {/* Composite Panel */}
-      <div className="border border-primary/25 bg-card">
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-primary/10 flex-wrap gap-y-2">
-          <div className="flex items-center gap-2">
-            <GitMerge className="w-3.5 h-3.5 text-primary/60" />
-            <span className="font-mono text-[11px] text-primary/70 uppercase tracking-wider font-medium">
-              Your Composite
-            </span>
-            {anyNonDefault ? (
-              <span className="font-mono text-[9px] px-1.5 py-0.5 bg-primary/10 border border-primary/20 text-primary/60">
-                Mixed
-              </span>
-            ) : (
-              <span className="font-mono text-[9px] px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-600">
-                All V1
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                copy(
-                  [
-                    `=== STYLE OF MUSIC ===\n${merged.styleOfMusic}`,
-                    `=== TITLE ===\n${merged.title}`,
-                    `=== LYRICS / METADATA ===\n${merged.lyrics}`,
-                    `=== NEGATIVE PROMPT ===\n${merged.negativePrompt}`,
-                  ].join("\n\n"),
-                  "Composite template copied!"
-                )
-              }
-              className="flex items-center gap-1.5 px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider border border-primary/20 text-zinc-500 hover:border-primary/40 hover:text-zinc-300 transition-all"
-            >
-              <Copy className="w-3 h-3" />
-              Copy All
-            </button>
-            <button
-              type="button"
-              onClick={() => onMerge(merged)}
-              className="flex items-center gap-1.5 px-4 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all"
-            >
-              <Check className="w-3 h-3" />
-              Use This Template
-            </button>
-          </div>
+      {/* Composite Panel — waiting state */}
+      {variations.length === 0 && (
+        <div className="border border-primary/10 bg-card px-5 py-6 text-center font-mono text-[11px] text-zinc-700 uppercase tracking-wider animate-pulse">
+          Waiting for first variation…
         </div>
+      )}
 
-        <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {(
-            [
-              {
-                label: "Style of Music",
-                key: "styleOfMusic" as SectionKey,
-                limit: 900,
-              },
-              { label: "Title", key: "title" as SectionKey },
-              {
-                label: "Negative Prompt",
-                key: "negativePrompt" as SectionKey,
-                limit: 199,
-                min: 180,
-                mono: true,
-              },
-              {
-                label: "Lyrics",
-                key: "lyrics" as SectionKey,
-                limit: 4999,
-                min: 4900,
-              },
-            ] as Array<{
-              label: string;
-              key: SectionKey;
-              limit?: number;
-              min?: number;
-              mono?: boolean;
-            }>
-          ).map(({ label, key, limit, min, mono }) => {
-            const val = merged[key as keyof SunoTemplate] as string;
-            return (
-              <div key={key} className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">
-                    {label}
-                  </span>
-                  <span className="font-mono text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary/70 border border-primary/20">
-                    from V{selected[key] + 1}
-                  </span>
-                  <CharBadge count={val.length} limit={limit} min={min} />
-                </div>
-                <p
-                  className={cn(
-                    "text-[11px] text-zinc-300 leading-relaxed break-words",
-                    mono ? "font-mono" : ""
-                  )}
-                >
-                  {key === "lyrics" ? val.slice(0, 300) + (val.length > 300 ? "…" : "") : val}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* Composite Panel — only render once at least one variation is ready */}
+      {variations.length > 0 && (
+        <CompositePanelReady
+          merged={merged}
+          selected={selected}
+          anyNonDefault={anyNonDefault}
+          onCopy={() =>
+            copy(
+              [
+                `=== STYLE OF MUSIC ===\n${merged.styleOfMusic}`,
+                `=== TITLE ===\n${merged.title}`,
+                `=== LYRICS / METADATA ===\n${merged.lyrics}`,
+                `=== NEGATIVE PROMPT ===\n${merged.negativePrompt}`,
+              ].join("\n\n"),
+              "Composite template copied!"
+            )
+          }
+          onMerge={() => onMerge(merged)}
+        />
+      )}
     </div>
   );
 }
