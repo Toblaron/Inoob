@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import logoTrackTemplate from "@assets/logotracktemplateBilde-sharpen-denoise-text-lighting-remove-u_1774346189019.jpeg";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -427,6 +427,31 @@ export default function Home() {
   const [confirmedStructure, setConfirmedStructure] = useState<ConfirmedSection[] | null>(null);
   const [suggestedDefaults, setSuggestedDefaults] = useState<SuggestedDefaults | null>(null);
 
+  /**
+   * When structure is locked (confirmedStructure set), display the confirmed sections
+   * instead of the freshly-analyzed lyricsStructure to prevent UI/payload divergence.
+   */
+  const displayStructure = useMemo<LyricsStructure | null>(() => {
+    if (!lyricsStructure) return null;
+    if (!confirmedStructure) return lyricsStructure;
+    const remapped = confirmedStructure.map((cs, i) => {
+      const original = lyricsStructure.sections[i];
+      return {
+        label: cs.label,
+        lines: cs.lines,
+        rhymeScheme: original?.rhymeScheme ?? "",
+        sentiment: original?.sentiment ?? 0,
+        isHook: original?.isHook ?? false,
+        repetitionKey: original?.repetitionKey ?? "",
+      };
+    });
+    return {
+      ...lyricsStructure,
+      sections: remapped,
+      totalSections: remapped.length,
+    };
+  }, [lyricsStructure, confirmedStructure]);
+
   const clearAutoFill = (field: string) => {
     setAutoFilledFields((prev) => { const next = new Set(prev); next.delete(field); return next; });
   };
@@ -823,9 +848,12 @@ export default function Home() {
               setAutoFillValues((prev) => ({ ...prev, ...newSavedValues }));
             }
             if (d.instrumentHints && d.instrumentHints.length > 0 && selectedInstruments.length === 0) {
-              setSelectedInstruments(d.instrumentHints.slice(0, 6));
-              setAutoFilledFields((prev) => { const next = new Set(prev); next.add("instruments"); return next; });
-              setAutoFillValues((prev) => ({ ...prev, instruments: d.instrumentHints!.slice(0, 6).join(",") }));
+              const knownHints = d.instrumentHints.filter((h) => INSTRUMENT_TAGS.includes(h)).slice(0, MAX_INSTRUMENTS);
+              if (knownHints.length > 0) {
+                setSelectedInstruments(knownHints);
+                setAutoFilledFields((prev) => { const next = new Set(prev); next.add("instruments"); return next; });
+                setAutoFillValues((prev) => ({ ...prev, instruments: knownHints.join(",") }));
+              }
             }
             if (d.languageGenreHint && selectedGenres.length === 0) {
               setSelectedGenres([d.languageGenreHint]);
@@ -1407,7 +1435,7 @@ export default function Home() {
                           <button
                             key={g}
                             type="button"
-                            onClick={() => setSelectedGenres((p) => p.filter((x) => x !== g))}
+                            onClick={() => { setSelectedGenres((p) => p.filter((x) => x !== g)); clearAutoFill("genres"); }}
                             className="flex items-center gap-0.5 px-2 py-0.5 font-mono text-[11px] bg-primary/15 text-primary border border-primary/30 hover:border-destructive/40 hover:text-destructive transition-colors"
                           >
                             {g}<span className="text-[9px] leading-none ml-0.5">✕</span>
@@ -1436,7 +1464,7 @@ export default function Home() {
                                   <button
                                     key={genre}
                                     type="button"
-                                    onClick={() => !isDisabled && setSelectedGenres((p) => toggleSet(p, genre, MAX_GENRES))}
+                                    onClick={() => { if (!isDisabled) { setSelectedGenres((p) => toggleSet(p, genre, MAX_GENRES)); clearAutoFill("genres"); } }}
                                     className={cn(
                                       "px-2 py-0.5 font-mono text-[11px] border transition-all",
                                       isSelected ? "border-primary text-primary bg-primary/10"
@@ -1696,11 +1724,11 @@ export default function Home() {
         </motion.div>
       </div>
 
-      {/* Pre-generation Lyrics Structure Panel (from manual lyrics analyze) */}
-      {!currentTemplate && !isLoading && lyricsStructure && lyricsStructure.totalSections > 0 && (
+      {/* Pre-generation Lyrics Structure Panel (from URL fetch or manual analyze) */}
+      {!currentTemplate && !isLoading && displayStructure && displayStructure.totalSections > 0 && (
         <div className="relative z-10 px-4 max-w-6xl mx-auto w-full">
           <LyricsStructurePanel
-            structure={lyricsStructure}
+            structure={displayStructure}
             onConfirm={(sections) => setConfirmedStructure(sections)}
             onClear={() => setConfirmedStructure(null)}
             isLocked={confirmedStructure !== null}
@@ -1830,9 +1858,9 @@ export default function Home() {
               />
 
               {/* Lyrics Structure Panel */}
-              {lyricsStructure && lyricsStructure.totalSections > 0 && (
+              {displayStructure && displayStructure.totalSections > 0 && (
                 <LyricsStructurePanel
-                  structure={lyricsStructure}
+                  structure={displayStructure}
                   onConfirm={(sections) => setConfirmedStructure(sections)}
                   onClear={() => setConfirmedStructure(null)}
                   isLocked={confirmedStructure !== null}
