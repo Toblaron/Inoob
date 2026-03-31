@@ -1440,6 +1440,40 @@ export default function Home() {
                 </motion.div>
               )}
 
+              {/* Preview for manually pasted individual URLs (no playlist) */}
+              {!playlistPreview && !playlistLoading && (() => {
+                const urls = parseBatchUrls(batchUrlsText);
+                if (urls.length < 2) return null;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="flex flex-col gap-1 border border-zinc-800 bg-card px-3 py-2.5"
+                  >
+                    <p className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
+                      {urls.length} URL{urls.length !== 1 ? "s" : ""} queued for batch
+                    </p>
+                    <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                      {urls.map((url, i) => {
+                        const vidId = url.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/)?.[1];
+                        return (
+                          <div key={i} className="flex items-center gap-2">
+                            {vidId && (
+                              <img
+                                src={`https://i.ytimg.com/vi/${vidId}/default.jpg`}
+                                alt=""
+                                className="w-10 h-7 object-cover flex-shrink-0 border border-zinc-800"
+                              />
+                            )}
+                            <span className="font-mono text-[11px] text-zinc-400 truncate">{url}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                );
+              })()}
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"

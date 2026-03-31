@@ -1436,8 +1436,14 @@ router.post("/batch", async (req, res) => {
   res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
+  // Track client disconnect so we can stop processing early
+  let clientDisconnected = false;
+  req.on("close", () => { clientDisconnected = true; });
+
   const sendEvent = (type: string, data: unknown) => {
-    res.write(`data: ${JSON.stringify({ type, ...( typeof data === "object" && data !== null ? data : { data }) })}\n\n`);
+    if (!clientDisconnected) {
+      res.write(`data: ${JSON.stringify({ type, ...( typeof data === "object" && data !== null ? data : { data }) })}\n\n`);
+    }
   };
 
   // Send initial queued status for all tracks
@@ -1463,7 +1469,7 @@ router.post("/batch", async (req, res) => {
   const results: Record<number, unknown> = {};
 
   async function processNext(): Promise<void> {
-    if (idx >= tracks.length) return;
+    if (idx >= tracks.length || clientDisconnected) return;
     const track = tracks[idx++];
 
     sendEvent("progress", { track: { ...track, status: "analyzing" } });
