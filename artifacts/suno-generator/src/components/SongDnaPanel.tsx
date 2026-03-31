@@ -322,19 +322,31 @@ export function SongDnaPanel({
                         </div>
 
                         {onBlendGenerate && (
-                          <button
-                            onClick={handleBlend}
-                            disabled={blendPending}
-                            className={cn(
-                              "flex items-center gap-2 px-4 py-2 font-mono text-[10px] uppercase tracking-wider border transition-all",
-                              blendPending
-                                ? "border-primary/50 text-primary bg-primary/10"
-                                : "border-primary/30 text-zinc-400 hover:border-primary hover:text-primary"
+                          <div className="flex flex-col items-center gap-1">
+                            <button
+                              onClick={handleBlend}
+                              disabled={blendPending}
+                              className={cn(
+                                "flex items-center gap-2 px-4 py-2 font-mono text-[10px] uppercase tracking-wider border transition-all",
+                                blendPending
+                                  ? "border-primary/50 text-primary bg-primary/10"
+                                  : "border-primary/30 text-zinc-400 hover:border-primary hover:text-primary"
+                              )}
+                            >
+                              <Blend className="w-3 h-3" />
+                              {blendPending ? "Blend applied!" : "Apply Blend Settings"}
+                            </button>
+                            {blendPending && (
+                              <p className="font-mono text-[9px] text-primary/70">
+                                Energy &amp; tempo controls updated — click Generate to create the hybrid
+                              </p>
                             )}
-                          >
-                            <Blend className="w-3 h-3" />
-                            {blendPending ? "Generating blend..." : "Blend These Two — Generate Hybrid Template"}
-                          </button>
+                            {!blendPending && (
+                              <p className="font-mono text-[9px] text-zinc-600">
+                                Averages both fingerprints and sets energy + tempo for your next generation
+                              </p>
+                            )}
+                          </div>
                         )}
                       </motion.div>
                     )}
