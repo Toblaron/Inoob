@@ -388,6 +388,8 @@ function VariationColumn({
 interface CompositePanelReadyProps {
   merged: SunoTemplate;
   selected: Selection;
+  resolvedSelected: Selection;
+  firstReadyIdx: number;
   anyNonDefault: boolean;
   onCopy: () => void;
   onMerge: () => void;
@@ -408,7 +410,7 @@ const COMPOSITE_SECTIONS: CompositeSectionSpec[] = [
   { label: "Lyrics", key: "lyrics", limit: 4999, min: 4900 },
 ];
 
-function CompositePanelReady({ merged, selected, anyNonDefault, onCopy, onMerge }: CompositePanelReadyProps) {
+function CompositePanelReady({ merged, resolvedSelected, firstReadyIdx, anyNonDefault, onCopy, onMerge }: CompositePanelReadyProps) {
   return (
     <div className="border border-primary/25 bg-card">
       <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-primary/10 flex-wrap gap-y-2">
@@ -423,7 +425,7 @@ function CompositePanelReady({ merged, selected, anyNonDefault, onCopy, onMerge 
             </span>
           ) : (
             <span className="font-mono text-[9px] px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-600">
-              All V1
+              All V{firstReadyIdx + 1}
             </span>
           )}
         </div>
@@ -457,7 +459,7 @@ function CompositePanelReady({ merged, selected, anyNonDefault, onCopy, onMerge 
                   {label}
                 </span>
                 <span className="font-mono text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary/70 border border-primary/20">
-                  from V{selected[key] + 1}
+                  from V{resolvedSelected[key] + 1}
                 </span>
                 <CharBadge count={val.length} limit={limit} min={min} />
               </div>
@@ -575,7 +577,14 @@ export function VariationWorkshop({
         }
       : null;
 
-  const anyNonDefault = Object.values(selected).some((v) => v !== 0);
+  const resolvedSelected: Selection = {
+    styleOfMusic: selIdx("styleOfMusic"),
+    title: selIdx("title"),
+    lyrics: selIdx("lyrics"),
+    negativePrompt: selIdx("negativePrompt"),
+  };
+
+  const anyNonDefault = Object.values(resolvedSelected).some((v) => v !== firstReadyIdx);
 
   const scrollLeft = () => {
     scrollRef.current?.scrollBy({ left: -260, behavior: "smooth" });
@@ -815,6 +824,8 @@ export function VariationWorkshop({
         <CompositePanelReady
           merged={merged}
           selected={selected}
+          resolvedSelected={resolvedSelected}
+          firstReadyIdx={firstReadyIdx}
           anyNonDefault={anyNonDefault}
           onCopy={() =>
             copy(
