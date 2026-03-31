@@ -1368,49 +1368,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Install prompt (Chrome/Edge) */}
-      {isInstallable && !installDismissed && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 bg-card border border-primary/30 shadow-2xl">
-          <Download className="w-4 h-4 text-primary shrink-0" />
-          <span className="font-mono text-[11px] text-zinc-300">Install app for offline access</span>
-          <button
-            onClick={promptInstall}
-            className="font-mono text-[11px] px-3 py-1 border border-primary text-primary hover:bg-primary hover:text-black transition-all uppercase tracking-wider"
-          >
-            Install
-          </button>
-          <button
-            onClick={() => setInstallDismissed(true)}
-            className="text-zinc-600 hover:text-zinc-400 transition-colors"
-            aria-label="Dismiss"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* iOS "Add to Home Screen" tip */}
-      {isIOS && !installDismissed && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm flex flex-col gap-2 px-4 py-3 bg-card border border-primary/30 shadow-2xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Share className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span className="font-mono text-[11px] text-primary uppercase tracking-wider">Add to Home Screen</span>
-            </div>
-            <button
-              onClick={() => setInstallDismissed(true)}
-              className="text-zinc-600 hover:text-zinc-400 transition-colors"
-              aria-label="Dismiss"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <p className="font-mono text-[10px] text-zinc-500 leading-relaxed">
-            Tap the <span className="text-zinc-300">Share</span> button in Safari, then tap <span className="text-zinc-300">&quot;Add to Home Screen&quot;</span> to install this app.
-          </p>
-        </div>
-      )}
-
       <div className="relative z-10 w-full max-w-3xl flex flex-col items-center mb-8">
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -1419,10 +1376,52 @@ export default function Home() {
           className="w-full mb-8"
         >
           {/* Logo + header */}
-          <div className="flex items-center gap-3 mb-3">
-            <span className="font-mono text-[10px] text-primary/60 uppercase tracking-widest border border-primary/20 px-2 py-0.5">v2</span>
-            <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">SUNO.AI PROMPT GENERATOR</span>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] text-primary/60 uppercase tracking-widest border border-primary/20 px-2 py-0.5">v2</span>
+              <span className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">SUNO.AI PROMPT GENERATOR</span>
+            </div>
+            {/* Install button (Chrome/Edge) */}
+            {isInstallable && !installDismissed && (
+              <button
+                onClick={promptInstall}
+                className="flex items-center gap-1.5 font-mono text-[10px] px-2.5 py-1 border border-primary/30 text-primary/70 hover:border-primary hover:text-primary transition-all uppercase tracking-wider"
+                title="Install app for offline access"
+              >
+                <Download className="w-3 h-3" />
+                Install App
+              </button>
+            )}
+            {/* iOS Add to Home Screen hint */}
+            {isIOS && !installDismissed && (
+              <button
+                onClick={() => setShowIOSInstallTip((v) => !v)}
+                className="flex items-center gap-1.5 font-mono text-[10px] px-2.5 py-1 border border-primary/30 text-primary/70 hover:border-primary hover:text-primary transition-all uppercase tracking-wider"
+                title="Add to Home Screen instructions"
+              >
+                <Share className="w-3 h-3" />
+                Add to Home Screen
+              </button>
+            )}
           </div>
+          {/* iOS install tooltip */}
+          {isIOS && showIOSInstallTip && !installDismissed && (
+            <div className="flex items-start gap-3 px-4 py-3 mb-3 bg-card border border-primary/20">
+              <Share className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-mono text-[10px] text-zinc-400 leading-relaxed">
+                  In Safari, tap the <span className="text-zinc-200">Share</span> button (<span className="text-zinc-200">↑</span>) then tap <span className="text-zinc-200">&quot;Add to Home Screen&quot;</span> to install this app.
+                </p>
+              </div>
+              <button
+                onClick={() => { setInstallDismissed(true); setShowIOSInstallTip(false); }}
+                className="text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
+                aria-label="Dismiss"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
           <img
             src={logoTrackTemplate}
             alt="Track → Template"
