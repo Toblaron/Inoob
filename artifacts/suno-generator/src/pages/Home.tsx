@@ -916,6 +916,13 @@ export default function Home() {
     setCurrentTemplate(merged);
     setVariationWorkshop(null);
     addToHistory(lastUrlRef.current, merged);
+    const allText = [
+      `TITLE: ${merged.title ?? ""}`,
+      `\nSTYLE OF MUSIC:\n${merged.styleOfMusic ?? ""}`,
+      `\nNEGATIVE PROMPT:\n${merged.negativePrompt ?? ""}`,
+      `\nLYRICS:\n${merged.lyrics ?? ""}`,
+    ].join("\n");
+    navigator.clipboard.writeText(allText).catch(() => undefined);
   };
 
   const handleRegenerateSection = (section: keyof SunoTemplate) => {

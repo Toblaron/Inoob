@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { GenerateSunoTemplateBody, GenerateSunoTemplateResponse } from "@workspace/api-zod";
+import { GenerateSunoTemplateBody, GenerateSunoTemplateResponse, GenerateVariationsBody } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import ytdl from "@distube/ytdl-core";
 import { parse as parseHtml } from "node-html-parser";
@@ -1257,14 +1257,13 @@ router.post("/generate-template", async (req, res) => {
  * Returns { variations: SunoTemplate[] } — partial success is allowed (at least 1 must succeed).
  */
 router.post("/generate-variations", async (req, res) => {
-  const parsed = GenerateSunoTemplateBody.safeParse(req.body);
+  const parsed = GenerateVariationsBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body. Please provide a youtubeUrl." });
     return;
   }
 
-  const rawCount = typeof req.body.count === "number" ? req.body.count : 2;
-  const count = Math.min(Math.max(Math.round(rawCount), 1), 4);
+  const count = Math.min(Math.max(Math.round(parsed.data.count ?? 2), 1), 4);
 
   console.log(`[variations] Generating ${count} variations for ${parsed.data.youtubeUrl}`);
 
