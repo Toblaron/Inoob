@@ -551,7 +551,7 @@ export function VariationWorkshop({
     return idx;
   };
 
-  const merged: SunoTemplate =
+  const merged: SunoTemplate | null =
     reference !== null
       ? {
           ...reference,
@@ -560,7 +560,7 @@ export function VariationWorkshop({
           lyrics: safeVariation(selIdx("lyrics")).lyrics,
           negativePrompt: safeVariation(selIdx("negativePrompt")).negativePrompt,
         }
-      : ({} as SunoTemplate);
+      : null;
 
   const anyNonDefault = Object.values(selected).some((v) => v !== 0);
 
@@ -796,7 +796,7 @@ export function VariationWorkshop({
       )}
 
       {/* Composite Panel — only render once at least one variation is ready */}
-      {variations.length > 0 && (
+      {readySlots.length > 0 && reference !== null && merged !== null && (
         <CompositePanelReady
           merged={merged}
           selected={selected}

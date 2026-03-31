@@ -876,54 +876,44 @@ export default function Home() {
     );
   };
 
-  const slotsRef = useRef<(SunoTemplate | null | "error")[]>([]);
-  const settledCountRef = useRef(0);
-
   const handleGenerateVariations = () => {
     if (!lastUrlRef.current) return;
     const count = variationCount;
-    const opts = lastOptionsRef.current as object;
-
-    slotsRef.current = Array(count).fill(null);
-    settledCountRef.current = 0;
 
     setIsGeneratingVariations(true);
     setVariationWorkshop(Array(count).fill(null));
     setVariationPending(Array(count).fill(true));
     setApiError(null);
 
-    for (let i = 0; i < count; i++) {
-      const slotIdx = i;
-      mainMutation.mutate(
-        {
-          data: {
-            youtubeUrl: lastUrlRef.current!,
-            ...(opts as object),
-            variationIndex: slotIdx + 1,
-          },
+    variationsMutation.mutate(
+      {
+        data: {
+          youtubeUrl: lastUrlRef.current!,
+          ...(lastOptionsRef.current as object),
+          count,
         },
-        {
-          onSuccess: (data) => {
-            slotsRef.current[slotIdx] = data;
-            settledCountRef.current += 1;
-            setVariationPending((prev) => { const n = [...prev]; n[slotIdx] = false; return n; });
-            setVariationWorkshop([...slotsRef.current] as (SunoTemplate | null)[]);
-            if (settledCountRef.current === count) setIsGeneratingVariations(false);
-          },
-          onError: () => {
-            slotsRef.current[slotIdx] = "error";
-            settledCountRef.current += 1;
-            setVariationPending((prev) => { const n = [...prev]; n[slotIdx] = false; return n; });
-            setVariationWorkshop([...slotsRef.current] as (SunoTemplate | null)[]);
-            if (settledCountRef.current === count) {
-              const anyOk = slotsRef.current.some((s) => s !== null && s !== "error");
-              if (!anyOk) setApiError("All variation requests failed.");
-              setIsGeneratingVariations(false);
-            }
-          },
-        }
-      );
-    }
+      },
+      {
+        onSuccess: (data) => {
+          const slots = data.slots.map(
+            (s): SunoTemplate | null | "error" => (s.template ? s.template : "error")
+          );
+          setVariationWorkshop(slots);
+          setVariationPending([]);
+          setIsGeneratingVariations(false);
+        },
+        onError: (err) => {
+          setApiError(
+            (err as { data?: { error?: string }; message?: string })?.data?.error ??
+              (err as Error)?.message ??
+              "Failed to generate variations"
+          );
+          setVariationPending([]);
+          setVariationWorkshop(null);
+          setIsGeneratingVariations(false);
+        },
+      }
+    );
   };
 
   const handleMergeVariation = (merged: SunoTemplate) => {
@@ -971,7 +961,7 @@ export default function Home() {
     saveHistory([]);
   };
 
-  const isLoading = mainMutation.isPending && !regeneratingSection;
+  const isLoading = mainMutation.isPending && !regeneratingSection && !isGeneratingVariations;
 
   const styleActiveCount = [
     vocalGender !== "auto",
