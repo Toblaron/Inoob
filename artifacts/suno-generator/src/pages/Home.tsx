@@ -33,8 +33,9 @@ import {
   X,
 } from "lucide-react";
 import { useGenerateSunoTemplate } from "@workspace/api-client-react";
-import type { SunoTemplate } from "@workspace/api-client-react";
+import type { SunoTemplate, LyricsStructure, SuggestedDefaults } from "@workspace/api-client-react";
 import { TemplateResult } from "@/components/TemplateResult";
+import { LyricsStructurePanel, type ConfirmedSection } from "@/components/LyricsStructurePanel";
 import { LoadingEq } from "@/components/LoadingEq";
 import { ExampleGallery } from "@/components/ExampleGallery";
 import { cn } from "@/lib/utils";
@@ -419,6 +420,14 @@ export default function Home() {
 
   const [suggestions, setSuggestions] = useState<SuggestedControls | null>(null);
   const [suggestLoading, setSuggestLoading] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+  const [lyricsStructure, setLyricsStructure] = useState<LyricsStructure | null>(null);
+  const [confirmedStructure, setConfirmedStructure] = useState<ConfirmedSection[] | null>(null);
+  const [suggestedDefaults, setSuggestedDefaults] = useState<SuggestedDefaults | null>(null);
+
+  const clearAutoFill = (field: string) => {
+    setAutoFilledFields((prev) => { const next = new Set(prev); next.delete(field); return next; });
+  };
 
   const lastUrlRef = useRef<string>("");
   const lastOptionsRef = useRef<object>({});
@@ -504,13 +513,16 @@ export default function Home() {
       });
       if (!resp.ok) return;
       const data = await resp.json() as SuggestedControls;
-      const hasAny = data.genres.length > 0 || data.era || data.energy || data.tempo;
+      const hasAny = data.genres.length > 0 || data.era || data.energy || data.tempo || data.vocals;
       if (!hasAny) return;
       setSuggestions(data);
-      if (data.genres.length > 0) setSelectedGenres(data.genres);
-      if (data.era) setEra(data.era as typeof era);
-      if (data.energy) setEnergyLevel(data.energy as typeof energyLevel);
-      if (data.tempo) setTempo(data.tempo as typeof tempo);
+      const autoFilled = new Set<string>();
+      if (data.genres.length > 0) { setSelectedGenres(data.genres); autoFilled.add("genres"); }
+      if (data.era) { setEra(data.era as typeof era); autoFilled.add("era"); }
+      if (data.energy) { setEnergyLevel(data.energy as typeof energyLevel); autoFilled.add("energy"); }
+      if (data.tempo) { setTempo(data.tempo as typeof tempo); autoFilled.add("tempo"); }
+      if (data.vocals) { setVocalGender(data.vocals as typeof vocalGender); autoFilled.add("vocals"); }
+      setAutoFilledFields(autoFilled);
     } catch {}
     finally {
       setSuggestLoading(false);
@@ -526,6 +538,10 @@ export default function Home() {
       setVideoPreview(null);
       setSuggestions(null);
       setSuggestLoading(false);
+      setAutoFilledFields(new Set());
+      setLyricsStructure(null);
+      setConfirmedStructure(null);
+      setSuggestedDefaults(null);
       return;
     }
     setVideoPreview((prev) => prev ?? { title: "", author: "", thumbnail: `https://img.youtube.com/vi/${id}/mqdefault.jpg`, duration: null });
@@ -657,6 +673,7 @@ export default function Home() {
       excludeTags: allExcludeTags.length > 0 ? allExcludeTags : undefined,
       isInstrumental: isInstrumental || undefined,
       feedbackContext: buildFeedbackContext(),
+      confirmedStructure: confirmedStructure ?? undefined,
     };
   };
 
@@ -718,6 +735,7 @@ export default function Home() {
     setTemplateRating(null);
     setHoverRating(null);
     setRatingSaved(false);
+    setLyricsStructure(null);
     const usedOpts: UsedOptions = {
       genres: selectedGenres.length > 0 ? selectedGenres : undefined,
       moods: selectedMoods.length > 0 ? selectedMoods : undefined,
@@ -733,7 +751,27 @@ export default function Home() {
         onSuccess: (data) => {
           setCurrentTemplate(data);
           addToHistory(values.youtubeUrl, data, usedOpts);
-          // Persist style settings to per-artist memory
+          if (data.lyricsStructure) setLyricsStructure(data.lyricsStructure);
+          if (data.suggestedDefaults) {
+            setSuggestedDefaults(data.suggestedDefaults);
+            const d = data.suggestedDefaults;
+            setAutoFilledFields((prev) => {
+              const next = new Set(prev);
+              if (d.energy && energyLevel === "auto" && !next.has("energy")) {
+                setEnergyLevel(d.energy as typeof energyLevel);
+                next.add("energy");
+              }
+              if (d.era && era === "auto" && !next.has("era")) {
+                setEra(d.era as typeof era);
+                next.add("era");
+              }
+              if (d.tempo && !tempo && !next.has("tempo")) {
+                setTempo(d.tempo as "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper" | null);
+                next.add("tempo");
+              }
+              return next;
+            });
+          }
           if (data.artist && (selectedGenres.length > 0 || era !== "auto" || energyLevel !== "auto")) {
             saveArtistStyle(data.artist, {
               genres: selectedGenres.length > 0 ? selectedGenres : undefined,
@@ -1135,6 +1173,7 @@ export default function Home() {
                           setEra("auto");
                           setEnergyLevel("auto");
                           setTempo(null);
+                          setAutoFilledFields(new Set());
                         }}
                         className="shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors p-0.5"
                         title="Clear suggestions"
@@ -1151,10 +1190,11 @@ export default function Home() {
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Mic2 className="w-3 h-3 text-secondary" /> Vocals
+                        {autoFilledFields.has("vocals") && <AutoBadge />}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(["auto", ...ALL_VOCALS] as const).map((v) => (
-                          <ChipButton key={v} active={vocalGender === v} onClick={() => setVocalGender(v as typeof vocalGender)}>
+                          <ChipButton key={v} active={vocalGender === v} onClick={() => { setVocalGender(v as typeof vocalGender); clearAutoFill("vocals"); }}>
                             {v === "auto" ? "Auto" : v.charAt(0).toUpperCase() + v.slice(1)}
                           </ChipButton>
                         ))}
@@ -1163,10 +1203,11 @@ export default function Home() {
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Zap className="w-3 h-3 text-secondary" /> Energy
+                        {autoFilledFields.has("energy") && <AutoBadge />}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(["auto", ...ALL_ENERGIES] as const).map((v) => (
-                          <ChipButton key={v} active={energyLevel === v} onClick={() => setEnergyLevel(v as typeof energyLevel)}>
+                          <ChipButton key={v} active={energyLevel === v} onClick={() => { setEnergyLevel(v as typeof energyLevel); clearAutoFill("energy"); }}>
                             {v === "auto" ? "Auto" : v.charAt(0).toUpperCase() + v.slice(1)}
                           </ChipButton>
                         ))}
@@ -1179,6 +1220,7 @@ export default function Home() {
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Gauge className="w-3 h-3 text-secondary" /> Tempo
+                        {autoFilledFields.has("tempo") && <AutoBadge />}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(ALL_TEMPOS as readonly string[]).map((v) => {
@@ -1187,7 +1229,7 @@ export default function Home() {
                             uptempo: "Up-tempo", fast: "Fast", hyper: "Hyper",
                           };
                           return (
-                            <ChipButton key={v} active={tempo === v} onClick={() => setTempo((prev) => prev === v ? null : v as typeof tempo)}>
+                            <ChipButton key={v} active={tempo === v} onClick={() => { setTempo((prev) => prev === v ? null : v as typeof tempo); clearAutoFill("tempo"); }}>
                               {labels[v]}
                             </ChipButton>
                           );
@@ -1197,10 +1239,11 @@ export default function Home() {
                     <div className="space-y-1.5">
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Clock className="w-3 h-3 text-secondary" /> Era
+                        {autoFilledFields.has("era") && <AutoBadge />}
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {(["auto", ...ALL_ERAS] as const).map((v) => (
-                          <ChipButton key={v} active={era === v} onClick={() => setEra(v as typeof era)}>
+                          <ChipButton key={v} active={era === v} onClick={() => { setEra(v as typeof era); clearAutoFill("era"); }}>
                             {v === "auto" ? "Auto" : v}
                           </ChipButton>
                         ))}
@@ -1272,6 +1315,7 @@ export default function Home() {
                       <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                         <Tags className="w-3 h-3 text-secondary" /> Genres
                         <span className="text-[10px] text-zinc-600 font-normal normal-case tracking-normal">(up to {MAX_GENRES})</span>
+                        {autoFilledFields.has("genres") && <AutoBadge />}
                       </label>
                       {selectedGenres.length > 0 && (
                         <button type="button" onClick={() => setSelectedGenres([])} className="text-[11px] text-zinc-500 hover:text-destructive transition-colors">Clear all</button>
@@ -1670,6 +1714,31 @@ export default function Home() {
                 onRegenerateSection={handleRegenerateSection}
               />
 
+              {/* Lyrics Structure Panel */}
+              {lyricsStructure && lyricsStructure.totalSections > 0 && (
+                <LyricsStructurePanel
+                  structure={lyricsStructure}
+                  onConfirm={(sections) => setConfirmedStructure(sections)}
+                  onClear={() => setConfirmedStructure(null)}
+                  isLocked={confirmedStructure !== null}
+                />
+              )}
+
+              {/* Suggested defaults banner (from BPM analysis after generation) */}
+              {suggestedDefaults && (suggestedDefaults.instrumentHints?.length || suggestedDefaults.languageGenreHint) && (
+                <div className="flex items-start gap-2 px-3 py-2.5 bg-primary/5 border border-primary/15 max-w-6xl mx-auto mt-2">
+                  <Sparkles className="w-3.5 h-3.5 text-primary/60 shrink-0 mt-0.5" />
+                  <div className="text-[11px] font-mono text-zinc-400 space-y-0.5">
+                    {suggestedDefaults.languageGenreHint && (
+                      <p>Language hint: <span className="text-primary">{suggestedDefaults.languageGenreHint}</span></p>
+                    )}
+                    {suggestedDefaults.instrumentHints?.length && (
+                      <p>Instruments from description: <span className="text-primary">{suggestedDefaults.instrumentHints.join(", ")}</span></p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Rating bar */}
               <div className="flex items-center justify-center gap-3 mt-4 py-2.5 px-5 bg-card border border-primary/10 max-w-6xl mx-auto">
                 <span className="text-xs text-zinc-400 mr-1 shrink-0">Rate this template:</span>
@@ -1789,6 +1858,14 @@ function ChipButton({ active, onClick, children }: { active: boolean; onClick: (
     >
       {children}
     </button>
+  );
+}
+
+function AutoBadge() {
+  return (
+    <span className="font-mono text-[9px] px-1 py-0.5 bg-primary/15 text-primary border border-primary/25 tracking-normal normal-case font-normal">
+      AI
+    </span>
   );
 }
 

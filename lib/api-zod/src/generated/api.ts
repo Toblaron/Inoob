@@ -35,6 +35,37 @@ export const GenerateSunoTemplateBody = zod.object({
   variationIndex: zod.number().optional().describe("Which variation to generate (1 or 2)"),
   feedbackContext: zod.string().optional().describe("Learning context derived from the user's past template ratings"),
   isInstrumental: zod.boolean().optional().describe("When true, generate as a fully instrumental track — no lyrics, only structural cues"),
+  confirmedStructure: zod.array(zod.object({
+    label: zod.string(),
+    lines: zod.array(zod.string()),
+  })).optional().describe("User-confirmed lyrics structure to use as a constraint in generation"),
+});
+
+const LyricsSectionSchema = zod.object({
+  label: zod.string(),
+  lines: zod.array(zod.string()),
+  rhymeScheme: zod.string(),
+  sentiment: zod.number(),
+  isHook: zod.boolean(),
+  repetitionKey: zod.string(),
+});
+
+const LyricsStructureSchema = zod.object({
+  sections: zod.array(LyricsSectionSchema),
+  hookRepetitions: zod.number(),
+  sentimentArc: zod.array(zod.number()),
+  hasTaggedStructure: zod.boolean(),
+  totalSections: zod.number(),
+  dominantScheme: zod.string(),
+});
+
+const SuggestedDefaultsSchema = zod.object({
+  energy: zod.string().optional(),
+  tempo: zod.string().optional(),
+  era: zod.string().optional(),
+  instrumentHints: zod.array(zod.string()).optional(),
+  languageGenreHint: zod.string().optional(),
+  sources: zod.record(zod.string()),
 });
 
 export const GenerateSunoTemplateResponse = zod.object({
@@ -57,4 +88,6 @@ export const GenerateSunoTemplateResponse = zod.object({
   tags: zod
     .array(zod.string())
     .describe("Additional tags for mood, instruments, tempo"),
+  lyricsStructure: LyricsStructureSchema.optional().describe("Analyzed structure of the source lyrics"),
+  suggestedDefaults: SuggestedDefaultsSchema.optional().describe("Smart defaults computed from BPM, era, and language data"),
 });

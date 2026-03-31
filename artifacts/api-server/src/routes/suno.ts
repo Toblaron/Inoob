@@ -4,6 +4,8 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import ytdl from "@distube/ytdl-core";
 import { parse as parseHtml } from "node-html-parser";
 import { detectAudioFeatures, type AudioFeatures } from "../lib/audioFeatures.js";
+import { analyzeLyricsStructure } from "../lib/lyricsStructure.js";
+import { computeSuggestedDefaults } from "../lib/suggestedDefaults.js";
 
 const router: IRouter = Router();
 
@@ -965,7 +967,7 @@ router.post("/generate-template", async (req, res) => {
       return;
     }
 
-    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext, isInstrumental } = parsed.data;
+    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext, isInstrumental, confirmedStructure } = parsed.data;
 
     if (!isValidYouTubeUrl(youtubeUrl)) {
       res.status(400).json({ error: "Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link." });
@@ -991,6 +993,17 @@ router.post("/generate-template", async (req, res) => {
       };
     }
 
+    const lyricsStructure = metadata.lyricsText
+      ? analyzeLyricsStructure(metadata.lyricsText)
+      : undefined;
+
+    const suggestedDefaults = computeSuggestedDefaults({
+      bpm: metadata.audioFeatures?.bpm,
+      releaseYear: metadata.musicBrainz?.releaseYear ?? metadata.descriptionData?.releaseYear,
+      description: metadata.description,
+      language: metadata.language,
+    });
+
     const context = buildPromptContext(metadata);
     const effectiveVocalGender = isInstrumental ? "no vocals" : vocalGender;
     const styleControls = buildStyleControls({ vocalGender: effectiveVocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex, feedbackContext });
@@ -1014,7 +1027,11 @@ router.post("/generate-template", async (req, res) => {
       ? "\n\n🎵 INSTRUMENTAL MODE ACTIVE: Generate this as a fully instrumental track. The lyrics section (Section 2) MUST contain ONLY structural/arrangement tags and instrumental direction cues — absolutely NO actual lyric text or sung words. Use detailed bracketed tags such as [Intro - Piano Motif], [Verse 1 - Guitar Melody, sparse drums], [Build - Strings Rising, tension increasing], [Chorus - Full Band, driving instrumental hook], [Bridge - Synth Solo], [Breakdown - Drums only], [Outro - Fade with lead guitar]. Fill the lyrics field to the 4,900–4,999 character limit using these rich instrumental direction cues. The negative prompt MUST prominently include: vocals, singing, lyrics, rap, spoken word."
       : "";
 
-    const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}${modeInstruction}${instrumentalInstruction}${styleControls}
+    const confirmedStructureHint = confirmedStructure && confirmedStructure.length > 0
+      ? `\n\nUSER-CONFIRMED LYRICS STRUCTURE — The user has reviewed and confirmed the following section layout. Use EXACTLY these section labels and line groupings when building Section 2 (lyrics). Do not reorder sections. You may add production cue lines and performance directions within each section, but the section labels and lyric lines must match the confirmed structure:\n${confirmedStructure.map((s: { label: string; lines: string[] }) => `[${s.label}]\n${s.lines.join("\n")}`).join("\n\n")}`
+      : "";
+
+    const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}${modeInstruction}${instrumentalInstruction}${confirmedStructureHint}${styleControls}
 
 ${context}`;
 
@@ -1049,6 +1066,8 @@ ${context}`;
       lyrics: trimToCharLimit(aiResult.lyrics, 4999),
       negativePrompt: aiResult.negativePrompt,
       tags: [],
+      lyricsStructure: lyricsStructure ?? undefined,
+      suggestedDefaults: Object.keys(suggestedDefaults.sources).length > 0 ? suggestedDefaults : undefined,
     });
 
     res.json(template);

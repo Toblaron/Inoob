@@ -9,6 +9,11 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface ConfirmedStructureSection {
+  label: string;
+  lines: string[];
+}
+
 export interface GenerateTemplateRequest {
   /** A YouTube video URL */
   youtubeUrl: string;
@@ -40,6 +45,35 @@ export interface GenerateTemplateRequest {
   feedbackContext?: string;
   /** When true, generate as a fully instrumental track — no lyrics, only structural cues */
   isInstrumental?: boolean;
+  /** User-confirmed lyrics structure to use as a constraint in generation */
+  confirmedStructure?: ConfirmedStructureSection[];
+}
+
+export interface LyricsSection {
+  label: string;
+  lines: string[];
+  rhymeScheme: string;
+  sentiment: number;
+  isHook: boolean;
+  repetitionKey: string;
+}
+
+export interface LyricsStructure {
+  sections: LyricsSection[];
+  hookRepetitions: number;
+  sentimentArc: number[];
+  hasTaggedStructure: boolean;
+  totalSections: number;
+  dominantScheme: string;
+}
+
+export interface SuggestedDefaults {
+  energy?: string;
+  tempo?: string;
+  era?: string;
+  instrumentHints?: string[];
+  languageGenreHint?: string;
+  sources: Record<string, string>;
 }
 
 export interface SunoTemplate {
@@ -55,6 +89,10 @@ export interface SunoTemplate {
   negativePrompt: string;
   /** Additional tags for mood, instruments, tempo */
   tags: string[];
+  /** Analyzed structure of the source lyrics */
+  lyricsStructure?: LyricsStructure;
+  /** Smart defaults computed from BPM, era, and language data */
+  suggestedDefaults?: SuggestedDefaults;
 }
 
 export interface ErrorResponse {
