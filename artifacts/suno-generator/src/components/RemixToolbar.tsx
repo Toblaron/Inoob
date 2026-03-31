@@ -69,7 +69,7 @@ export function RemixToolbar({ onTransform, activeTransformId, disabled, chainLe
               {chainLength - 1} step{chainLength !== 2 ? "s" : ""}
             </span>
           )}
-          {chainLength >= 10 && (
+          {chainLength - 1 >= 10 && (
             <span className="font-mono text-[10px] text-yellow-500/80">max chain reached</span>
           )}
         </div>
@@ -87,7 +87,7 @@ export function RemixToolbar({ onTransform, activeTransformId, disabled, chainLe
                     <button
                       key={preset.id}
                       onClick={() => onTransform(preset.id)}
-                      disabled={disabled || !!activeTransformId || chainLength >= 10}
+                      disabled={disabled || !!activeTransformId || chainLength - 1 >= 10}
                       title={`Apply "${preset.name}" transformation`}
                       className={cn(
                         "flex items-center gap-1 px-2.5 py-1 font-mono text-[11px] border transition-all",
