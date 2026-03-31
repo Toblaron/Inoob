@@ -2021,7 +2021,7 @@ export const TRANSFORM_PRESETS: TransformPreset[] = [
  * applies a targeted delta (era shift, genre pivot, mood shift, energy change).
  * Does NOT touch lyrics. Returns only the changed fields.
  */
-router.post("/transform", async (req, res) => {
+router.post("/suno/transform", async (req, res) => {
   const parseResult = TransformTemplateBody.safeParse(req.body);
   if (!parseResult.success) {
     res.status(400).json({ error: "Invalid request", details: parseResult.error.flatten() });

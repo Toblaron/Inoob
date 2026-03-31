@@ -422,6 +422,11 @@ export default function Home() {
   const [remixChain, setRemixChain] = useState<RemixSnapshot[]>([]);
   const [remixChainIndex, setRemixChainIndex] = useState<number>(0);
   const [activeTransformId, setActiveTransformId] = useState<string | null>(null);
+  const remixChainRef = useRef<RemixSnapshot[]>([]);
+  const remixChainIndexRef = useRef<number>(0);
+
+  useEffect(() => { remixChainRef.current = remixChain; }, [remixChain]);
+  useEffect(() => { remixChainIndexRef.current = remixChainIndex; }, [remixChainIndex]);
 
   const [batchMode, setBatchMode] = useState(false);
   const [batchUrlsText, setBatchUrlsText] = useState("");
@@ -822,7 +827,7 @@ export default function Home() {
     setActiveTransformId(transformId);
     const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
     try {
-      const resp = await fetch(`${apiBase}/api/transform`, {
+      const resp = await fetch(`${apiBase}/api/suno/transform`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -845,15 +850,19 @@ export default function Home() {
       const preset = TRANSFORM_PRESETS.find((p) => p.id === transformId);
       const label = preset?.name ?? transformId;
       setCurrentTemplate(updated);
-      setRemixChain((prev) => {
-        const base = prev.length === 0
-          ? [{ label: "Original", template: currentTemplate }]
-          : prev;
-        return [...base, { label, template: updated }];
-      });
-      setRemixChainIndex((prev) => {
-        return prev + 1;
-      });
+
+      const currentChain = remixChainRef.current;
+      const currentIdx = remixChainIndexRef.current;
+
+      const baseChain = currentChain.length === 0
+        ? [{ label: "Original", template: currentTemplate }]
+        : currentChain.slice(0, currentIdx + 1);
+
+      const newChain = [...baseChain, { label, template: updated }];
+      const newIndex = newChain.length - 1;
+
+      setRemixChain(newChain);
+      setRemixChainIndex(newIndex);
     } catch (err) {
       setApiError((err as Error).message ?? "Transform failed");
     } finally {
