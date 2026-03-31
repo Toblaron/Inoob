@@ -950,11 +950,14 @@ export default function Home() {
 
   const detectPlaylistUrl = useCallback((text: string): string | null => {
     const lines = text.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
-    const first = lines[0] ?? "";
-    try {
-      const u = new URL(first);
-      return u.searchParams.get("list") ? first : null;
-    } catch { return null; }
+    // Scan all lines for a playlist URL (list= param), not just the first
+    for (const line of lines) {
+      try {
+        const u = new URL(line);
+        if (u.searchParams.get("list")) return line;
+      } catch { /* not a valid URL, skip */ }
+    }
+    return null;
   }, []);
 
   const fetchPlaylistPreview = useCallback(async (playlistUrl: string) => {
@@ -1097,6 +1100,11 @@ export default function Home() {
         energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
         era: era !== "auto" ? era : undefined,
         mode: mode ?? undefined,
+        genres: selectedGenres.length > 0 ? selectedGenres : undefined,
+        moods: selectedMoods.length > 0 ? selectedMoods : undefined,
+        instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
+        excludeTags: excludeTags.length > 0 ? excludeTags : undefined,
+        genreNudge: genreNudge.trim() || undefined,
       }),
     })
       .then(async (resp) => {

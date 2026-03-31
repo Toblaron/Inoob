@@ -1331,7 +1331,7 @@ function extractPlaylistId(url: string): string | null {
  */
 async function fetchPlaylistTracks(
   playlistId: string
-): Promise<{ videoId: string; title: string; url: string; thumbnail?: string }[]> {
+): Promise<{ tracks: { videoId: string; title: string; url: string; thumbnail?: string }[]; truncated: boolean }> {
   const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${playlistId}`;
   const resp = await fetch(feedUrl, {
     headers: { "User-Agent": "SunoTemplateGenerator/1.0" },
@@ -1345,9 +1345,10 @@ async function fetchPlaylistTracks(
   const videoIdRegex = /<yt:videoId>([^<]+)<\/yt:videoId>/;
   const titleRegex = /<title>([^<]+)<\/title>/;
 
-  const tracks: { videoId: string; title: string; url: string; thumbnail?: string }[] = [];
+  // Collect up to PLAYLIST_CAP + 1 entries to detect whether there are more beyond the cap
+  const allParsed: { videoId: string; title: string; url: string; thumbnail?: string }[] = [];
   let match;
-  while ((match = entryRegex.exec(xml)) !== null && tracks.length < PLAYLIST_CAP) {
+  while ((match = entryRegex.exec(xml)) !== null && allParsed.length <= PLAYLIST_CAP) {
     const entry = match[1];
     const videoIdMatch = videoIdRegex.exec(entry);
     const titleMatch = titleRegex.exec(entry);
@@ -1360,14 +1361,16 @@ async function fetchPlaylistTracks(
       .replace(/&quot;/g, '"')
       .replace(/&#39;/g, "'")
       .trim();
-    tracks.push({
+    allParsed.push({
       videoId,
       title: rawTitle,
       url: `https://www.youtube.com/watch?v=${videoId}`,
       thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
     });
   }
-  return tracks;
+  // Truncate to cap and return with a flag indicating whether truncation occurred
+  const truncated = allParsed.length > PLAYLIST_CAP;
+  return { tracks: allParsed.slice(0, PLAYLIST_CAP), truncated };
 }
 
 /**
@@ -1388,21 +1391,17 @@ router.get("/playlist-info", async (req, res) => {
   }
 
   try {
-    const tracks = await fetchPlaylistTracks(playlistId);
+    const { tracks, truncated } = await fetchPlaylistTracks(playlistId);
     if (tracks.length === 0) {
       res.status(404).json({ error: "Playlist is empty or could not be read. Make sure it is public." });
       return;
     }
 
-    const allTracks = tracks;
-    // capped = true when we hit the PLAYLIST_CAP limit (the RSS feed may have had more)
-    const capped = allTracks.length >= PLAYLIST_CAP;
-
     res.json({
       playlistId,
-      tracks: allTracks,
-      totalCount: allTracks.length,
-      capped,
+      tracks,
+      totalCount: tracks.length,
+      capped: truncated,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to fetch playlist";
