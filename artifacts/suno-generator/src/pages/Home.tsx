@@ -982,7 +982,36 @@ export default function Home() {
   }, []);
 
   const handleStartBatch = useCallback(async () => {
-    const urls = parseBatchUrls(batchUrlsText);
+    const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+    // If input contains a playlist URL, expand it first before proceeding
+    const playlistUrl = detectPlaylistUrl(batchUrlsText);
+    let resolvedText = batchUrlsText;
+    if (playlistUrl) {
+      setPlaylistLoading(true);
+      setPlaylistError(null);
+      try {
+        const resp = await fetch(`${apiBase}/api/playlist-info?url=${encodeURIComponent(playlistUrl)}`);
+        if (!resp.ok) {
+          const body = await resp.json().catch(() => ({ error: "Failed to fetch playlist" })) as { error?: string };
+          setPlaylistError(body.error ?? "Failed to fetch playlist");
+          setPlaylistLoading(false);
+          return;
+        }
+        const data = await resp.json() as { tracks: PlaylistTrack[]; totalCount: number; capped: boolean };
+        setPlaylistPreview(data.tracks);
+        resolvedText = data.tracks.map((t) => t.url).join("\n");
+        setBatchUrlsText(resolvedText);
+      } catch (err) {
+        setPlaylistError((err as Error).message ?? "Failed to load playlist");
+        setPlaylistLoading(false);
+        return;
+      } finally {
+        setPlaylistLoading(false);
+      }
+    }
+
+    const urls = parseBatchUrls(resolvedText);
     if (urls.length === 0) {
       setApiError("No valid YouTube URLs found. Paste video URLs, one per line.");
       return;
@@ -1072,7 +1101,7 @@ export default function Home() {
     } finally {
       setIsBatchRunning(false);
     }
-  }, [batchUrlsText, parseBatchUrls, vocalGender, energyLevel, era, mode, selectedGenres, selectedMoods, selectedInstruments, excludeTags, genreNudge]);
+  }, [batchUrlsText, parseBatchUrls, detectPlaylistUrl, vocalGender, energyLevel, era, mode, selectedGenres, selectedMoods, selectedInstruments, excludeTags, genreNudge]);
 
   const handleBatchRetry = useCallback((track: BatchTrackResult) => {
     const urls = [track.url];
@@ -1138,7 +1167,7 @@ export default function Home() {
           prev ? prev.map((t) => t.index === track.index ? { ...t, status: "failed", error: "Retry failed" } : t) : prev
         );
       });
-  }, [vocalGender, energyLevel, era, mode]);
+  }, [vocalGender, energyLevel, era, mode, selectedGenres, selectedMoods, selectedInstruments, excludeTags, genreNudge]);
 
   const handleRegenerateSection = (section: keyof SunoTemplate) => {
     if (!lastUrlRef.current) return;
@@ -1415,7 +1444,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleStartBatch}
-                  disabled={isBatchRunning || parseBatchUrls(batchUrlsText).length === 0}
+                  disabled={isBatchRunning || playlistLoading || parseBatchUrls(batchUrlsText).length === 0}
                   className="flex items-center gap-2 px-5 py-2.5 font-mono font-bold text-sm uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isBatchRunning ? (
