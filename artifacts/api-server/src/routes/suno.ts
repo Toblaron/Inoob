@@ -1471,7 +1471,6 @@ router.post("/batch", async (req, res) => {
 
   // Process with concurrency limit
   let idx = 0;
-  const results: Record<number, unknown> = {};
 
   async function processNext(): Promise<void> {
     if (idx >= tracks.length || clientDisconnected) return;
@@ -1497,7 +1496,6 @@ router.post("/batch", async (req, res) => {
         status: "done" as const,
         template,
       };
-      results[track.index] = result;
       sendEvent("progress", { track: result });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Generation failed";
@@ -1506,7 +1504,6 @@ router.post("/batch", async (req, res) => {
         status: "failed" as const,
         error: message,
       };
-      results[track.index] = result;
       sendEvent("progress", { track: result });
     }
   }

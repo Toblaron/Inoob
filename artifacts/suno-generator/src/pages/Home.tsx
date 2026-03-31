@@ -1132,11 +1132,6 @@ export default function Home() {
       prev ? prev.map((t) => t.index === track.index ? { ...t, status: "queued" } : t) : prev
     );
 
-    const videoIdFromUrl = (u: string): string => {
-      const m = u.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/);
-      return m ? m[1] : "";
-    };
-
     const retryTrack: BatchTrackResult = { ...track, status: "analyzing" };
     setBatchTracks((prev) =>
       prev ? prev.map((t) => t.index === track.index ? retryTrack : t) : prev
@@ -1160,7 +1155,15 @@ export default function Home() {
       }),
     })
       .then(async (resp) => {
-        if (!resp.ok || !resp.body) return;
+        if (!resp.ok || !resp.body) {
+          const errMsg = !resp.ok
+            ? (await resp.json().catch(() => ({ error: "Retry failed" })) as { error?: string }).error ?? "Retry failed"
+            : "No response body";
+          setBatchTracks((prev) =>
+            prev ? prev.map((t) => t.index === track.index ? { ...t, status: "failed", error: errMsg } : t) : prev
+          );
+          return;
+        }
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
         let buf = "";
