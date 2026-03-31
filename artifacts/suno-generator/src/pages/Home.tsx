@@ -404,7 +404,7 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  const [variationWorkshop, setVariationWorkshop] = useState<(SunoTemplate | null)[] | null>(null);
+  const [variationWorkshop, setVariationWorkshop] = useState<(SunoTemplate | null | "error")[] | null>(null);
   const [variationPending, setVariationPending] = useState<boolean[]>([]);
   const [variationCount, setVariationCount] = useState<2 | 3 | 4>(2);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
@@ -876,41 +876,54 @@ export default function Home() {
     );
   };
 
+  const slotsRef = useRef<(SunoTemplate | null | "error")[]>([]);
+  const settledCountRef = useRef(0);
+
   const handleGenerateVariations = () => {
     if (!lastUrlRef.current) return;
     const count = variationCount;
+    const opts = lastOptionsRef.current as object;
+
+    slotsRef.current = Array(count).fill(null);
+    settledCountRef.current = 0;
+
     setIsGeneratingVariations(true);
-    setVariationWorkshop(null);
+    setVariationWorkshop(Array(count).fill(null));
     setVariationPending(Array(count).fill(true));
     setApiError(null);
 
-    variationsMutation.mutate(
-      {
-        data: {
-          youtubeUrl: lastUrlRef.current!,
-          ...(lastOptionsRef.current as object),
-          count,
+    for (let i = 0; i < count; i++) {
+      const slotIdx = i;
+      mainMutation.mutate(
+        {
+          data: {
+            youtubeUrl: lastUrlRef.current!,
+            ...(opts as object),
+            variationIndex: slotIdx + 1,
+          },
         },
-      },
-      {
-        onSuccess: (data) => {
-          const slots = data.slots.map((s) => s.template ?? null);
-          setVariationWorkshop(slots);
-          setVariationPending([]);
-          setIsGeneratingVariations(false);
-        },
-        onError: (err) => {
-          setApiError(
-            (err as { data?: { error?: string }; message?: string })?.data?.error ??
-              (err as Error)?.message ??
-              "Failed to generate variations"
-          );
-          setVariationPending([]);
-          setVariationWorkshop(null);
-          setIsGeneratingVariations(false);
-        },
-      }
-    );
+        {
+          onSuccess: (data) => {
+            slotsRef.current[slotIdx] = data;
+            settledCountRef.current += 1;
+            setVariationPending((prev) => { const n = [...prev]; n[slotIdx] = false; return n; });
+            setVariationWorkshop([...slotsRef.current] as (SunoTemplate | null)[]);
+            if (settledCountRef.current === count) setIsGeneratingVariations(false);
+          },
+          onError: () => {
+            slotsRef.current[slotIdx] = "error";
+            settledCountRef.current += 1;
+            setVariationPending((prev) => { const n = [...prev]; n[slotIdx] = false; return n; });
+            setVariationWorkshop([...slotsRef.current] as (SunoTemplate | null)[]);
+            if (settledCountRef.current === count) {
+              const anyOk = slotsRef.current.some((s) => s !== null && s !== "error");
+              if (!anyOk) setApiError("All variation requests failed.");
+              setIsGeneratingVariations(false);
+            }
+          },
+        }
+      );
+    }
   };
 
   const handleMergeVariation = (merged: SunoTemplate) => {

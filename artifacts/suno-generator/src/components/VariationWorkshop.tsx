@@ -11,6 +11,7 @@ import {
   Copy,
   ChevronLeft,
   ChevronRight,
+  AlertCircle,
 } from "lucide-react";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import type { SunoTemplate } from "@workspace/api-client-react";
@@ -26,8 +27,8 @@ interface Selection {
 }
 
 interface VariationWorkshopProps {
-  /** Fixed-length array (one per slot). null = slot failed or still loading. */
-  variations: (SunoTemplate | null)[];
+  /** Fixed-length array (one per slot). null = loading, "error" = failed, SunoTemplate = ready. */
+  variations: (SunoTemplate | null | "error")[];
   pending?: boolean[];
   totalCount?: number;
   onMerge: (merged: SunoTemplate) => void;
@@ -467,6 +468,21 @@ function CompositePanelReady({ merged, selected, anyNonDefault, onCopy, onMerge 
   );
 }
 
+function ErrorColumn({ variationIdx }: { variationIdx: number }) {
+  return (
+    <div className="flex flex-col gap-2 min-w-0 opacity-70">
+      <div className="flex items-center justify-between px-3 py-2 border border-red-500/30 font-mono text-[11px] font-bold uppercase tracking-widest bg-red-500/5 text-red-400">
+        <span>V{variationIdx + 1}</span>
+        <span className="font-mono text-[9px] text-red-500/70 normal-case tracking-normal font-normal">Failed</span>
+      </div>
+      <div className="w-full p-6 border border-red-500/10 bg-card flex flex-col items-center justify-center gap-2 min-h-[120px]">
+        <AlertCircle className="w-5 h-5 text-red-500/50" />
+        <p className="font-mono text-[11px] text-red-400/60 text-center">Generation failed for this variation</p>
+      </div>
+    </div>
+  );
+}
+
 function SkeletonColumn({ variationIdx }: { variationIdx: number }) {
   return (
     <div className="flex flex-col gap-2 min-w-0 opacity-60 animate-pulse">
@@ -518,12 +534,12 @@ export function VariationWorkshop({
   const numTotal = totalCount || variations.length;
   const isStillLoading = pending.some(Boolean);
 
-  const readySlots = variations.filter((v): v is SunoTemplate => v !== null);
+  const readySlots = variations.filter((v): v is SunoTemplate => v !== null && v !== "error");
   const reference = readySlots[0] ?? null;
 
   const safeVariation = (idx: number): SunoTemplate => {
     const slot = variations[idx];
-    if (slot) return slot;
+    if (slot && slot !== "error") return slot as SunoTemplate;
     const fallback = readySlots[0];
     if (fallback) return fallback;
     return {} as SunoTemplate;
@@ -531,7 +547,7 @@ export function VariationWorkshop({
 
   const selIdx = (key: SectionKey) => {
     let idx = selected[key];
-    while (idx > 0 && !variations[idx]) idx--;
+    while (idx > 0 && (!variations[idx] || variations[idx] === "error")) idx--;
     return idx;
   };
 
@@ -694,9 +710,8 @@ export function VariationWorkshop({
         >
           {Array.from({ length: numTotal }).map((_, i) => {
             const v = variations[i];
-            if (!v) {
-              return <SkeletonColumn key={i} variationIdx={i} />;
-            }
+            if (v === "error") return <ErrorColumn key={i} variationIdx={i} />;
+            if (!v || pending[i]) return <SkeletonColumn key={i} variationIdx={i} />;
             return (
               <VariationColumn
                 key={i}
@@ -733,19 +748,22 @@ export function VariationWorkshop({
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.15 }}
             >
-              {variations[mobileTab] ? (
-                <VariationColumn
-                  variationIdx={mobileTab}
-                  isReference={mobileTab === 0}
-                  variation={variations[mobileTab]!}
-                  reference={reference ?? variations[mobileTab]!}
-                  selected={selected}
-                  showDiff={showDiff}
-                  onSelect={(key) => selectSection(key, mobileTab)}
-                />
-              ) : (
-                <SkeletonColumn variationIdx={mobileTab} />
-              )}
+              {(() => {
+                const v = variations[mobileTab];
+                if (v === "error") return <ErrorColumn variationIdx={mobileTab} />;
+                if (!v || pending[mobileTab]) return <SkeletonColumn variationIdx={mobileTab} />;
+                return (
+                  <VariationColumn
+                    variationIdx={mobileTab}
+                    isReference={mobileTab === 0}
+                    variation={v}
+                    reference={reference ?? v}
+                    selected={selected}
+                    showDiff={showDiff}
+                    onSelect={(key) => selectSection(key, mobileTab)}
+                  />
+                );
+              })()}
             </motion.div>
           </AnimatePresence>
           {/* Mobile prev/next */}

@@ -102,7 +102,7 @@ export interface ErrorResponse {
 }
 
 export interface GenerateVariationsRequest extends GenerateTemplateRequest {
-  count?: 2 | 3 | 4;
+  count?: 1 | 2 | 3 | 4;
 }
 
 export interface VariationSlot {

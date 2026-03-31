@@ -94,7 +94,7 @@ export const GenerateSunoTemplateResponse = zod.object({
 });
 
 export const GenerateVariationsBody = GenerateSunoTemplateBody.extend({
-  count: zod.number().int().min(2).max(4).optional().describe("Number of variations to generate (2–4, default 2)"),
+  count: zod.number().int().min(1).max(4).optional().describe("Number of variations to generate (1–4, default 2)"),
 });
 
 export const VariationSlot = zod.object({
