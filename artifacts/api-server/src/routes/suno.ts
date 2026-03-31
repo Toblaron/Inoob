@@ -800,6 +800,12 @@ function trimStylePrompt(text: string, limit = 900): string {
 
 const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate professional three-section templates for Suno.ai that produce high-quality, non-generic AI music. You will be given rich metadata about a YouTube song and must produce a precise, production-detailed template using every advanced Suno technique available.
 
+⚠️ NON-NEGOTIABLE OUTPUT LENGTH REQUIREMENTS — verify these before finalising:
+- styleOfMusic: 850–900 characters (fill to near limit — do not stop at 300 or 400)
+- lyrics: MINIMUM 4,900 characters, MAXIMUM 4,999 characters (you MUST reach 4,900)
+- negativePrompt: 180–199 characters
+If your draft is under these minimums, keep writing and adding production detail until you reach them.
+
 **80/20 SONGWRITING PRINCIPLE — apply throughout all three sections:**
 80% of a song's impact, memorability, and emotional power comes from 20% of its creative elements: the HOOK, the MELODY CHARACTER, the CHORD PROGRESSION, and the LYRICAL THEME. Production effects and mixing choices are the other 80% of effort that only contributes 20% of impact. This means:
 - In styleOfMusic: lead with hook concept, melody character, and chord progression BEFORE production details.
@@ -1215,19 +1221,92 @@ ${context}`;
   let aiResult: AiOutput;
   let templateFromCache = false;
 
+  // Explicit length reminder appended to every user message — Llama models respond
+  // better to repeated constraints in the user turn than buried system instructions.
+  const lengthReminder = `
+
+⚠️ MANDATORY OUTPUT LENGTHS — CHECK BEFORE RESPONDING:
+1. styleOfMusic → TARGET 850–900 characters. Fill to near the 900-char limit.
+2. lyrics → MINIMUM 4,900 characters, MAXIMUM 4,999 characters. You MUST reach 4,900.
+3. negativePrompt → exactly 180–199 characters.
+
+If lyrics would be under 4,900 characters in your first draft: keep writing — add more [instrument cue] lines, (performance direction) parentheticals, ad-lib variants, and richer section headers until you reach 4,900. Do NOT stop writing early.`;
+
   const runAiCall = async (): Promise<AiOutput> => {
     const completion = await openai.chat.completions.create({
       model: AI_MODEL,
       max_completion_tokens: 8192,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userMessage },
+        { role: "user", content: userMessage + lengthReminder },
       ],
       response_format: { type: "json_object" },
     });
     const content = completion.choices[0]?.message?.content;
     if (!content) throw new Error("AI failed to generate a template. Please try again.");
-    return JSON.parse(content) as AiOutput;
+    let result = JSON.parse(content) as AiOutput;
+
+    // Expansion pass — if output is too short, make a targeted follow-up call
+    const lyricsShort = result.lyrics.length < 4500;
+    const styleShort = result.styleOfMusic.length < 650;
+
+    if (lyricsShort || styleShort) {
+      console.warn(`[expand] lyrics=${result.lyrics.length} style=${result.styleOfMusic.length} — running expansion pass`);
+
+      if (lyricsShort) {
+        const needed = 4900 - result.lyrics.length;
+        const expandPrompt = `The lyrics below are only ${result.lyrics.length} characters. They need to be expanded to between 4,900 and 4,999 characters total.
+
+ADD ${needed}+ more characters by inserting:
+- More [instrument cue] lines after each section header
+- More (performance direction) parentheticals after lyric stanzas
+- More ad-lib variants in chorus sections: (yeah!), (oh-oh), (come on!)
+- Richer descriptors in section headers
+- An additional [Bridge] or [Breakdown] section if needed
+- More [instrument cue] lines in the header block
+
+Do NOT add new lyric lines unless the song is very short. Do NOT change existing lyric lines.
+Return ONLY the expanded lyrics text — no JSON wrapper, no commentary.
+
+CURRENT LYRICS:
+${result.lyrics}`;
+
+        const expandCompletion = await openai.chat.completions.create({
+          model: AI_MINI_MODEL,
+          max_completion_tokens: 8192,
+          messages: [{ role: "user", content: expandPrompt }],
+        });
+        const expanded = expandCompletion.choices[0]?.message?.content?.trim();
+        if (expanded && expanded.length > result.lyrics.length) {
+          result = { ...result, lyrics: expanded };
+          console.log(`[expand] lyrics expanded: ${result.lyrics.length} chars`);
+        }
+      }
+
+      if (styleShort) {
+        const needed = 850 - result.styleOfMusic.length;
+        const expandStylePrompt = `The Style of Music descriptor below is only ${result.styleOfMusic.length} characters. Expand it to 850–900 characters by adding more specific production detail: articulation vocabulary, dynamics contrast, more instrument specifics, mastering descriptors, and performance nuance. Hard maximum: 900 characters.
+
+Do NOT change the existing content — only append or expand.
+Return ONLY the expanded style text — no JSON wrapper, no commentary.
+
+CURRENT STYLE:
+${result.styleOfMusic}`;
+
+        const expandStyleCompletion = await openai.chat.completions.create({
+          model: AI_MINI_MODEL,
+          max_completion_tokens: 1024,
+          messages: [{ role: "user", content: expandStylePrompt }],
+        });
+        const expandedStyle = expandStyleCompletion.choices[0]?.message?.content?.trim();
+        if (expandedStyle && expandedStyle.length > result.styleOfMusic.length && expandedStyle.length <= 900) {
+          result = { ...result, styleOfMusic: expandedStyle };
+          console.log(`[expand] style expanded: ${result.styleOfMusic.length} chars`);
+        }
+      }
+    }
+
+    return result;
   };
 
   if (templateCacheKey) {
