@@ -168,6 +168,47 @@ export interface BatchGenerateRequest {
   genreNudge?: string;
 }
 
+export interface TransformTemplateRequest {
+  styleOfMusic: string;
+  negativePrompt: string;
+  transformId: string;
+}
+
+export interface TransformTemplateResponse {
+  styleOfMusic: string;
+  negativePrompt: string;
+}
+
+export type TransformCategory = "era" | "genre" | "mood" | "energy";
+
+export interface TransformPreset {
+  id: string;
+  name: string;
+  category: TransformCategory;
+}
+
+export const TRANSFORM_PRESETS: TransformPreset[] = [
+  { id: "era-1960s", name: "1960s", category: "era" },
+  { id: "era-1970s", name: "1970s", category: "era" },
+  { id: "era-1980s", name: "1980s", category: "era" },
+  { id: "era-1990s", name: "1990s", category: "era" },
+  { id: "era-2000s", name: "2000s", category: "era" },
+  { id: "era-modern", name: "Modern", category: "era" },
+  { id: "genre-lofi", name: "Lo-Fi", category: "genre" },
+  { id: "genre-orchestral", name: "Orchestral", category: "genre" },
+  { id: "genre-edm", name: "EDM", category: "genre" },
+  { id: "genre-jazz", name: "Jazz", category: "genre" },
+  { id: "genre-acoustic", name: "Acoustic", category: "genre" },
+  { id: "genre-hiphop", name: "Hip-Hop", category: "genre" },
+  { id: "genre-metal", name: "Metal", category: "genre" },
+  { id: "mood-darker", name: "Darker", category: "mood" },
+  { id: "mood-uplifting", name: "More Uplifting", category: "mood" },
+  { id: "mood-aggressive", name: "More Aggressive", category: "mood" },
+  { id: "mood-calmer", name: "Calmer", category: "mood" },
+  { id: "energy-ramp", name: "Ramp Up", category: "energy" },
+  { id: "energy-wind", name: "Wind Down", category: "energy" },
+];
+
 export type BatchTrackStatus = "queued" | "analyzing" | "generating" | "done" | "failed";
 
 export interface BatchTrackResult {

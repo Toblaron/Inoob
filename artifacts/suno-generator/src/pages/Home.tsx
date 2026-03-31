@@ -46,6 +46,8 @@ import { LoadingEq } from "@/components/LoadingEq";
 import { ExampleGallery } from "@/components/ExampleGallery";
 import { SongDnaPanel } from "@/components/SongDnaPanel";
 import { PromptOptimizerCard } from "@/components/PromptOptimizerCard";
+import { RemixToolbar, TRANSFORM_PRESETS } from "@/components/RemixToolbar";
+import { RemixChain, type RemixSnapshot } from "@/components/RemixChain";
 import { scoreTemplate } from "@/lib/promptScorer";
 import { cn } from "@/lib/utils";
 
@@ -416,6 +418,10 @@ export default function Home() {
   const [variationPending, setVariationPending] = useState<boolean[]>([]);
   const [variationCount, setVariationCount] = useState<2 | 3 | 4>(2);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
+
+  const [remixChain, setRemixChain] = useState<RemixSnapshot[]>([]);
+  const [remixChainIndex, setRemixChainIndex] = useState<number>(0);
+  const [activeTransformId, setActiveTransformId] = useState<string | null>(null);
 
   const [batchMode, setBatchMode] = useState(false);
   const [batchUrlsText, setBatchUrlsText] = useState("");
@@ -811,6 +817,66 @@ export default function Home() {
     });
   };
 
+  const handleTransform = useCallback(async (transformId: string) => {
+    if (!currentTemplate || activeTransformId) return;
+    setActiveTransformId(transformId);
+    const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+    try {
+      const resp = await fetch(`${apiBase}/api/transform`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          styleOfMusic: currentTemplate.styleOfMusic,
+          negativePrompt: currentTemplate.negativePrompt,
+          transformId,
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Transform failed" })) as { error?: string };
+        throw new Error(err.error ?? "Transform failed");
+      }
+      const result = await resp.json() as { styleOfMusic: string; negativePrompt: string };
+      const updated: SunoTemplate = {
+        ...currentTemplate,
+        styleOfMusic: result.styleOfMusic,
+        negativePrompt: result.negativePrompt,
+      };
+      const preset = TRANSFORM_PRESETS.find((p) => p.id === transformId);
+      const label = preset?.name ?? transformId;
+      setCurrentTemplate(updated);
+      setRemixChain((prev) => {
+        const base = prev.length === 0
+          ? [{ label: "Original", template: currentTemplate }]
+          : prev;
+        return [...base, { label, template: updated }];
+      });
+      setRemixChainIndex((prev) => {
+        return prev + 1;
+      });
+    } catch (err) {
+      setApiError((err as Error).message ?? "Transform failed");
+    } finally {
+      setActiveTransformId(null);
+    }
+  }, [currentTemplate, activeTransformId]);
+
+  const handleRemixRestore = useCallback((index: number) => {
+    if (index < 0 || index >= remixChain.length) return;
+    const snap = remixChain[index];
+    setCurrentTemplate(snap.template);
+    setRemixChainIndex(index);
+  }, [remixChain]);
+
+  const handleRemixBranch = useCallback((index: number) => {
+    if (index < 0 || index >= remixChain.length) return;
+    const snap = remixChain[index];
+    const truncated = remixChain.slice(0, index + 1);
+    setRemixChain(truncated);
+    setCurrentTemplate(snap.template);
+    setRemixChainIndex(index);
+  }, [remixChain]);
+
   const onSubmit = (values: FormValues) => {
     const opts = buildOptions();
     lastUrlRef.current = values.youtubeUrl;
@@ -822,6 +888,8 @@ export default function Home() {
     setHoverRating(null);
     setRatingSaved(false);
     setLyricsStructure(null);
+    setRemixChain([]);
+    setRemixChainIndex(0);
     const usedOpts: UsedOptions = {
       genres: selectedGenres.length > 0 ? selectedGenres : undefined,
       moods: selectedMoods.length > 0 ? selectedMoods : undefined,
@@ -2310,6 +2378,22 @@ export default function Home() {
                 template={currentTemplate}
                 regeneratingSection={regeneratingSection}
                 onRegenerateSection={handleRegenerateSection}
+              />
+
+              {/* Remix Chain breadcrumbs */}
+              <RemixChain
+                chain={remixChain}
+                currentIndex={remixChainIndex}
+                onRestore={handleRemixRestore}
+                onBranch={handleRemixBranch}
+              />
+
+              {/* Transform toolbar */}
+              <RemixToolbar
+                onTransform={handleTransform}
+                activeTransformId={activeTransformId}
+                disabled={!!regeneratingSection}
+                chainLength={remixChain.length}
               />
 
               {/* Prompt Quality Optimizer */}

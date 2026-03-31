@@ -125,6 +125,17 @@ export const PlaylistInfoResponse = zod.object({
   capped: zod.boolean().describe("True if the playlist was truncated to 20 entries"),
 });
 
+export const TransformTemplateBody = zod.object({
+  styleOfMusic: zod.string().describe("Current style prompt to transform"),
+  negativePrompt: zod.string().describe("Current negative prompt to transform"),
+  transformId: zod.string().describe("ID of the transformation preset to apply"),
+});
+
+export const TransformTemplateResponse = zod.object({
+  styleOfMusic: zod.string().describe("Updated style prompt after transformation"),
+  negativePrompt: zod.string().describe("Updated negative prompt after transformation"),
+});
+
 export const BatchGenerateBody = zod.object({
   urls: zod.array(zod.string()).min(1).max(20).describe("List of YouTube video URLs to process"),
   vocalGender: GenerateSunoTemplateBody.shape.vocalGender,

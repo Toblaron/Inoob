@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { GenerateSunoTemplateBody, GenerateSunoTemplateResponse, GenerateVariationsBody, BatchGenerateBody } from "@workspace/api-zod";
+import { GenerateSunoTemplateBody, GenerateSunoTemplateResponse, GenerateVariationsBody, BatchGenerateBody, TransformTemplateBody } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import ytdl from "@distube/ytdl-core";
 import { parse as parseHtml } from "node-html-parser";
@@ -1977,6 +1977,108 @@ router.post("/analyze-structure", (req, res) => {
   } catch (err) {
     console.error("analyze-structure error:", err);
     res.status(500).json({ error: "Could not analyze lyrics structure." });
+  }
+});
+
+// ─── Transformation presets ────────────────────────────────────────────────
+
+interface TransformPreset {
+  id: string;
+  name: string;
+  category: "era" | "genre" | "mood" | "energy";
+  instruction: string;
+}
+
+export const TRANSFORM_PRESETS: TransformPreset[] = [
+  // Era
+  { id: "era-1960s", name: "1960s", category: "era", instruction: "Shift all era and decade references to 1960s: add British Invasion, Motown, psychedelic rock, vintage reverb. Remove any modern production tags." },
+  { id: "era-1970s", name: "1970s", category: "era", instruction: "Shift to 1970s: add classic rock, funk groove, progressive rock, analogue warmth, FM radio sound. Remove modern/digital tags." },
+  { id: "era-1980s", name: "1980s", category: "era", instruction: "Shift to 1980s: add synth-pop, gated reverb drums, glossy production, new wave. Remove acoustic/organic tags." },
+  { id: "era-1990s", name: "1990s", category: "era", instruction: "Shift to 1990s: add grunge, alternative rock, lo-fi tape warmth, Britpop, 90s production. Remove modern sheen." },
+  { id: "era-2000s", name: "2000s", category: "era", instruction: "Shift to 2000s: add pop-punk, emo, glossy pop, hip-hop influenced production. Remove retro warmth." },
+  { id: "era-modern", name: "Modern", category: "era", instruction: "Make it contemporary 2020s: add hyperpop, modern production, crisp digital clarity, current trends. Remove vintage warmth." },
+  // Genre
+  { id: "genre-lofi", name: "Lo-Fi", category: "genre", instruction: "Transform into a lo-fi genre: add vinyl crackle, tape hiss, dusty samples, bedroom lo-fi, mellow keys. Remove high-energy or shiny production descriptors." },
+  { id: "genre-orchestral", name: "Orchestral", category: "genre", instruction: "Transform into cinematic orchestral: add sweeping strings, brass, full orchestra, cinematic score, Hans Zimmer-inspired. Remove electronic/synth elements." },
+  { id: "genre-edm", name: "EDM", category: "genre", instruction: "Transform into electronic dance: add 4/4 kick, festival drop, synthesizer leads, sidechain compression, euphoric build. Remove acoustic/organic elements." },
+  { id: "genre-jazz", name: "Jazz", category: "genre", instruction: "Transform into jazz: add swing feel, walking bass, jazz harmony, brushed drums, cool jazz or bossa nova influence. Remove digital/electronic production." },
+  { id: "genre-acoustic", name: "Acoustic", category: "genre", instruction: "Transform into acoustic: add fingerpicked guitar, natural room reverb, stripped-back arrangement, organic warmth. Remove electronic/synthesized elements." },
+  { id: "genre-hiphop", name: "Hip-Hop", category: "genre", instruction: "Transform into hip-hop: add boom bap or trap beat, 808 bass, vinyl samples, rhythmic groove, urban production. Remove orchestral/live-band elements." },
+  { id: "genre-metal", name: "Metal", category: "genre", instruction: "Transform into metal: add heavy distorted guitars, double kick drums, aggressive energy, crushing riffs. Remove gentle/soft production descriptors." },
+  // Mood
+  { id: "mood-darker", name: "Darker", category: "mood", instruction: "Shift mood to darker and more brooding: add minor tonality, haunting atmosphere, melancholy, shadowy undertones. Remove uplifting/bright mood descriptors." },
+  { id: "mood-uplifting", name: "More Uplifting", category: "mood", instruction: "Shift mood to uplifting and hopeful: add major key brightness, soaring melodies, triumphant energy, euphoric feel. Remove dark/melancholy tags." },
+  { id: "mood-aggressive", name: "More Aggressive", category: "mood", instruction: "Shift mood to aggressive and intense: add driven energy, fierce delivery, pounding rhythm, raw power. Remove calm/gentle mood descriptors." },
+  { id: "mood-calmer", name: "Calmer", category: "mood", instruction: "Shift mood to calm and serene: add gentle pacing, soft dynamics, meditative stillness, peaceful atmosphere. Remove aggressive/high-energy descriptors." },
+  // Energy
+  { id: "energy-ramp", name: "Ramp Up", category: "energy", instruction: "Increase energy level significantly: add faster tempo feel, more drive, higher BPM tags, energetic production. Remove slow/chill descriptors." },
+  { id: "energy-wind", name: "Wind Down", category: "energy", instruction: "Decrease energy level significantly: add slower tempo feel, gentle groove, relaxed pacing, chillout atmosphere. Remove high-energy/fast descriptors." },
+];
+
+/**
+ * POST /api/transform
+ * Lightweight transformation — takes the current styleOfMusic + negativePrompt and
+ * applies a targeted delta (era shift, genre pivot, mood shift, energy change).
+ * Does NOT touch lyrics. Returns only the changed fields.
+ */
+router.post("/transform", async (req, res) => {
+  const parseResult = TransformTemplateBody.safeParse(req.body);
+  if (!parseResult.success) {
+    res.status(400).json({ error: "Invalid request", details: parseResult.error.flatten() });
+    return;
+  }
+
+  const { styleOfMusic, negativePrompt, transformId } = parseResult.data;
+  const preset = TRANSFORM_PRESETS.find((p) => p.id === transformId);
+  if (!preset) {
+    res.status(400).json({ error: `Unknown transform id: ${transformId}` });
+    return;
+  }
+
+  const systemPrompt = `You are a Suno.ai prompt engineer. Your job is to apply targeted transformations to an existing style prompt and negative prompt. 
+
+Rules:
+1. Only modify styleOfMusic and negativePrompt — never touch lyrics.
+2. Keep styleOfMusic under 900 characters total. Trim cleanly — no half-words.
+3. Keep negativePrompt between 180–199 characters total. Pad with synonyms if needed. If impossible, keep 170–199 chars.
+4. Preserve all comma-separated tag structure. Output tags as comma-separated values.
+5. Do not add cliché vague words like "epic", "amazing", "perfect". Be specific.
+6. Return ONLY a JSON object with two fields: styleOfMusic, negativePrompt.`;
+
+  const userPrompt = `Current styleOfMusic:
+${styleOfMusic}
+
+Current negativePrompt:
+${negativePrompt}
+
+Transformation to apply: "${preset.name}" (${preset.category})
+Instruction: ${preset.instruction}
+
+Apply the transformation and return the updated styleOfMusic and negativePrompt as a JSON object.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      max_completion_tokens: 600,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    let parsed: Record<string, string>;
+    try { parsed = JSON.parse(raw) as Record<string, string>; }
+    catch { parsed = {}; }
+
+    const updatedStyle = typeof parsed.styleOfMusic === "string" ? parsed.styleOfMusic.slice(0, 900) : styleOfMusic;
+    const updatedNeg = typeof parsed.negativePrompt === "string" ? parsed.negativePrompt.slice(0, 199) : negativePrompt;
+
+    res.json({ styleOfMusic: updatedStyle, negativePrompt: updatedNeg });
+  } catch (err) {
+    console.error("transform error:", err);
+    res.status(500).json({ error: "Transform failed" });
   }
 });
 
