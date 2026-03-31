@@ -14,15 +14,21 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", router);
 
 if (process.env.NODE_ENV === "production") {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  // import.meta.url is undefined in esbuild CJS bundles — fall back to cwd-relative path
+  let serverDir: string;
+  try {
+    serverDir = path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    serverDir = path.join(process.cwd(), "artifacts", "api-server", "dist");
+  }
   const staticDir = process.env.STATIC_DIR
     ? path.resolve(process.env.STATIC_DIR)
-    : path.resolve(__dirname, "../../suno-generator/dist/public");
+    : path.resolve(serverDir, "../../suno-generator/dist/public");
 
   if (existsSync(staticDir)) {
     console.log(`Serving static frontend from: ${staticDir}`);
     app.use(express.static(staticDir));
-    app.get("*", (_req, res) => {
+    app.get("*path", (_req, res) => {
       res.sendFile(path.join(staticDir, "index.html"));
     });
   } else {
