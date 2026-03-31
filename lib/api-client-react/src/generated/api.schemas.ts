@@ -221,3 +221,53 @@ export interface BatchTrackResult {
   error?: string;
   index: number;
 }
+
+export interface SunoGenerateRequest {
+  /** Style tags for the Suno style field (max 1000 chars) */
+  styleOfMusic: string;
+  /** Lyrics / metadata block (max 5000 chars) */
+  lyrics: string;
+  /** Song title (max 80 chars) */
+  title: string;
+  /** Negative prompt (max 200 chars) */
+  negativePrompt?: string;
+  /** Generate as instrumental (no lyrics) */
+  instrumental?: boolean;
+  /** Suno model version, e.g. V5_5 */
+  model?: string;
+}
+
+export interface SunoTrack {
+  id: string;
+  title?: string;
+  /** Direct audio URL */
+  audio_url?: string;
+  /** Cover art URL */
+  image_url?: string;
+  /** Duration in seconds */
+  duration?: number;
+  status?: string;
+  model_name?: string;
+  prompt?: string;
+  style?: string;
+  created_at?: string;
+}
+
+export type SunoTaskStatus = "queued" | "processing" | "completed" | "failed";
+
+export interface SunoGenerateResponse {
+  taskId: string;
+  status: SunoTaskStatus;
+  tracks?: SunoTrack[];
+}
+
+export interface SunoStatusResponse {
+  taskId: string;
+  status: SunoTaskStatus;
+  tracks?: SunoTrack[];
+  error?: string;
+}
+
+export interface SunoCreditsResponse {
+  credits: number;
+}
