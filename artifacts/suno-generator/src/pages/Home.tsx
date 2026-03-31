@@ -963,7 +963,7 @@ export default function Home() {
     setPlaylistPreview(null);
     try {
       const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const resp = await fetch(`${apiBase}/api/suno/playlist-info?url=${encodeURIComponent(playlistUrl)}`);
+      const resp = await fetch(`${apiBase}/api/playlist-info?url=${encodeURIComponent(playlistUrl)}`);
       if (!resp.ok) {
         const body = await resp.json().catch(() => ({ error: "Failed to fetch playlist" })) as { error?: string };
         throw new Error(body.error ?? "Failed to fetch playlist");
@@ -1013,7 +1013,7 @@ export default function Home() {
 
     try {
       const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const resp = await fetch(`${apiBase}/api/suno/batch`, {
+      const resp = await fetch(`${apiBase}/api/batch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1088,7 +1088,7 @@ export default function Home() {
     );
 
     const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
-    fetch(`${apiBase}/api/suno/batch`, {
+    fetch(`${apiBase}/api/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

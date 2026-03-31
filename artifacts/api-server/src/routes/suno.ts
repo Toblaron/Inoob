@@ -1395,7 +1395,8 @@ router.get("/playlist-info", async (req, res) => {
     }
 
     const allTracks = tracks;
-    const capped = false; // RSS feed already caps at ~15; PLAYLIST_CAP guards over that
+    // capped = true when we hit the PLAYLIST_CAP limit (the RSS feed may have had more)
+    const capped = allTracks.length >= PLAYLIST_CAP;
 
     res.json({
       playlistId,
