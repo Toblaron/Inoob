@@ -26,9 +26,18 @@ interface Selection {
   negativePrompt: number;
 }
 
+type VariationSlotValue = SunoTemplate | null | { error: string };
+
+function isTemplate(v: VariationSlotValue): v is SunoTemplate {
+  return v !== null && typeof v === "object" && "styleOfMusic" in v;
+}
+function isError(v: VariationSlotValue): v is { error: string } {
+  return v !== null && typeof v === "object" && "error" in v;
+}
+
 interface VariationWorkshopProps {
-  /** Fixed-length array (one per slot). null = loading, "error" = failed, SunoTemplate = ready. */
-  variations: (SunoTemplate | null | "error")[];
+  /** Fixed-length array (one per slot). null = loading, {error} = failed, SunoTemplate = ready. */
+  variations: VariationSlotValue[];
   pending?: boolean[];
   totalCount?: number;
   onMerge: (merged: SunoTemplate) => void;
@@ -468,7 +477,7 @@ function CompositePanelReady({ merged, selected, anyNonDefault, onCopy, onMerge 
   );
 }
 
-function ErrorColumn({ variationIdx }: { variationIdx: number }) {
+function ErrorColumn({ variationIdx, errorMsg }: { variationIdx: number; errorMsg?: string }) {
   return (
     <div className="flex flex-col gap-2 min-w-0 opacity-70">
       <div className="flex items-center justify-between px-3 py-2 border border-red-500/30 font-mono text-[11px] font-bold uppercase tracking-widest bg-red-500/5 text-red-400">
@@ -477,7 +486,9 @@ function ErrorColumn({ variationIdx }: { variationIdx: number }) {
       </div>
       <div className="w-full p-6 border border-red-500/10 bg-card flex flex-col items-center justify-center gap-2 min-h-[120px]">
         <AlertCircle className="w-5 h-5 text-red-500/50" />
-        <p className="font-mono text-[11px] text-red-400/60 text-center">Generation failed for this variation</p>
+        <p className="font-mono text-[11px] text-red-400/60 text-center">
+          {errorMsg ?? "Generation failed for this variation"}
+        </p>
       </div>
     </div>
   );
@@ -519,11 +530,15 @@ export function VariationWorkshop({
   const [showDiff, setShowDiff] = useState(true);
   const [mobileTab, setMobileTab] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
+
+  const firstReadyIdx = variations.findIndex((v): v is SunoTemplate => isTemplate(v));
+  const defaultIdx = firstReadyIdx >= 0 ? firstReadyIdx : 0;
+
   const [selected, setSelected] = useState<Selection>({
-    styleOfMusic: 0,
-    title: 0,
-    lyrics: 0,
-    negativePrompt: 0,
+    styleOfMusic: defaultIdx,
+    title: defaultIdx,
+    lyrics: defaultIdx,
+    negativePrompt: defaultIdx,
   });
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -534,12 +549,12 @@ export function VariationWorkshop({
   const numTotal = totalCount || variations.length;
   const isStillLoading = pending.some(Boolean);
 
-  const readySlots = variations.filter((v): v is SunoTemplate => v !== null && v !== "error");
+  const readySlots = variations.filter((v): v is SunoTemplate => isTemplate(v));
   const reference = readySlots[0] ?? null;
 
   const safeVariation = (idx: number): SunoTemplate => {
     const slot = variations[idx];
-    if (slot && slot !== "error") return slot as SunoTemplate;
+    if (isTemplate(slot)) return slot;
     const fallback = readySlots[0];
     if (fallback) return fallback;
     return {} as SunoTemplate;
@@ -547,7 +562,7 @@ export function VariationWorkshop({
 
   const selIdx = (key: SectionKey) => {
     let idx = selected[key];
-    while (idx > 0 && (!variations[idx] || variations[idx] === "error")) idx--;
+    while (idx > 0 && !isTemplate(variations[idx])) idx--;
     return idx;
   };
 
@@ -631,7 +646,7 @@ export function VariationWorkshop({
             <span className="inline-block px-1 bg-red-500/15 text-red-400 line-through rounded-sm opacity-70">-removed</span>
           </span>
           <span className="text-zinc-700">
-            vs V{variations.findIndex((v): v is SunoTemplate => v !== null && v !== "error") + 1} (reference)
+            vs V{variations.findIndex((v): v is SunoTemplate => isTemplate(v)) + 1} (reference)
           </span>
         </div>
       )}
@@ -712,13 +727,13 @@ export function VariationWorkshop({
         >
           {Array.from({ length: numTotal }).map((_, i) => {
             const v = variations[i];
-            if (v === "error") return <ErrorColumn key={i} variationIdx={i} />;
-            if (!v || pending[i]) return <SkeletonColumn key={i} variationIdx={i} />;
+            if (isError(v)) return <ErrorColumn key={i} variationIdx={i} errorMsg={v.error} />;
+            if (!isTemplate(v) || pending[i]) return <SkeletonColumn key={i} variationIdx={i} />;
             return (
               <VariationColumn
                 key={i}
                 variationIdx={i}
-                isReference={i === 0}
+                isReference={i === firstReadyIdx}
                 variation={v}
                 reference={reference ?? v}
                 selected={selected}
@@ -752,12 +767,12 @@ export function VariationWorkshop({
             >
               {(() => {
                 const v = variations[mobileTab];
-                if (v === "error") return <ErrorColumn variationIdx={mobileTab} />;
-                if (!v || pending[mobileTab]) return <SkeletonColumn variationIdx={mobileTab} />;
+                if (isError(v)) return <ErrorColumn variationIdx={mobileTab} errorMsg={v.error} />;
+                if (!isTemplate(v) || pending[mobileTab]) return <SkeletonColumn variationIdx={mobileTab} />;
                 return (
                   <VariationColumn
                     variationIdx={mobileTab}
-                    isReference={mobileTab === 0}
+                    isReference={mobileTab === firstReadyIdx}
                     variation={v}
                     reference={reference ?? v}
                     selected={selected}

@@ -404,7 +404,7 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  const [variationWorkshop, setVariationWorkshop] = useState<(SunoTemplate | null | "error")[] | null>(null);
+  const [variationWorkshop, setVariationWorkshop] = useState<(SunoTemplate | null | { error: string })[] | null>(null);
   const [variationPending, setVariationPending] = useState<boolean[]>([]);
   const [variationCount, setVariationCount] = useState<2 | 3 | 4>(2);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
@@ -896,7 +896,8 @@ export default function Home() {
       {
         onSuccess: (data) => {
           const slots = data.slots.map(
-            (s): SunoTemplate | null | "error" => (s.template ? s.template : "error")
+            (s): SunoTemplate | null | { error: string } =>
+              s.template ? s.template : { error: s.error ?? "Generation failed" }
           );
           setVariationWorkshop(slots);
           setVariationPending([]);
