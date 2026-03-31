@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Suno template character-count validator.
+Suno template character-count validator and trimmer.
 
 Reads JSON from stdin:
   { "styleOfMusic": "...", "lyrics": "...", "negativePrompt": "..." }
@@ -8,17 +8,22 @@ Reads JSON from stdin:
 Writes JSON to stdout:
   {
     "valid": bool,
+    "trimmed": bool,            # true if any field was trimmed to fit
     "fields": {
-      "styleOfMusic":   { "len": int, "min": 900, "max": 999,  "ok": bool },
-      "lyrics":         { "len": int, "min": 4900, "max": 4999, "ok": bool },
-      "negativePrompt": { "len": int, "min": 150, "max": 199,  "ok": bool }
+      "styleOfMusic":   { "original": int, "final": int, "min": 900,  "max": 999,  "ok": bool },
+      "lyrics":         { "original": int, "final": int, "min": 4900, "max": 4999, "ok": bool },
+      "negativePrompt": { "original": int, "final": int, "min": 150,  "max": 199,  "ok": bool }
     },
-    "errors": ["styleOfMusic too short: 850 chars (need 900-999)", ...]
+    "errors": [...],            # validation issues that could NOT be auto-fixed (too short)
+    "data": {                   # trimmed/validated field values ready to use
+      "styleOfMusic": "...",
+      "lyrics": "...",
+      "negativePrompt": "..."
+    }
   }
 
-Python len() counts Unicode code points, which matches Suno's server-side
-counting more accurately than JavaScript .length (which counts UTF-16 code
-units and double-counts emoji / characters outside the BMP).
+Python len() counts Unicode code points, which is more accurate than
+JavaScript .length (UTF-16 code units, double-counts emoji).
 """
 
 import sys
@@ -30,32 +35,59 @@ LIMITS = {
     "negativePrompt": (150,  199),
 }
 
-def validate(data: dict) -> dict:
+
+def smart_trim(text: str, max_len: int, split_char: str) -> str:
+    """Trim text to at most max_len code points, cutting at the last
+    occurrence of split_char at or before max_len."""
+    if len(text) <= max_len:
+        return text
+    sub = text[:max_len]
+    idx = sub.rfind(split_char)
+    if idx > max_len // 2:          # only use split if it's in the latter half
+        return sub[:idx].rstrip()
+    return sub.rstrip()
+
+
+def process(data: dict) -> dict:
+    out_data = {}
     fields = {}
     errors = []
+    trimmed = False
 
     for key, (lo, hi) in LIMITS.items():
         value = data.get(key, "")
-        n = len(value)  # Unicode code points
-        ok = lo <= n <= hi
-        fields[key] = {"len": n, "min": lo, "max": hi, "ok": ok}
-        if not ok:
-            if n < lo:
-                errors.append(f"{key} too short: {n} chars (need {lo}–{hi})")
-            else:
-                errors.append(f"{key} too long: {n} chars (need {lo}–{hi})")
+        original = len(value)
+
+        # Trim if too long
+        if original > hi:
+            split = "\n" if key == "lyrics" else ","
+            value = smart_trim(value, hi, split)
+            trimmed = True
+
+        final = len(value)
+        ok = lo <= final <= hi
+        fields[key] = {"original": original, "final": final, "min": lo, "max": hi, "ok": ok}
+
+        if not ok and final < lo:
+            errors.append(f"{key} too short: {final} chars (need {lo}–{hi})")
+        # too-long errors are auto-fixed by trim, so no error entry for those
+
+        out_data[key] = value
 
     return {
         "valid": len(errors) == 0,
+        "trimmed": trimmed,
         "fields": fields,
         "errors": errors,
+        "data": out_data,
     }
+
 
 if __name__ == "__main__":
     try:
         data = json.load(sys.stdin)
-        result = validate(data)
-        print(json.dumps(result))
+        result = process(data)
+        print(json.dumps(result, ensure_ascii=False))
     except Exception as e:
-        print(json.dumps({"valid": False, "fields": {}, "errors": [f"validator error: {e}"]}))
+        print(json.dumps({"valid": False, "trimmed": False, "fields": {}, "errors": [f"validator error: {e}"], "data": {}}))
         sys.exit(1)

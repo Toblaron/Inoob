@@ -1381,33 +1381,39 @@ ${lyrics}`,
     aiResult = await runAiCall();
   }
 
-  // ── Python character-count validation ────────────────────────────────────
+  // ── Python character-count validation + smart trim ───────────────────────
   // Python len() counts Unicode code points; JS .length counts UTF-16 units.
-  // They differ for emoji / supplementary-plane chars.  We log both so any
-  // discrepancy is immediately visible.  Validation never blocks generation —
-  // it runs async and results are logged only.
-  validateWithPython({
-    styleOfMusic:   aiResult.styleOfMusic,
-    lyrics:         aiResult.lyrics,
-    negativePrompt: aiResult.negativePrompt,
-  }).then((report) => {
-    if (!report) return; // Python not available — skip silently
-    const { fields, valid, errors } = report;
-    const sm = fields.styleOfMusic;
-    const ly = fields.lyrics;
-    const np = fields.negativePrompt;
-    const jsStyle = aiResult.styleOfMusic.length;
-    const jsLyrics = aiResult.lyrics.length;
-    const jsNeg    = aiResult.negativePrompt.length;
-    console.log(
-      `[py-validate] style  JS=${jsStyle} PY=${sm?.len} ok=${sm?.ok}  ` +
-      `lyrics JS=${jsLyrics} PY=${ly?.len} ok=${ly?.ok}  ` +
-      `neg JS=${jsNeg} PY=${np?.len} ok=${np?.ok}  valid=${valid}`
-    );
-    if (errors.length) {
-      console.warn(`[py-validate] ISSUES: ${errors.join(" | ")}`);
+  // They differ for emoji (🔥 = 1 in Python, 2 in JS).  Python is the
+  // authoritative counter.  The validator also trims fields that exceed the
+  // max limit (newline boundary for lyrics, comma boundary for style/negative)
+  // and returns the corrected values — we apply them back to aiResult.
+  try {
+    const pyReport = await validateWithPython({
+      styleOfMusic:   aiResult.styleOfMusic,
+      lyrics:         aiResult.lyrics,
+      negativePrompt: aiResult.negativePrompt,
+    });
+    if (pyReport) {
+      const { fields, valid, trimmed, errors } = pyReport;
+      const sm = fields.styleOfMusic;
+      const ly = fields.lyrics;
+      const np = fields.negativePrompt;
+      console.log(
+        `[py-validate] style  JS=${aiResult.styleOfMusic.length} PY=${sm?.original}→${sm?.final} ok=${sm?.ok}  ` +
+        `lyrics JS=${aiResult.lyrics.length} PY=${ly?.original}→${ly?.final} ok=${ly?.ok}  ` +
+        `neg JS=${aiResult.negativePrompt.length} PY=${np?.original}→${np?.final} ok=${np?.ok}  ` +
+        `valid=${valid} trimmed=${trimmed}`
+      );
+      if (errors.length) {
+        console.warn(`[py-validate] ISSUES (unfixable): ${errors.join(" | ")}`);
+      }
+      // Apply Python-trimmed values so the response respects the char limits
+      if (trimmed) {
+        aiResult = { ...aiResult, ...pyReport.data };
+        console.log(`[py-validate] applied trimmed values to response`);
+      }
     }
-  }).catch(() => { /* never reject */ });
+  } catch { /* never block generation */ }
 
   const fromCache = baseFromCache && featuresFromCache && lyricsFromCache && templateFromCache;
 

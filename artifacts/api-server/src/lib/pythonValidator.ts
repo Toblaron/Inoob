@@ -6,7 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(__dirname, "../validate_chars.py");
 
 export interface FieldReport {
-  len: number;
+  original: number;
+  final: number;
   min: number;
   max: number;
   ok: boolean;
@@ -14,18 +15,29 @@ export interface FieldReport {
 
 export interface ValidationReport {
   valid: boolean;
+  trimmed: boolean;
   fields: {
     styleOfMusic?: FieldReport;
     lyrics?: FieldReport;
     negativePrompt?: FieldReport;
   };
   errors: string[];
+  /** Trimmed/validated field values — use these instead of the raw AI output */
+  data: {
+    styleOfMusic: string;
+    lyrics: string;
+    negativePrompt: string;
+  };
 }
 
 /**
- * Run the Python character-count validator.
+ * Run the Python character-count validator and trimmer.
+ *
  * Python len() counts Unicode code points — more accurate than JS .length
  * for text containing emoji or supplementary-plane characters.
+ *
+ * The script also trims fields that exceed the max limit (smart trim at
+ * newline for lyrics, comma for style/negative).
  *
  * Returns null if Python is not available (graceful degradation).
  */
@@ -35,7 +47,7 @@ export async function validateWithPython(payload: {
   negativePrompt: string;
 }): Promise<ValidationReport | null> {
   return new Promise((resolve) => {
-    const py = spawn("python3", [SCRIPT], { timeout: 10_000 });
+    const py = spawn("python3", [SCRIPT], { timeout: 15_000 });
 
     let stdout = "";
     let stderr = "";
