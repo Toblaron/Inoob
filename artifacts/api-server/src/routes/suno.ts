@@ -2043,13 +2043,33 @@ router.get("/youtube-preview", async (req, res) => {
     res.status(400).json({ error: "Invalid YouTube URL" });
     return;
   }
+
+  const videoId = videoIdFromUrl(url);
+  // YouTube always serves the mqdefault thumbnail for any public video
+  const thumbFallback = videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null;
+
+  // ── Strategy 1: oEmbed (works for all public videos, no rate-limit, no bot-detection) ──
+  try {
+    const oembed = await fetchViaOembed(url);
+    const { cleanTitle, cleanArtist } = cleanSongTitle(oembed.title, oembed.author);
+    // oEmbed gives a 120x90 thumb — prefer our mqdefault URL which is larger
+    const thumbnail = thumbFallback ?? oembed.thumbnail ?? null;
+    console.log(`[youtube-preview] oEmbed OK: "${cleanTitle}" by "${cleanArtist}"`);
+    res.json({ title: oembed.title, cleanTitle, author: cleanArtist || oembed.author, thumbnail, duration: null });
+    return;
+  } catch {
+    console.warn("[youtube-preview] oEmbed failed — trying ytdl fallback");
+  }
+
+  // ── Strategy 2: ytdl-core (has richer data but often blocked on RPi) ──
   try {
     const info = await ytdl.getBasicInfo(url, {
       requestOptions: { headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" } },
     });
     const vd = info.videoDetails;
-    const thumb = vd.thumbnails?.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? null;
     const { cleanTitle, cleanArtist } = cleanSongTitle(vd.title ?? "", vd.author?.name ?? "");
+    const thumb = vd.thumbnails?.sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0]?.url ?? thumbFallback;
+    console.log(`[youtube-preview] ytdl OK: "${cleanTitle}" by "${cleanArtist}"`);
     res.json({
       title: vd.title ?? "Unknown Title",
       cleanTitle,
@@ -2058,8 +2078,9 @@ router.get("/youtube-preview", async (req, res) => {
       duration: vd.lengthSeconds ? formatDuration(Number(vd.lengthSeconds)) : null,
     });
   } catch (err) {
-    console.error("youtube-preview error:", err);
-    res.status(400).json({ error: "Could not fetch video info" });
+    console.error("[youtube-preview] all strategies failed:", (err as Error).message?.slice(0, 120));
+    // Still return partial data (thumbnail always works)
+    res.json({ title: "", cleanTitle: "", author: "", thumbnail: thumbFallback, duration: null });
   }
 });
 
