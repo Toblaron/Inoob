@@ -876,72 +876,40 @@ export default function Home() {
     );
   };
 
-  const variationResultsRef = useRef<(SunoTemplate | null)[]>([]);
-  const variationSettledRef = useRef(0);
-
   const handleGenerateVariations = () => {
     if (!lastUrlRef.current) return;
-    const opts = lastOptionsRef.current as object;
     const count = variationCount;
-
-    variationResultsRef.current = Array(count).fill(null);
-    variationSettledRef.current = 0;
-
     setIsGeneratingVariations(true);
     setVariationWorkshop(null);
     setVariationPending(Array(count).fill(true));
     setApiError(null);
 
-    for (let i = 0; i < count; i++) {
-      const slotIdx = i;
-      mainMutation.mutate(
-        {
-          data: {
-            youtubeUrl: lastUrlRef.current!,
-            ...(opts as object),
-            variationIndex: slotIdx + 1,
-          },
+    variationsMutation.mutate(
+      {
+        data: {
+          youtubeUrl: lastUrlRef.current!,
+          ...(lastOptionsRef.current as object),
+          count,
         },
-        {
-          onSuccess: (data) => {
-            variationResultsRef.current[slotIdx] = data;
-            variationSettledRef.current += 1;
-
-            setVariationPending((prev) => {
-              const next = [...prev];
-              next[slotIdx] = false;
-              return next;
-            });
-            const ready = variationResultsRef.current.filter(
-              (r): r is SunoTemplate => r !== null
-            );
-            if (ready.length > 0) setVariationWorkshop(ready);
-
-            if (variationSettledRef.current === count) {
-              setIsGeneratingVariations(false);
-            }
-          },
-          onError: () => {
-            variationSettledRef.current += 1;
-            setVariationPending((prev) => {
-              const next = [...prev];
-              next[slotIdx] = false;
-              return next;
-            });
-            if (variationSettledRef.current === count) {
-              const ready = variationResultsRef.current.filter(
-                (r): r is SunoTemplate => r !== null
-              );
-              if (ready.length === 0) {
-                setApiError("All variation requests failed.");
-                setVariationWorkshop(null);
-              }
-              setIsGeneratingVariations(false);
-            }
-          },
-        }
-      );
-    }
+      },
+      {
+        onSuccess: (data) => {
+          setVariationWorkshop(data.variations);
+          setVariationPending([]);
+          setIsGeneratingVariations(false);
+        },
+        onError: (err) => {
+          setApiError(
+            (err as { data?: { error?: string }; message?: string })?.data?.error ??
+              (err as Error)?.message ??
+              "Failed to generate variations"
+          );
+          setVariationPending([]);
+          setVariationWorkshop(null);
+          setIsGeneratingVariations(false);
+        },
+      }
+    );
   };
 
   const handleMergeVariation = (merged: SunoTemplate) => {

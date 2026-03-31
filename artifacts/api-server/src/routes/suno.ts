@@ -1264,7 +1264,7 @@ router.post("/generate-variations", async (req, res) => {
   }
 
   const rawCount = typeof req.body.count === "number" ? req.body.count : 2;
-  const count = Math.min(Math.max(Math.round(rawCount), 2), 4);
+  const count = Math.min(Math.max(Math.round(rawCount), 1), 4);
 
   console.log(`[variations] Generating ${count} variations for ${parsed.data.youtubeUrl}`);
 
