@@ -481,16 +481,35 @@ async function fetchCaptions(info: ytdl.videoInfo): Promise<string | null> {
 }
 
 async function fetchViaOembed(url: string): Promise<{ title: string; author: string }> {
-  const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
-  const response = await fetch(oembedUrl);
-  if (!response.ok) throw new Error("Could not fetch video metadata via oEmbed.");
-  const data = await response.json() as { title: string; author_name: string };
-  return { title: data.title, author: data.author_name };
+  const headers = { "User-Agent": "Mozilla/5.0 (compatible; TrackTemplate/1.0)" };
+  const timeout = 8000;
+
+  // Try YouTube's native oEmbed first, then noembed.com as fallback
+  const endpoints = [
+    `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+    `https://noembed.com/embed?url=${encodeURIComponent(url)}`,
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeout);
+      const response = await fetch(endpoint, { headers, signal: controller.signal });
+      clearTimeout(timer);
+      if (!response.ok) continue;
+      const data = await response.json() as { title: string; author_name: string };
+      if (data.title && data.author_name) return { title: data.title, author: data.author_name };
+    } catch {
+      // try next endpoint
+    }
+  }
+  throw new Error("Could not fetch video metadata via oEmbed.");
 }
 
 /**
  * Stage 1: Fetch base video metadata (title, author, description, captions, MusicBrainz).
- * Does NOT fetch lyrics or audio features — those are fetched and cached separately.
+ * oEmbed is the primary source (always works for public videos).
+ * ytdl-core enriches with description/keywords/captions when available.
  */
 async function fetchBaseMetadata(url: string): Promise<BaseVideoMetadata> {
   let title = "";
@@ -501,26 +520,32 @@ async function fetchBaseMetadata(url: string): Promise<BaseVideoMetadata> {
   let durationSeconds: number | null = null;
   let captionText: string | null = null;
 
+  // Step 1: Guaranteed title+author via oEmbed (public videos always work)
+  try {
+    const oembed = await fetchViaOembed(url);
+    title = oembed.title;
+    author = oembed.author;
+    console.log(`oEmbed OK: "${title}" by "${author}"`);
+  } catch (oembedErr) {
+    // oEmbed failed → video is likely private, age-restricted, or the URL is invalid
+    throw new Error(
+      "Could not fetch video metadata. Make sure the URL is a valid, public YouTube video " +
+      "(private, age-restricted, and members-only videos are not supported)."
+    );
+  }
+
+  // Step 2: Enrich with ytdl-core (description, keywords, captions, duration) — best-effort
   try {
     const info = await ytdl.getInfo(url);
     const details = info.videoDetails;
     durationSeconds = parseInt(details.lengthSeconds, 10);
-    title = details.title;
-    author = details.author.name;
     description = details.description ?? "";
     keywords = details.keywords ?? [];
     category = (details as unknown as { category?: string }).category ?? "";
     captionText = await fetchCaptions(info);
-    console.log(`ytdl-core OK: "${title}" by "${author}" (${durationSeconds}s)`);
+    console.log(`ytdl-core enrichment OK (${durationSeconds}s, ${keywords.length} keywords)`);
   } catch (ytdlErr) {
-    console.warn("ytdl-core failed, falling back to oEmbed:", (ytdlErr as Error).message?.slice(0, 120));
-    try {
-      const oembed = await fetchViaOembed(url);
-      title = oembed.title;
-      author = oembed.author;
-    } catch {
-      throw new Error("Could not fetch video metadata from YouTube.");
-    }
+    console.warn("ytdl-core enrichment skipped:", (ytdlErr as Error).message?.slice(0, 80));
   }
 
   const { cleanTitle, cleanArtist } = cleanSongTitle(title, author);
