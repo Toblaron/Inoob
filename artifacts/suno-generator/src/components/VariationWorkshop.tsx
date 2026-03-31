@@ -433,7 +433,7 @@ function CompositePanelReady({ merged, selected, anyNonDefault, onCopy, onMerge 
             className="flex items-center gap-1.5 px-4 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all"
           >
             <Check className="w-3 h-3" />
-            Use This Template
+            Merge to Final
           </button>
         </div>
       </div>
@@ -630,7 +630,9 @@ export function VariationWorkshop({
           <span className="flex items-center gap-1">
             <span className="inline-block px-1 bg-red-500/15 text-red-400 line-through rounded-sm opacity-70">-removed</span>
           </span>
-          <span className="text-zinc-700">vs V1 (reference)</span>
+          <span className="text-zinc-700">
+            vs V{variations.findIndex((v): v is SunoTemplate => v !== null && v !== "error") + 1} (reference)
+          </span>
         </div>
       )}
 
