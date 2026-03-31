@@ -1288,8 +1288,11 @@ router.post("/generate-variations", async (req, res) => {
       .map((s) => s.template);
 
     if (variations.length === 0) {
-      const firstErr = slots.find((s) => "error" in s)?.error ?? "All variations failed to generate";
-      res.status(500).json({ error: firstErr });
+      const firstErrMsg = slots.find((s) => "error" in s)?.error ?? "All variations failed to generate";
+      const isClientError =
+        firstErrMsg.includes("Invalid YouTube URL") ||
+        firstErrMsg.includes("Could not fetch video metadata");
+      res.status(isClientError ? 400 : 500).json({ error: firstErrMsg });
       return;
     }
 
@@ -1298,7 +1301,10 @@ router.post("/generate-variations", async (req, res) => {
   } catch (err: unknown) {
     console.error("Error generating variations:", err);
     const message = err instanceof Error ? err.message : "An unexpected error occurred";
-    res.status(500).json({ error: message });
+    const isClientError =
+      message.includes("Invalid YouTube URL") ||
+      message.includes("Could not fetch video metadata");
+    res.status(isClientError ? 400 : 500).json({ error: message });
   }
 });
 

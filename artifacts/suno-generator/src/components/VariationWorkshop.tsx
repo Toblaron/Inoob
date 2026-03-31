@@ -552,12 +552,10 @@ export function VariationWorkshop({
   const readySlots = variations.filter((v): v is SunoTemplate => isTemplate(v));
   const reference = readySlots[0] ?? null;
 
-  const safeVariation = (idx: number): SunoTemplate => {
+  const safeVariation = (idx: number): SunoTemplate | null => {
     const slot = variations[idx];
     if (isTemplate(slot)) return slot;
-    const fallback = readySlots[0];
-    if (fallback) return fallback;
-    return {} as SunoTemplate;
+    return readySlots[0] ?? null;
   };
 
   const selIdx = (key: SectionKey) => {
@@ -570,10 +568,10 @@ export function VariationWorkshop({
     reference !== null
       ? {
           ...reference,
-          styleOfMusic: safeVariation(selIdx("styleOfMusic")).styleOfMusic,
-          title: safeVariation(selIdx("title")).title,
-          lyrics: safeVariation(selIdx("lyrics")).lyrics,
-          negativePrompt: safeVariation(selIdx("negativePrompt")).negativePrompt,
+          styleOfMusic: safeVariation(selIdx("styleOfMusic"))?.styleOfMusic ?? reference.styleOfMusic,
+          title: safeVariation(selIdx("title"))?.title ?? reference.title,
+          lyrics: safeVariation(selIdx("lyrics"))?.lyrics ?? reference.lyrics,
+          negativePrompt: safeVariation(selIdx("negativePrompt"))?.negativePrompt ?? reference.negativePrompt,
         }
       : null;
 
