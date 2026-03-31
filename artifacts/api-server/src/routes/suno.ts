@@ -8,6 +8,7 @@ import { analyzeLyricsStructure } from "../lib/lyricsStructure.js";
 import { computeSuggestedDefaults } from "../lib/suggestedDefaults.js";
 import { cacheGet, cacheSet, cacheStats, hashParams, TTL } from "../lib/cache.js";
 import { computeFingerprint } from "../lib/fingerprint.js";
+import { validateWithPython } from "../lib/pythonValidator.js";
 
 const AI_MODEL      = process.env.AI_MODEL      ?? "gpt-5.2";
 const AI_MINI_MODEL = process.env.AI_MINI_MODEL ?? "gpt-4.1-mini";
@@ -1312,7 +1313,7 @@ If you finish the song structure and are under 4,900 chars: KEEP WRITING — add
 
     const lyricsCompletion = await openai.chat.completions.create({
       model: AI_MODEL,
-      max_completion_tokens: 2500,  // 4,900 chars ≈ 1,225 tokens; 2,500 is plenty with headroom
+      max_completion_tokens: 6000,  // generous cap — Gemini Flash can be concise, give it room
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: lyricsUserPrompt },
@@ -1322,31 +1323,32 @@ If you finish the song structure and are under 4,900 chars: KEEP WRITING — add
     let lyrics = lyricsCompletion.choices[0]?.message?.content?.trim() ?? "";
     console.log(`[lyrics] initial: ${lyrics.length} chars`);
 
-    // ── Single expansion pass (token-efficient) ───────────────────────────────
-    // Only one pass to avoid burning through daily token limits on Groq free tier.
-    // If the primary prompt is well-tuned, expansion should rarely be needed.
-    if (lyrics.length < 4600) {
+    // ── Expansion loop: up to 3 passes ───────────────────────────────────────
+    // Gemini Flash tends to produce concise output; multiple passes bridge the
+    // gap to the 4,900-char minimum.  Each pass is capped at 3,000 tokens to
+    // stay well within rate limits for both Gemini (req/day) and Groq (TPD).
+    for (let pass = 0; pass < 3 && lyrics.length < 4600; pass++) {
       const needed = 4900 - lyrics.length;
-      console.warn(`[expand] ${lyrics.length} chars — running single expansion pass (need ${needed} more)`);
+      console.warn(`[expand] pass ${pass + 1}: ${lyrics.length} chars, need ${needed} more`);
 
       const expandCompletion = await openai.chat.completions.create({
         model: AI_MODEL,
-        max_completion_tokens: 2500,
+        max_completion_tokens: 3000,
         messages: [{
           role: "user",
-          content: `The Suno lyrics below are ${lyrics.length} characters. You must expand them to reach at least 4,900 characters.
+          content: `The Suno lyrics below are ${lyrics.length} characters. Expand them to at least 4,900 characters.
 
-Add ${needed}+ more characters by inserting throughout the text:
-- More [instrument cue] lines after every section header (add 2 more per section)
+Add ${needed}+ more characters throughout:
+- More [instrument cue] lines after every section header (add 2–3 per section)
 - More (performance direction) parentheticals after lyric stanzas
 - More ad-lib variants in choruses: (yeah!), (oh-oh), (come on!), (let's go), (woah!)
-- Richer section header descriptors (add 2–3 more descriptor phrases to each)
+- Richer section header descriptors (3+ descriptor phrases per header)
 - An additional [Breakdown] or [Interlude] section
 - Extended [Outro] with 4+ instrument cue lines and fade directions
 
 Do NOT change existing lyric lines. Output the COMPLETE expanded lyrics. No JSON, no commentary.
 
-CURRENT LYRICS (${lyrics.length} chars):
+CURRENT LYRICS (${lyrics.length} chars — need ${needed} more):
 ${lyrics}`,
         }],
       });
@@ -1354,9 +1356,10 @@ ${lyrics}`,
       const expanded = expandCompletion.choices[0]?.message?.content?.trim() ?? "";
       if (expanded.length > lyrics.length) {
         lyrics = expanded;
-        console.log(`[expand] result: ${lyrics.length} chars`);
+        console.log(`[expand] pass ${pass + 1}: ${lyrics.length} chars`);
       } else {
-        console.warn(`[expand] no improvement (${expanded.length} chars)`);
+        console.warn(`[expand] pass ${pass + 1}: no improvement (${expanded.length} chars) — stopping`);
+        break;
       }
     }
 
@@ -1377,6 +1380,34 @@ ${lyrics}`,
   } else {
     aiResult = await runAiCall();
   }
+
+  // ── Python character-count validation ────────────────────────────────────
+  // Python len() counts Unicode code points; JS .length counts UTF-16 units.
+  // They differ for emoji / supplementary-plane chars.  We log both so any
+  // discrepancy is immediately visible.  Validation never blocks generation —
+  // it runs async and results are logged only.
+  validateWithPython({
+    styleOfMusic:   aiResult.styleOfMusic,
+    lyrics:         aiResult.lyrics,
+    negativePrompt: aiResult.negativePrompt,
+  }).then((report) => {
+    if (!report) return; // Python not available — skip silently
+    const { fields, valid, errors } = report;
+    const sm = fields.styleOfMusic;
+    const ly = fields.lyrics;
+    const np = fields.negativePrompt;
+    const jsStyle = aiResult.styleOfMusic.length;
+    const jsLyrics = aiResult.lyrics.length;
+    const jsNeg    = aiResult.negativePrompt.length;
+    console.log(
+      `[py-validate] style  JS=${jsStyle} PY=${sm?.len} ok=${sm?.ok}  ` +
+      `lyrics JS=${jsLyrics} PY=${ly?.len} ok=${ly?.ok}  ` +
+      `neg JS=${jsNeg} PY=${np?.len} ok=${np?.ok}  valid=${valid}`
+    );
+    if (errors.length) {
+      console.warn(`[py-validate] ISSUES: ${errors.join(" | ")}`);
+    }
+  }).catch(() => { /* never reject */ });
 
   const fromCache = baseFromCache && featuresFromCache && lyricsFromCache && templateFromCache;
 
