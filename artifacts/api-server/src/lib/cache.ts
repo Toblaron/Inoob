@@ -68,17 +68,36 @@ export function cacheStats(): { entries: number; sizeBytes: number; hits: number
 }
 
 /**
- * Create a deterministic cache key from a set of parameters.
- * SHA-1 (first 12 chars) is sufficient — collisions are harmless (just a cache miss).
+ * Recursively JSON-stringify with all object keys sorted, so nested objects
+ * always produce the same output regardless of insertion order.
  */
-export function hashParams(params: Record<string, unknown>): string {
-  const stable = JSON.stringify(params, Object.keys(params).sort());
-  return createHash("sha1").update(stable).digest("hex").slice(0, 12);
+function stableStringify(val: unknown): string {
+  if (val === null || typeof val !== "object") return JSON.stringify(val);
+  if (Array.isArray(val)) return `[${val.map(stableStringify).join(",")}]`;
+  const obj = val as Record<string, unknown>;
+  const sorted = Object.keys(obj)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`);
+  return `{${sorted.join(",")}}`;
 }
 
-/** TTL constants (seconds) */
+/**
+ * Create a deterministic cache key from a set of parameters.
+ * Uses a deep stable-sort stringify so nested objects (e.g. confirmedStructure)
+ * always hash consistently regardless of key insertion order.
+ * SHA-1 (first 12 chars) — collisions are harmless (just a cache miss).
+ */
+export function hashParams(params: Record<string, unknown>): string {
+  return createHash("sha1").update(stableStringify(params)).digest("hex").slice(0, 12);
+}
+
+/** TTL constants (seconds). undefined = permanent (no expiry). */
 export const TTL = {
+  /** Base video metadata + lyrics — re-fetch after 7 days in case lyrics are updated */
   METADATA: 7 * 24 * 3600,
-  FEATURES: 0,
+  LYRICS: 7 * 24 * 3600,
+  /** Audio features are deterministic — never expire */
+  FEATURES: undefined as number | undefined,
+  /** Generated AI template output — re-generate after 7 days */
   TEMPLATE: 7 * 24 * 3600,
 } as const;

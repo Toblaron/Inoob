@@ -28,7 +28,8 @@ interface DescriptionMusicData {
   key?: string;
 }
 
-interface VideoMetadata {
+/** Stage 1 cache payload — base video info, no lyrics, no audio features. TTL: 7d */
+interface BaseVideoMetadata {
   title: string;
   author: string;
   description: string;
@@ -36,26 +37,34 @@ interface VideoMetadata {
   category: string;
   duration: string;
   durationSeconds: number | null;
-  /** Raw captions/transcript from YouTube */
   captionText: string | null;
-  /** Authentic lyrics from a lyrics API */
-  lyricsText: string | null;
-  /** Cleaned song title (without YouTube suffixes) for API searches */
   cleanTitle: string;
-  /** Cleaned artist name for API searches */
   cleanArtist: string;
-  lyricsSource: "user-override" | "api" | "captions" | "none";
-  /** Which lyrics source provided the lyrics */
-  lyricsProvider?: "genius" | "lrclib" | "lyrics.ovh";
-  /** Whether the lyrics already contain [Verse]/[Chorus] etc. section tags */
-  lyricsHasStructure?: boolean;
-  /** Detected language of the lyrics */
-  language?: string;
-  /** MusicBrainz verified metadata */
   musicBrainz?: MusicBrainzData;
-  /** Structured data extracted from the description */
   descriptionData?: DescriptionMusicData;
-  /** Audio features: BPM, key, time signature (from description → GetSongBPM → AI knowledge) */
+}
+
+/** Stage 2 cache payload — audio features only. TTL: permanent (deterministic). */
+interface CachedAudioFeatures {
+  features: AudioFeatures | null;
+}
+
+/** Stage 3 cache payload — lyrics and language. TTL: 7d */
+interface CachedLyrics {
+  lyricsText: string | null;
+  lyricsSource: "api" | "captions" | "none";
+  lyricsProvider?: "genius" | "lrclib" | "lyrics.ovh";
+  lyricsHasStructure?: boolean;
+  language?: string;
+}
+
+/** Full assembled metadata used throughout the route logic. */
+interface VideoMetadata extends BaseVideoMetadata {
+  lyricsText: string | null;
+  lyricsSource: "user-override" | "api" | "captions" | "none";
+  lyricsProvider?: "genius" | "lrclib" | "lyrics.ovh";
+  lyricsHasStructure?: boolean;
+  language?: string;
   audioFeatures?: AudioFeatures;
 }
 
@@ -475,8 +484,11 @@ async function fetchViaOembed(url: string): Promise<{ title: string; author: str
   return { title: data.title, author: data.author_name };
 }
 
-async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
-  // --- Step 1: Get base metadata from ytdl-core (best source), fall back to oEmbed ---
+/**
+ * Stage 1: Fetch base video metadata (title, author, description, captions, MusicBrainz).
+ * Does NOT fetch lyrics or audio features — those are fetched and cached separately.
+ */
+async function fetchBaseMetadata(url: string): Promise<BaseVideoMetadata> {
   let title = "";
   let author = "";
   let description = "";
@@ -513,22 +525,43 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
 
   console.log(`Looking up: "${cleanArtist}" - "${cleanTitle}"${durationSeconds ? ` (${durationSeconds}s)` : ""}`);
 
-  // --- Step 2: Parallel-fetch Genius lyrics + (lrclib + lyrics.ovh) + MusicBrainz + audio features ---
-  const [geniusResult, lrclibLyrics, ovhLyrics, musicBrainz, audioFeatures] = await Promise.all([
+  const musicBrainz = await fetchMusicBrainzData(cleanArtist, cleanTitle, durationSeconds ?? undefined);
+  if (musicBrainz.releaseYear || musicBrainz.genres?.length) {
+    console.log(`MusicBrainz: year=${musicBrainz.releaseYear}, genres=[${musicBrainz.genres?.join(", ")}], album="${musicBrainz.album}"`);
+  }
+
+  return {
+    title,
+    author,
+    description,
+    keywords,
+    category,
+    duration,
+    durationSeconds,
+    captionText,
+    cleanTitle,
+    cleanArtist,
+    musicBrainz: (musicBrainz.releaseYear || musicBrainz.genres?.length || musicBrainz.album) ? musicBrainz : undefined,
+    descriptionData: Object.keys(descriptionData).length > 0 ? descriptionData : undefined,
+  };
+}
+
+/**
+ * Stage 3: Fetch lyrics from external providers (Genius → lrclib → lyrics.ovh).
+ * Falls back to captions if no lyrics found; falls back to "none" if no captions.
+ */
+async function fetchLyricsData(
+  cleanArtist: string,
+  cleanTitle: string,
+  durationSeconds: number | null,
+  captionText: string | null,
+): Promise<CachedLyrics> {
+  const [geniusResult, lrclibLyrics, ovhLyrics] = await Promise.all([
     fetchLyricsFromGenius(cleanArtist, cleanTitle),
     fetchLyricsFromLrcLib(cleanArtist, cleanTitle, durationSeconds ?? undefined),
     fetchLyricsFromAPI(cleanArtist, cleanTitle),
-    fetchMusicBrainzData(cleanArtist, cleanTitle, durationSeconds ?? undefined),
-    detectAudioFeatures({
-      artist: cleanArtist,
-      title: cleanTitle,
-      youtubeUrl: url,
-      descriptionBpm: descriptionData.bpm,
-      descriptionKey: descriptionData.key,
-    }),
   ]);
 
-  // --- Step 3: Pick the best lyrics source (Genius > lrclib > lyrics.ovh) ---
   let lyricsText: string | null = null;
   let lyricsProvider: "genius" | "lrclib" | "lyrics.ovh" | undefined;
   let lyricsHasStructure = false;
@@ -548,39 +581,47 @@ async function fetchYouTubeMetadata(url: string): Promise<VideoMetadata> {
     console.log(`Lyrics via lyrics.ovh (${lyricsText.length} chars)`);
   }
 
-  const language = lyricsText ? detectLanguage(lyricsText) : undefined;
-  if (language && language !== "English") console.log(`Language detected: ${language}`);
-
-  if (musicBrainz.releaseYear || musicBrainz.genres?.length) {
-    console.log(`MusicBrainz: year=${musicBrainz.releaseYear}, genres=[${musicBrainz.genres?.join(", ")}], album="${musicBrainz.album}"`);
-  }
-
-  const base = {
-    title,
-    author,
-    description,
-    keywords,
-    category,
-    duration,
-    durationSeconds,
-    captionText,
-    cleanTitle,
-    cleanArtist,
-    language,
-    musicBrainz: (musicBrainz.releaseYear || musicBrainz.genres?.length || musicBrainz.album) ? musicBrainz : undefined,
-    descriptionData: Object.keys(descriptionData).length > 0 ? descriptionData : undefined,
-    audioFeatures: audioFeatures ?? undefined,
-  };
-
   if (lyricsText) {
-    return { ...base, lyricsText, lyricsSource: "api", lyricsProvider, lyricsHasStructure };
+    const language = detectLanguage(lyricsText);
+    if (language !== "English") console.log(`Language detected: ${language}`);
+    return { lyricsText, lyricsSource: "api", lyricsProvider, lyricsHasStructure, language };
   }
   if (captionText) {
     console.log(`No lyrics found — using YouTube captions (${captionText.length} chars)`);
-    return { ...base, lyricsText: null, lyricsSource: "captions" };
+    return { lyricsText: null, lyricsSource: "captions" };
   }
   console.log("No lyrics or captions found — relying on AI knowledge");
-  return { ...base, lyricsText: null, lyricsSource: "none" };
+  return { lyricsText: null, lyricsSource: "none" };
+}
+
+/**
+ * Assemble a full VideoMetadata from the three independently-cached stages.
+ */
+function assembleMetadata(
+  base: BaseVideoMetadata,
+  cachedLyrics: CachedLyrics,
+  audioFeatures: AudioFeatures | undefined,
+): VideoMetadata {
+  return { ...base, ...cachedLyrics, audioFeatures };
+}
+
+/**
+ * Fetch and cache all three stages for a YouTube URL, returning full VideoMetadata.
+ * Used by routes that need everything in one call (no videoId available for staged lookup).
+ */
+async function fetchAllMetadata(url: string): Promise<VideoMetadata> {
+  const base = await fetchBaseMetadata(url);
+  const [lyricsData, featuresResult] = await Promise.all([
+    fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText),
+    detectAudioFeatures({
+      artist: base.cleanArtist,
+      title: base.cleanTitle,
+      youtubeUrl: url,
+      descriptionBpm: base.descriptionData?.bpm,
+      descriptionKey: base.descriptionData?.key,
+    }),
+  ]);
+  return assembleMetadata(base, lyricsData, featuresResult ?? undefined);
 }
 
 function videoIdFromUrl(url: string): string | null {
@@ -990,19 +1031,19 @@ router.post("/generate-template", async (req, res) => {
 
     const videoId = videoIdFromUrl(youtubeUrl);
 
-    // ── Cache: metadata ──────────────────────────────────────────────────────
-    let metadata: VideoMetadata;
-    let metadataFromCache = false;
+    // ── Staged cache: Stage 1 (base metadata, 7d) ────────────────────────────
+    let base: BaseVideoMetadata;
+    let baseFromCache = false;
     if (videoId) {
-      const cached = cacheGet<VideoMetadata>(`metadata:${videoId}`);
+      const cached = cacheGet<BaseVideoMetadata>(`metadata:${videoId}`);
       if (cached) {
-        metadata = cached;
-        metadataFromCache = true;
+        base = cached;
+        baseFromCache = true;
         console.log(`[cache] metadata HIT for ${videoId}`);
       } else {
         try {
-          metadata = await fetchYouTubeMetadata(youtubeUrl);
-          cacheSet(`metadata:${videoId}`, metadata, TTL.METADATA);
+          base = await fetchBaseMetadata(youtubeUrl);
+          cacheSet(`metadata:${videoId}`, base, TTL.METADATA);
           console.log(`[cache] metadata SET for ${videoId}`);
         } catch (fetchErr) {
           console.error("Failed to fetch YouTube metadata:", fetchErr);
@@ -1012,13 +1053,65 @@ router.post("/generate-template", async (req, res) => {
       }
     } else {
       try {
-        metadata = await fetchYouTubeMetadata(youtubeUrl);
+        base = await fetchBaseMetadata(youtubeUrl);
       } catch (fetchErr) {
         console.error("Failed to fetch YouTube metadata:", fetchErr);
         res.status(400).json({ error: "Could not fetch video metadata. Make sure the URL is a valid, public YouTube video." });
         return;
       }
     }
+
+    // ── Staged cache: Stage 2 (audio features, permanent — deterministic) ────
+    let audioFeatures: AudioFeatures | undefined;
+    let featuresFromCache = false;
+    if (videoId) {
+      const cached = cacheGet<CachedAudioFeatures>(`features:${videoId}`);
+      if (cached) {
+        audioFeatures = cached.features ?? undefined;
+        featuresFromCache = true;
+        console.log(`[cache] features HIT for ${videoId}`);
+      } else {
+        const result = await detectAudioFeatures({
+          artist: base.cleanArtist,
+          title: base.cleanTitle,
+          youtubeUrl,
+          descriptionBpm: base.descriptionData?.bpm,
+          descriptionKey: base.descriptionData?.key,
+        });
+        audioFeatures = result ?? undefined;
+        cacheSet<CachedAudioFeatures>(`features:${videoId}`, { features: result }, TTL.FEATURES);
+        console.log(`[cache] features SET for ${videoId} (permanent)`);
+      }
+    } else {
+      const result = await detectAudioFeatures({
+        artist: base.cleanArtist,
+        title: base.cleanTitle,
+        youtubeUrl,
+        descriptionBpm: base.descriptionData?.bpm,
+        descriptionKey: base.descriptionData?.key,
+      });
+      audioFeatures = result ?? undefined;
+    }
+
+    // ── Staged cache: Stage 3 (lyrics, 7d) ───────────────────────────────────
+    let cachedLyrics: CachedLyrics;
+    let lyricsFromCache = false;
+    if (videoId) {
+      const cached = cacheGet<CachedLyrics>(`lyrics:${videoId}`);
+      if (cached) {
+        cachedLyrics = cached;
+        lyricsFromCache = true;
+        console.log(`[cache] lyrics HIT for ${videoId}`);
+      } else {
+        cachedLyrics = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);
+        cacheSet(`lyrics:${videoId}`, cachedLyrics, TTL.LYRICS);
+        console.log(`[cache] lyrics SET for ${videoId}`);
+      }
+    } else {
+      cachedLyrics = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);
+    }
+
+    let metadata: VideoMetadata = assembleMetadata(base, cachedLyrics, audioFeatures);
 
     // Override lyrics with user-provided lyrics if supplied
     if (manualLyrics && manualLyrics.trim().length > 20) {
@@ -1127,7 +1220,7 @@ ${context}`;
       aiResult = JSON.parse(content) as AiOutput;
     }
 
-    const fromCache = metadataFromCache && templateFromCache;
+    const fromCache = baseFromCache && featuresFromCache && lyricsFromCache && templateFromCache;
 
     const template = GenerateSunoTemplateResponse.parse({
       songTitle: metadata.title,
@@ -1518,17 +1611,37 @@ router.post("/pre-analyze-structure", async (req, res) => {
   try {
     const vid = videoIdFromUrl(youtubeUrl);
     let metadata: VideoMetadata;
+
     if (vid) {
-      const cached = cacheGet<VideoMetadata>(`metadata:${vid}`);
-      if (cached) {
-        metadata = cached;
-      } else {
-        metadata = await fetchYouTubeMetadata(youtubeUrl);
-        cacheSet(`metadata:${vid}`, metadata, TTL.METADATA);
+      // Stage 1: base metadata
+      let base = cacheGet<BaseVideoMetadata>(`metadata:${vid}`);
+      if (!base) {
+        base = await fetchBaseMetadata(youtubeUrl);
+        cacheSet(`metadata:${vid}`, base, TTL.METADATA);
       }
+      // Stage 2: audio features (permanent) — populate cache opportunistically
+      if (!cacheGet<CachedAudioFeatures>(`features:${vid}`)) {
+        const result = await detectAudioFeatures({
+          artist: base.cleanArtist,
+          title: base.cleanTitle,
+          youtubeUrl,
+          descriptionBpm: base.descriptionData?.bpm,
+          descriptionKey: base.descriptionData?.key,
+        });
+        cacheSet<CachedAudioFeatures>(`features:${vid}`, { features: result }, TTL.FEATURES);
+      }
+      // Stage 3: lyrics
+      let cachedLyrics = cacheGet<CachedLyrics>(`lyrics:${vid}`);
+      if (!cachedLyrics) {
+        cachedLyrics = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);
+        cacheSet(`lyrics:${vid}`, cachedLyrics, TTL.LYRICS);
+      }
+      const cachedFeatures = cacheGet<CachedAudioFeatures>(`features:${vid}`);
+      metadata = assembleMetadata(base, cachedLyrics, cachedFeatures?.features ?? undefined);
     } else {
-      metadata = await fetchYouTubeMetadata(youtubeUrl);
+      metadata = await fetchAllMetadata(youtubeUrl);
     }
+
     if (!metadata.lyricsText || metadata.lyricsText.trim().length < 30) {
       res.status(404).json({ error: "No lyrics found for this song." });
       return;
