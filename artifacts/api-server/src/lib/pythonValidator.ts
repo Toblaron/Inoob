@@ -2,8 +2,15 @@ import { spawn } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SCRIPT = path.resolve(__dirname, "../validate_chars.py");
+// import.meta.url is undefined in esbuild CJS bundles (production build).
+// Fall back to a path relative to CWD which is the repo root on the Pi.
+const SCRIPT = (() => {
+  try {
+    return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../validate_chars.py");
+  } catch {
+    return path.resolve(process.cwd(), "artifacts/api-server/src/validate_chars.py");
+  }
+})();
 
 export interface FieldReport {
   original: number;
