@@ -47,6 +47,8 @@ export interface GenerateTemplateRequest {
   isInstrumental?: boolean;
   /** User-confirmed lyrics structure to use as a constraint in generation */
   confirmedStructure?: ConfirmedStructureSection[];
+  /** When true, bypass the template cache and always run a fresh AI generation */
+  noCache?: boolean;
 }
 
 export interface LyricsSection {

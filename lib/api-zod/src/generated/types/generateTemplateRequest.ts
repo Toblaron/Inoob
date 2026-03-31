@@ -9,4 +9,6 @@
 export interface GenerateTemplateRequest {
   /** A YouTube video URL */
   youtubeUrl: string;
+  /** When true, bypass the template cache and always run a fresh AI generation */
+  noCache?: boolean;
 }

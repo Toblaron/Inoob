@@ -1292,7 +1292,7 @@ export default function Home() {
     setRegeneratingSection(section as string);
     setApiError(null);
     mainMutation.mutate(
-      { data: { youtubeUrl: lastUrlRef.current, ...(lastOptionsRef.current as object) } },
+      { data: { youtubeUrl: lastUrlRef.current, ...(lastOptionsRef.current as object), noCache: true } },
       {
         onSuccess: (newData) => {
           setCurrentTemplate((prev) =>
@@ -1300,7 +1300,10 @@ export default function Home() {
           );
           setRegeneratingSection(null);
         },
-        onError: () => setRegeneratingSection(null),
+        onError: (err) => {
+          setRegeneratingSection(null);
+          setApiError(err instanceof Error ? err.message : "Regeneration failed — please try again.");
+        },
       }
     );
   };

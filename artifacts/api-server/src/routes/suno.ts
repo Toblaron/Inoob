@@ -1074,12 +1074,13 @@ interface GenerateInput {
   feedbackContext?: string;
   isInstrumental?: boolean;
   confirmedStructure?: Array<{ label: string; lines: string[] }>;
+  noCache?: boolean;
 }
 
 type AiOutput = { styleOfMusic: string; title: string; lyrics: string; negativePrompt: string };
 
 async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<typeof GenerateSunoTemplateResponse.parse>> {
-  const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext, isInstrumental, confirmedStructure } = data;
+  const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext, isInstrumental, confirmedStructure, noCache } = data;
 
   if (!isValidYouTubeUrl(youtubeUrl)) {
     throw new Error("Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link.");
@@ -1212,8 +1213,8 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
 
 ${context}`;
 
-  // Template cache (keyed by videoId + params; feedbackContext excluded; user-override not cached)
-  const useTemplateCache = videoId && metadata.lyricsSource !== "user-override";
+  // Template cache (keyed by videoId + params; feedbackContext excluded; user-override not cached; noCache bypasses)
+  const useTemplateCache = videoId && metadata.lyricsSource !== "user-override" && !noCache;
   const templateCacheKey = useTemplateCache
     ? `template:${videoId}:${hashParams({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, isInstrumental, confirmedStructure })}`
     : null;

@@ -39,6 +39,7 @@ export const GenerateSunoTemplateBody = zod.object({
     label: zod.string(),
     lines: zod.array(zod.string()),
   })).optional().describe("User-confirmed lyrics structure to use as a constraint in generation"),
+  noCache: zod.boolean().optional().describe("When true, bypass the template cache and always run a fresh AI generation"),
 });
 
 const LyricsSectionSchema = zod.object({
