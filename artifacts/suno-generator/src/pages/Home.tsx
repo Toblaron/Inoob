@@ -71,7 +71,7 @@ const MOOD_TAGS = [
   "Chaotic", "Anxious", "Desolate", "Primal", "Lush", "Fierce",
   "Longing", "Psychedelic", "Icy", "Dusty", "Tense", "Laid-back",
   "Transcendent", "Unsettling", "Festive", "Murky", "Euphoric-Sad",
-  "Punchy", "Stormy", "Intimate", "Epic", "Uneasy", "Crystalline",
+  "Punchy", "Stormy", "Intimate", "Epic", "Uneasy", "Crystalline", "Quirky",
 ];
 const INSTRUMENT_TAGS = [
   "Piano", "Guitar", "Synth", "Strings", "Bass", "Choir", "Brass", "Drums",
@@ -83,6 +83,9 @@ const INSTRUMENT_TAGS = [
   "Tabla", "Congas", "Sub Bass", "Pad", "Wurlitzer", "Harpsichord",
   "Bagpipes", "Moog", "Oud", "Koto", "Erhu", "Steel Drums",
   "Trombone", "Bassoon", "Bansuri", "Lap Steel", "Didgeridoo",
+  "Korg MS-20", "Roland Juno-106", "Yamaha CS-80", "Roland SH-101",
+  "Korg SB-100 Synthe Bass", "Korg MS2000", "Korg VC-10 Vocoder",
+  "Access Virus TI", "Akai S1000 Sampler",
 ];
 const QUALITY_EXCLUSIONS: { label: string; value: string }[] = [
   { label: "Muddy mix", value: "muddy mix" },
