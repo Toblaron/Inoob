@@ -19,8 +19,10 @@ import type {
 import type {
   ErrorResponse,
   GenerateTemplateRequest,
+  GenerateVariationsRequest,
   HealthStatus,
   SunoTemplate,
+  VariationsResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -172,6 +174,58 @@ export type GenerateSunoTemplateMutationResult = NonNullable<
 export type GenerateSunoTemplateMutationBody =
   BodyType<GenerateTemplateRequest>;
 export type GenerateSunoTemplateMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate multiple Suno.ai template variations in parallel
+ */
+export const getGenerateVariationsUrl = () => `/api/generate-variations`;
+
+export const generateVariations = async (
+  body: GenerateVariationsRequest,
+  options?: RequestInit,
+): Promise<VariationsResponse> => {
+  return customFetch<VariationsResponse>(getGenerateVariationsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(body),
+  });
+};
+
+export const useGenerateVariations = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateVariations>>,
+    TError,
+    { data: BodyType<GenerateVariationsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateVariations>>,
+  TError,
+  { data: BodyType<GenerateVariationsRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateVariations"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateVariations>>,
+    { data: BodyType<GenerateVariationsRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return generateVariations(data, requestOptions);
+  };
+
+  return useMutation({ mutationFn, ...mutationOptions });
+};
 
 /**
  * @summary Generate a Suno.ai template from a YouTube URL

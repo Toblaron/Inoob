@@ -92,3 +92,11 @@ export const GenerateSunoTemplateResponse = zod.object({
   suggestedDefaults: SuggestedDefaultsSchema.optional().describe("Smart defaults computed from BPM, era, and language data"),
   fromCache: zod.boolean().optional().describe("True when this result was served from the server-side cache"),
 });
+
+export const GenerateVariationsBody = GenerateSunoTemplateBody.extend({
+  count: zod.number().int().min(2).max(4).optional().describe("Number of variations to generate (2–4, default 2)"),
+});
+
+export const GenerateVariationsResponse = zod.object({
+  variations: zod.array(GenerateSunoTemplateResponse),
+});

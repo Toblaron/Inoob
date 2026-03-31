@@ -1005,8 +1005,14 @@ function buildStyleControls(opts: {
   if (opts.excludeTags && opts.excludeTags.length > 0) {
     lines.push(`USER EXCLUSION TAGS — The user explicitly wants to EXCLUDE these from the output. Add them prominently to Section 3 (Negative Prompt): ${opts.excludeTags.join(", ")}.`);
   }
-  if (opts.variationIndex === 2) {
-    lines.push(`VARIATION MODE — This is Variation 2. Take a fresh creative angle: choose different instrumentation, structural approach, and style adjectives from what you would typically pick first. Surprise the user with an unexpected but valid interpretation.`);
+  if (opts.variationIndex && opts.variationIndex >= 2) {
+    const variationAngles: Record<number, string> = {
+      2: "Take a fresh creative angle: choose different instrumentation, structural approach, and style adjectives from what you would typically pick first. Surprise the user with an unexpected but valid interpretation.",
+      3: "Explore a contrasting emotional dimension: shift the tempo feel, vocal delivery style, or production era while preserving the song's core identity. Be noticeably different from Variation 1 and Variation 2.",
+      4: "Push into genuinely unexpected territory: try an unusual genre fusion, unconventional instrumentation blend, or a radically different production treatment. This variation should feel like a bold reimagining.",
+    };
+    const angle = variationAngles[opts.variationIndex] ?? variationAngles[2];
+    lines.push(`VARIATION MODE — This is Variation ${opts.variationIndex}. ${angle}`);
   }
   if (opts.feedbackContext && opts.feedbackContext.trim()) {
     lines.push(`USER LEARNING SIGNAL — The user has rated past templates and their feedback is: ${opts.feedbackContext.trim()} Use this to bias your creative choices (lean toward liked characteristics, avoid disliked ones) unless they directly contradict other explicit preferences.`);
@@ -1014,74 +1020,75 @@ function buildStyleControls(opts: {
   return lines.length > 0 ? "\n\nUSER STYLE PREFERENCES (apply these to Section 1 and Section 2 header):\n" + lines.join("\n") : "";
 }
 
-router.post("/generate-template", async (req, res) => {
-  try {
-    const parsed = GenerateSunoTemplateBody.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: "Invalid request body. Please provide a youtubeUrl." });
-      return;
-    }
+// ─── Core generation pipeline (shared by /generate-template and /generate-variations) ─
 
-    const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext, isInstrumental, confirmedStructure } = parsed.data;
+interface GenerateInput {
+  youtubeUrl: string;
+  manualLyrics?: string;
+  vocalGender?: "auto" | "male" | "female" | "mixed" | "duet" | "no vocals";
+  energyLevel?: "auto" | "very chill" | "chill" | "medium" | "high" | "intense";
+  era?: "auto" | "50s" | "60s" | "70s" | "80s" | "90s" | "2000s" | "2010s" | "modern";
+  genreNudge?: string;
+  genres?: string[];
+  moods?: string[];
+  instruments?: string[];
+  mode?: "cover" | "inspired";
+  tempo?: "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper";
+  excludeTags?: string[];
+  variationIndex?: number;
+  feedbackContext?: string;
+  isInstrumental?: boolean;
+  confirmedStructure?: Array<{ label: string; lines: string[] }>;
+}
 
-    if (!isValidYouTubeUrl(youtubeUrl)) {
-      res.status(400).json({ error: "Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link." });
-      return;
-    }
+type AiOutput = { styleOfMusic: string; title: string; lyrics: string; negativePrompt: string };
 
-    const videoId = videoIdFromUrl(youtubeUrl);
+async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<typeof GenerateSunoTemplateResponse.parse>> {
+  const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext, isInstrumental, confirmedStructure } = data;
 
-    // ── Staged cache: Stage 1 (base metadata, 7d) ────────────────────────────
-    let base: BaseVideoMetadata;
-    let baseFromCache = false;
-    if (videoId) {
-      const cached = cacheGet<BaseVideoMetadata>(`metadata:${videoId}`);
-      if (cached) {
-        base = cached;
-        baseFromCache = true;
-        console.log(`[cache] metadata HIT for ${videoId}`);
-      } else {
-        try {
-          base = await fetchBaseMetadata(youtubeUrl);
-          cacheSet(`metadata:${videoId}`, base, TTL.METADATA);
-          console.log(`[cache] metadata SET for ${videoId}`);
-        } catch (fetchErr) {
-          console.error("Failed to fetch YouTube metadata:", fetchErr);
-          res.status(400).json({ error: "Could not fetch video metadata. Make sure the URL is a valid, public YouTube video." });
-          return;
-        }
-      }
+  if (!isValidYouTubeUrl(youtubeUrl)) {
+    throw new Error("Invalid YouTube URL. Please provide a valid youtube.com or youtu.be link.");
+  }
+
+  const videoId = videoIdFromUrl(youtubeUrl);
+
+  // Stage 1: base metadata (7d cache)
+  let base: BaseVideoMetadata;
+  let baseFromCache = false;
+  if (videoId) {
+    const cached = cacheGet<BaseVideoMetadata>(`metadata:${videoId}`);
+    if (cached) {
+      base = cached;
+      baseFromCache = true;
+      console.log(`[cache] metadata HIT for ${videoId}`);
     } else {
       try {
         base = await fetchBaseMetadata(youtubeUrl);
+        cacheSet(`metadata:${videoId}`, base, TTL.METADATA);
+        console.log(`[cache] metadata SET for ${videoId}`);
       } catch (fetchErr) {
         console.error("Failed to fetch YouTube metadata:", fetchErr);
-        res.status(400).json({ error: "Could not fetch video metadata. Make sure the URL is a valid, public YouTube video." });
-        return;
+        throw new Error("Could not fetch video metadata. Make sure the URL is a valid, public YouTube video.");
       }
     }
+  } else {
+    try {
+      base = await fetchBaseMetadata(youtubeUrl);
+    } catch (fetchErr) {
+      console.error("Failed to fetch YouTube metadata:", fetchErr);
+      throw new Error("Could not fetch video metadata. Make sure the URL is a valid, public YouTube video.");
+    }
+  }
 
-    // ── Staged cache: Stage 2 (audio features, permanent — deterministic) ────
-    let audioFeatures: AudioFeatures | undefined;
-    let featuresFromCache = false;
-    if (videoId) {
-      const cached = cacheGet<CachedAudioFeatures>(`features:${videoId}`);
-      if (cached) {
-        audioFeatures = cached.features ?? undefined;
-        featuresFromCache = true;
-        console.log(`[cache] features HIT for ${videoId}`);
-      } else {
-        const result = await detectAudioFeatures({
-          artist: base.cleanArtist,
-          title: base.cleanTitle,
-          youtubeUrl,
-          descriptionBpm: base.descriptionData?.bpm,
-          descriptionKey: base.descriptionData?.key,
-        });
-        audioFeatures = result ?? undefined;
-        cacheSet<CachedAudioFeatures>(`features:${videoId}`, { features: result }, TTL.FEATURES);
-        console.log(`[cache] features SET for ${videoId} (permanent)`);
-      }
+  // Stage 2: audio features (permanent cache)
+  let audioFeatures: AudioFeatures | undefined;
+  let featuresFromCache = false;
+  if (videoId) {
+    const cached = cacheGet<CachedAudioFeatures>(`features:${videoId}`);
+    if (cached) {
+      audioFeatures = cached.features ?? undefined;
+      featuresFromCache = true;
+      console.log(`[cache] features HIT for ${videoId}`);
     } else {
       const result = await detectAudioFeatures({
         artist: base.cleanArtist,
@@ -1091,153 +1098,198 @@ router.post("/generate-template", async (req, res) => {
         descriptionKey: base.descriptionData?.key,
       });
       audioFeatures = result ?? undefined;
+      cacheSet<CachedAudioFeatures>(`features:${videoId}`, { features: result }, TTL.FEATURES);
+      console.log(`[cache] features SET for ${videoId} (permanent)`);
     }
+  } else {
+    const result = await detectAudioFeatures({
+      artist: base.cleanArtist,
+      title: base.cleanTitle,
+      youtubeUrl,
+      descriptionBpm: base.descriptionData?.bpm,
+      descriptionKey: base.descriptionData?.key,
+    });
+    audioFeatures = result ?? undefined;
+  }
 
-    // ── Staged cache: Stage 3 (lyrics, 7d) ───────────────────────────────────
-    let cachedLyrics: CachedLyrics;
-    let lyricsFromCache = false;
-    if (videoId) {
-      const cached = cacheGet<CachedLyrics>(`lyrics:${videoId}`);
-      if (cached) {
-        cachedLyrics = cached;
-        lyricsFromCache = true;
-        console.log(`[cache] lyrics HIT for ${videoId}`);
-      } else {
-        cachedLyrics = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);
-        cacheSet(`lyrics:${videoId}`, cachedLyrics, TTL.LYRICS);
-        console.log(`[cache] lyrics SET for ${videoId}`);
-      }
+  // Stage 3: lyrics (7d cache)
+  let cachedLyrics: CachedLyrics;
+  let lyricsFromCache = false;
+  if (videoId) {
+    const cached = cacheGet<CachedLyrics>(`lyrics:${videoId}`);
+    if (cached) {
+      cachedLyrics = cached;
+      lyricsFromCache = true;
+      console.log(`[cache] lyrics HIT for ${videoId}`);
     } else {
       cachedLyrics = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);
+      cacheSet(`lyrics:${videoId}`, cachedLyrics, TTL.LYRICS);
+      console.log(`[cache] lyrics SET for ${videoId}`);
     }
+  } else {
+    cachedLyrics = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);
+  }
 
-    let metadata: VideoMetadata = assembleMetadata(base, cachedLyrics, audioFeatures);
+  let metadata: VideoMetadata = assembleMetadata(base, cachedLyrics, audioFeatures);
 
-    // Override lyrics with user-provided lyrics if supplied
-    if (manualLyrics && manualLyrics.trim().length > 20) {
-      console.log(`Using user-provided lyrics override (${manualLyrics.trim().length} chars)`);
-      metadata = {
-        ...metadata,
-        lyricsText: manualLyrics.trim(),
-        lyricsSource: "user-override",
-      };
-    }
+  if (manualLyrics && manualLyrics.trim().length > 20) {
+    console.log(`Using user-provided lyrics override (${manualLyrics.trim().length} chars)`);
+    metadata = { ...metadata, lyricsText: manualLyrics.trim(), lyricsSource: "user-override" };
+  }
 
-    const lyricsStructure = metadata.lyricsText
-      ? analyzeLyricsStructure(metadata.lyricsText)
-      : undefined;
+  const lyricsStructure = metadata.lyricsText ? analyzeLyricsStructure(metadata.lyricsText) : undefined;
 
-    const suggestedDefaults = computeSuggestedDefaults({
-      bpm: metadata.audioFeatures?.bpm,
-      releaseYear: metadata.musicBrainz?.releaseYear ?? metadata.descriptionData?.releaseYear,
-      description: metadata.description,
-      language: metadata.language,
-    });
+  const suggestedDefaults = computeSuggestedDefaults({
+    bpm: metadata.audioFeatures?.bpm,
+    releaseYear: metadata.musicBrainz?.releaseYear ?? metadata.descriptionData?.releaseYear,
+    description: metadata.description,
+    language: metadata.language,
+  });
 
-    const context = buildPromptContext(metadata);
-    const effectiveVocalGender = isInstrumental ? "no vocals" : vocalGender;
-    const styleControls = buildStyleControls({ vocalGender: effectiveVocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex, feedbackContext });
+  const context = buildPromptContext(metadata);
+  const effectiveVocalGender = isInstrumental ? "no vocals" : vocalGender;
+  const styleControls = buildStyleControls({ vocalGender: effectiveVocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex, feedbackContext });
 
-    const lyricsInstruction =
-      metadata.lyricsSource === "user-override"
-        ? "⚠️ USER-PROVIDED LYRICS OVERRIDE ACTIVE: The user has manually supplied their own lyrics. You MUST use every lyric line exactly as written — not one word changed. Add Suno production tags, section headers, and performance directions around them, but the lyric lines themselves are locked and non-negotiable."
-        : metadata.lyricsSource === "api"
-          ? "AUTHENTIC LYRICS from a professional database are provided — use them VERBATIM, structured with Suno metatags."
-          : metadata.lyricsSource === "captions"
-            ? "YouTube captions (approximate) are provided — clean them up and structure with Suno metatags."
-            : "No lyrics source available — use your knowledge of this song or write thematic placeholder lyrics.";
+  const lyricsInstruction =
+    metadata.lyricsSource === "user-override"
+      ? "⚠️ USER-PROVIDED LYRICS OVERRIDE ACTIVE: The user has manually supplied their own lyrics. You MUST use every lyric line exactly as written — not one word changed. Add Suno production tags, section headers, and performance directions around them, but the lyric lines themselves are locked and non-negotiable."
+      : metadata.lyricsSource === "api"
+        ? "AUTHENTIC LYRICS from a professional database are provided — use them VERBATIM, structured with Suno metatags."
+        : metadata.lyricsSource === "captions"
+          ? "YouTube captions (approximate) are provided — clean them up and structure with Suno metatags."
+          : "No lyrics source available — use your knowledge of this song or write thematic placeholder lyrics.";
 
-    const modeInstruction = mode === "cover"
-      ? "\n\nGENERATION MODE: AI Cover — Reconstruct this song as faithfully as Suno allows. Keep the original genre, tempo, instrumentation, structure, vocal style, and lyrics as close to the original recording as possible. Prioritise accuracy over creativity."
-      : mode === "inspired"
-      ? "\n\nGENERATION MODE: Inspired By — Use this song as creative springboard only. Keep the emotional core but freely reimagine the genre, instrumentation, and arrangement in an unexpected direction. The output should feel clearly distinct from the original. Be bold and inventive."
-      : "";
+  const modeInstruction = mode === "cover"
+    ? "\n\nGENERATION MODE: AI Cover — Reconstruct this song as faithfully as Suno allows. Keep the original genre, tempo, instrumentation, structure, vocal style, and lyrics as close to the original recording as possible. Prioritise accuracy over creativity."
+    : mode === "inspired"
+    ? "\n\nGENERATION MODE: Inspired By — Use this song as creative springboard only. Keep the emotional core but freely reimagine the genre, instrumentation, and arrangement in an unexpected direction. The output should feel clearly distinct from the original. Be bold and inventive."
+    : "";
 
-    const instrumentalInstruction = isInstrumental
-      ? "\n\n🎵 INSTRUMENTAL MODE ACTIVE: Generate this as a fully instrumental track. The lyrics section (Section 2) MUST contain ONLY structural/arrangement tags and instrumental direction cues — absolutely NO actual lyric text or sung words. Use detailed bracketed tags such as [Intro - Piano Motif], [Verse 1 - Guitar Melody, sparse drums], [Build - Strings Rising, tension increasing], [Chorus - Full Band, driving instrumental hook], [Bridge - Synth Solo], [Breakdown - Drums only], [Outro - Fade with lead guitar]. Fill the lyrics field to the 4,900–4,999 character limit using these rich instrumental direction cues. The negative prompt MUST prominently include: vocals, singing, lyrics, rap, spoken word."
-      : "";
+  const instrumentalInstruction = isInstrumental
+    ? "\n\n🎵 INSTRUMENTAL MODE ACTIVE: Generate this as a fully instrumental track. The lyrics section (Section 2) MUST contain ONLY structural/arrangement tags and instrumental direction cues — absolutely NO actual lyric text or sung words. Use detailed bracketed tags such as [Intro - Piano Motif], [Verse 1 - Guitar Melody, sparse drums], [Build - Strings Rising, tension increasing], [Chorus - Full Band, driving instrumental hook], [Bridge - Synth Solo], [Breakdown - Drums only], [Outro - Fade with lead guitar]. Fill the lyrics field to the 4,900–4,999 character limit using these rich instrumental direction cues. The negative prompt MUST prominently include: vocals, singing, lyrics, rap, spoken word."
+    : "";
 
-    const confirmedStructureHint = confirmedStructure && confirmedStructure.length > 0
-      ? `\n\nUSER-CONFIRMED LYRICS STRUCTURE — The user has reviewed and confirmed the following section layout. Use EXACTLY these section labels and line groupings when building Section 2 (lyrics). Do not reorder sections. You may add production cue lines and performance directions within each section, but the section labels and lyric lines must match the confirmed structure:\n${confirmedStructure.map((s: { label: string; lines: string[] }) => `[${s.label}]\n${s.lines.join("\n")}`).join("\n\n")}`
-      : "";
+  const confirmedStructureHint = confirmedStructure && confirmedStructure.length > 0
+    ? `\n\nUSER-CONFIRMED LYRICS STRUCTURE — The user has reviewed and confirmed the following section layout. Use EXACTLY these section labels and line groupings when building Section 2 (lyrics). Do not reorder sections. You may add production cue lines and performance directions within each section, but the section labels and lyric lines must match the confirmed structure:\n${confirmedStructure.map((s) => `[${s.label}]\n${s.lines.join("\n")}`).join("\n\n")}`
+    : "";
 
-    const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}${modeInstruction}${instrumentalInstruction}${confirmedStructureHint}${styleControls}
+  const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}${modeInstruction}${instrumentalInstruction}${confirmedStructureHint}${styleControls}
 
 ${context}`;
 
-    // ── Cache: template (AI output) — keyed by videoId + generation params ──
-    // feedbackContext is excluded from the hash (personalised, not shareable).
-    // manualLyrics with user-override are not cached (unique per request).
-    const useTemplateCache = videoId && metadata.lyricsSource !== "user-override";
-    const templateCacheKey = useTemplateCache
-      ? `template:${videoId}:${hashParams({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, isInstrumental, confirmedStructure })}`
-      : null;
+  // Template cache (keyed by videoId + params; feedbackContext excluded; user-override not cached)
+  const useTemplateCache = videoId && metadata.lyricsSource !== "user-override";
+  const templateCacheKey = useTemplateCache
+    ? `template:${videoId}:${hashParams({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, isInstrumental, confirmedStructure })}`
+    : null;
 
-    type AiOutput = { styleOfMusic: string; title: string; lyrics: string; negativePrompt: string };
-    let aiResult: AiOutput;
-    let templateFromCache = false;
+  let aiResult: AiOutput;
+  let templateFromCache = false;
 
-    if (templateCacheKey) {
-      const cached = cacheGet<AiOutput>(templateCacheKey);
-      if (cached) {
-        aiResult = cached;
-        templateFromCache = true;
-        console.log(`[cache] template HIT for ${videoId}`);
-      } else {
-        const completion = await openai.chat.completions.create({
-          model: "gpt-5.2",
-          max_completion_tokens: 8192,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: userMessage }
-          ],
-          response_format: { type: "json_object" },
-        });
-        const content = completion.choices[0]?.message?.content;
-        if (!content) {
-          res.status(500).json({ error: "AI failed to generate a template. Please try again." });
-          return;
-        }
-        aiResult = JSON.parse(content) as AiOutput;
-        cacheSet(templateCacheKey, aiResult, TTL.TEMPLATE);
-        console.log(`[cache] template SET for ${videoId}`);
-      }
-    } else {
-      const completion = await openai.chat.completions.create({
-        model: "gpt-5.2",
-        max_completion_tokens: 8192,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage }
-        ],
-        response_format: { type: "json_object" },
-      });
-      const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        res.status(500).json({ error: "AI failed to generate a template. Please try again." });
-        return;
-      }
-      aiResult = JSON.parse(content) as AiOutput;
-    }
-
-    const fromCache = baseFromCache && featuresFromCache && lyricsFromCache && templateFromCache;
-
-    const template = GenerateSunoTemplateResponse.parse({
-      songTitle: metadata.title,
-      artist: metadata.cleanArtist || metadata.author,
-      styleOfMusic: trimStylePrompt(aiResult.styleOfMusic, 900),
-      title: aiResult.title,
-      lyrics: trimToCharLimit(aiResult.lyrics, 4999),
-      negativePrompt: aiResult.negativePrompt,
-      tags: [],
-      lyricsStructure: lyricsStructure ?? undefined,
-      suggestedDefaults: Object.keys(suggestedDefaults.sources).length > 0 ? suggestedDefaults : undefined,
-      fromCache,
+  const runAiCall = async (): Promise<AiOutput> => {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 8192,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+      response_format: { type: "json_object" },
     });
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error("AI failed to generate a template. Please try again.");
+    return JSON.parse(content) as AiOutput;
+  };
 
+  if (templateCacheKey) {
+    const cached = cacheGet<AiOutput>(templateCacheKey);
+    if (cached) {
+      aiResult = cached;
+      templateFromCache = true;
+      console.log(`[cache] template HIT for ${videoId}`);
+    } else {
+      aiResult = await runAiCall();
+      cacheSet(templateCacheKey, aiResult, TTL.TEMPLATE);
+      console.log(`[cache] template SET for ${videoId}`);
+    }
+  } else {
+    aiResult = await runAiCall();
+  }
+
+  const fromCache = baseFromCache && featuresFromCache && lyricsFromCache && templateFromCache;
+
+  return GenerateSunoTemplateResponse.parse({
+    songTitle: metadata.title,
+    artist: metadata.cleanArtist || metadata.author,
+    styleOfMusic: trimStylePrompt(aiResult.styleOfMusic, 900),
+    title: aiResult.title,
+    lyrics: trimToCharLimit(aiResult.lyrics, 4999),
+    negativePrompt: aiResult.negativePrompt,
+    tags: [],
+    lyricsStructure: lyricsStructure ?? undefined,
+    suggestedDefaults: Object.keys(suggestedDefaults.sources).length > 0 ? suggestedDefaults : undefined,
+    fromCache,
+  });
+}
+
+router.post("/generate-template", async (req, res) => {
+  const parsed = GenerateSunoTemplateBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body. Please provide a youtubeUrl." });
+    return;
+  }
+  try {
+    const template = await generateOneTemplate(parsed.data);
     res.json(template);
   } catch (err: unknown) {
     console.error("Error generating template:", err);
+    const message = err instanceof Error ? err.message : "An unexpected error occurred";
+    const isClientError =
+      message.includes("Invalid YouTube URL") ||
+      message.includes("Could not fetch video metadata");
+    res.status(isClientError ? 400 : 500).json({ error: message });
+  }
+});
+
+/**
+ * POST /api/generate-variations
+ * Generates count (2–4) template variations in parallel, each with a different creative angle.
+ * Returns { variations: SunoTemplate[] } — partial success is allowed (at least 1 must succeed).
+ */
+router.post("/generate-variations", async (req, res) => {
+  const parsed = GenerateSunoTemplateBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body. Please provide a youtubeUrl." });
+    return;
+  }
+
+  const rawCount = typeof req.body.count === "number" ? req.body.count : 2;
+  const count = Math.min(Math.max(Math.round(rawCount), 2), 4);
+
+  console.log(`[variations] Generating ${count} variations for ${parsed.data.youtubeUrl}`);
+
+  try {
+    const results = await Promise.allSettled(
+      Array.from({ length: count }, (_, i) =>
+        generateOneTemplate({ ...parsed.data, variationIndex: i + 1 })
+      )
+    );
+
+    const variations = results
+      .filter((r): r is PromiseFulfilledResult<ReturnType<typeof GenerateSunoTemplateResponse.parse>> => r.status === "fulfilled")
+      .map((r) => r.value);
+
+    if (variations.length === 0) {
+      const firstErr = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
+      const message = firstErr?.reason instanceof Error ? firstErr.reason.message : "All variations failed to generate";
+      res.status(500).json({ error: message });
+      return;
+    }
+
+    console.log(`[variations] ${variations.length}/${count} variations succeeded`);
+    res.json({ variations });
+  } catch (err: unknown) {
+    console.error("Error generating variations:", err);
     const message = err instanceof Error ? err.message : "An unexpected error occurred";
     res.status(500).json({ error: message });
   }

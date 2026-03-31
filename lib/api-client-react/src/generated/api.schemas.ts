@@ -100,3 +100,11 @@ export interface SunoTemplate {
 export interface ErrorResponse {
   error: string;
 }
+
+export interface GenerateVariationsRequest extends GenerateTemplateRequest {
+  count?: 2 | 3 | 4;
+}
+
+export interface VariationsResponse {
+  variations: SunoTemplate[];
+}

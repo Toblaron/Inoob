@@ -33,10 +33,11 @@ import {
   X,
   RotateCcw,
 } from "lucide-react";
-import { useGenerateSunoTemplate } from "@workspace/api-client-react";
+import { useGenerateSunoTemplate, useGenerateVariations } from "@workspace/api-client-react";
 import type { SunoTemplate, LyricsStructure, SuggestedDefaults } from "@workspace/api-client-react";
 import { TemplateResult } from "@/components/TemplateResult";
 import { LyricsStructurePanel, type ConfirmedSection } from "@/components/LyricsStructurePanel";
+import { VariationWorkshop } from "@/components/VariationWorkshop";
 import { LoadingEq } from "@/components/LoadingEq";
 import { ExampleGallery } from "@/components/ExampleGallery";
 import { cn } from "@/lib/utils";
@@ -368,7 +369,7 @@ function formatRelativeTime(ts: number): string {
 
 export default function Home() {
   const mainMutation = useGenerateSunoTemplate();
-  const varBMutation = useGenerateSunoTemplate();
+  const variationsMutation = useGenerateVariations();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -403,11 +404,9 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  const [variationA, setVariationA] = useState<SunoTemplate | null>(null);
-  const [variationB, setVariationB] = useState<SunoTemplate | null>(null);
+  const [variationWorkshop, setVariationWorkshop] = useState<SunoTemplate[] | null>(null);
+  const [variationCount, setVariationCount] = useState<2 | 3 | 4>(2);
   const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
-  const [selectedVariation, setSelectedVariation] = useState<"A" | "B" | null>(null);
-  const [showVariations, setShowVariations] = useState(false);
 
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [artistMemoryBanner, setArtistMemoryBanner] = useState<string | null>(null);
@@ -797,10 +796,7 @@ export default function Home() {
     lastOptionsRef.current = opts;
     setApiError(null);
     setRegeneratingSection(null);
-    setShowVariations(false);
-    setVariationA(null);
-    setVariationB(null);
-    setSelectedVariation(null);
+    setVariationWorkshop(null);
     setTemplateRating(null);
     setHoverRating(null);
     setRatingSaved(false);
@@ -883,39 +879,32 @@ export default function Home() {
     if (!lastUrlRef.current) return;
     const opts = lastOptionsRef.current as object;
     setIsGeneratingVariations(true);
-    setVariationA(null);
-    setVariationB(null);
-    setSelectedVariation(null);
-    setShowVariations(true);
+    setVariationWorkshop(null);
     setApiError(null);
 
-    let aSettled = false;
-    let bSettled = false;
-    const checkDone = () => { if (aSettled && bSettled) setIsGeneratingVariations(false); };
-
-    mainMutation.mutate(
-      { data: { youtubeUrl: lastUrlRef.current, ...opts, variationIndex: 1 } },
+    variationsMutation.mutate(
+      { data: { youtubeUrl: lastUrlRef.current, ...opts, count: variationCount } },
       {
-        onSuccess: (data) => { setVariationA(data); aSettled = true; checkDone(); },
-        onError: () => { aSettled = true; checkDone(); },
-      }
-    );
-    varBMutation.mutate(
-      { data: { youtubeUrl: lastUrlRef.current, ...opts, variationIndex: 2 } },
-      {
-        onSuccess: (data) => { setVariationB(data); bSettled = true; checkDone(); },
-        onError: () => { bSettled = true; checkDone(); },
+        onSuccess: (data) => {
+          setVariationWorkshop(data.variations);
+          setIsGeneratingVariations(false);
+        },
+        onError: (err) => {
+          setApiError(
+            (err as { data?: { error?: string }; message?: string })?.data?.error ??
+            (err as Error)?.message ??
+            "Failed to generate variations"
+          );
+          setIsGeneratingVariations(false);
+        },
       }
     );
   };
 
-  const handleUseVariation = (v: "A" | "B") => {
-    const t = v === "A" ? variationA : variationB;
-    if (t) {
-      setCurrentTemplate(t);
-      setSelectedVariation(v);
-      setShowVariations(false);
-    }
+  const handleMergeVariation = (merged: SunoTemplate) => {
+    setCurrentTemplate(merged);
+    setVariationWorkshop(null);
+    addToHistory(lastUrlRef.current, merged);
   };
 
   const handleRegenerateSection = (section: keyof SunoTemplate) => {
@@ -941,7 +930,7 @@ export default function Home() {
     lastUrlRef.current = entry.youtubeUrl;
     setCurrentTemplate(entry.template);
     setShowHistory(false);
-    setShowVariations(false);
+    setVariationWorkshop(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -950,7 +939,7 @@ export default function Home() {
     saveHistory([]);
   };
 
-  const isLoading = mainMutation.isPending && !regeneratingSection && !isGeneratingVariations;
+  const isLoading = mainMutation.isPending && !regeneratingSection;
 
   const styleActiveCount = [
     vocalGender !== "auto",
@@ -1770,56 +1759,21 @@ export default function Home() {
               className="w-full flex flex-col items-center py-12 gap-4"
             >
               <LoadingEq />
-              <p className="text-sm text-zinc-500">Generating 2 variations in parallel…</p>
+              <p className="text-sm text-zinc-500">Generating {variationCount} variations in parallel…</p>
             </motion.div>
-          ) : showVariations && (variationA || variationB) ? (
+          ) : variationWorkshop && variationWorkshop.length > 0 ? (
             <motion.div
-              key="variations"
+              key="workshop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full max-w-6xl mx-auto"
+              className="w-full max-w-6xl mx-auto px-1"
             >
-              <div className="flex items-center justify-between mb-4 px-1">
-                <h2 className="text-lg font-bold text-foreground">Compare Variations</h2>
-                <button
-                  type="button"
-                  onClick={() => setShowVariations(false)}
-                  className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                >
-                  ✕ Close
-                </button>
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                {[{ v: "A" as const, tmpl: variationA }, { v: "B" as const, tmpl: variationB }].map(({ v, tmpl }) => (
-                  <div key={v} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-zinc-300">Variation {v}</span>
-                      {tmpl && (
-                        <button
-                          type="button"
-                          onClick={() => handleUseVariation(v)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary/20 border border-primary/40 text-primary hover:bg-primary/30 transition-colors"
-                        >
-                          <Check className="w-3 h-3" /> Use this one
-                        </button>
-                      )}
-                    </div>
-                    {tmpl ? (
-                      <TemplateResult
-                        template={tmpl}
-                        regeneratingSection={null}
-                        onRegenerateSection={() => {}}
-                        compact
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-40 border border-primary/10 bg-card">
-                        <LoadingEq />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <VariationWorkshop
+                variations={variationWorkshop}
+                onMerge={handleMergeVariation}
+                onClose={() => setVariationWorkshop(null)}
+              />
             </motion.div>
           ) : currentTemplate ? (
             <motion.div
@@ -1829,15 +1783,33 @@ export default function Home() {
               exit={{ opacity: 0 }}
             >
               {/* Action bar above results */}
-              <div className="flex flex-wrap gap-2 mb-4 max-w-6xl mx-auto px-1">
-                <button
-                  type="button"
-                  onClick={handleGenerateVariations}
-                  disabled={isGeneratingVariations}
-                  className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border border-primary/20 text-zinc-500 hover:border-primary/50 hover:text-primary transition-all disabled:opacity-30"
-                >
-                  <Layers className="w-3 h-3" /> Generate Variations
-                </button>
+              <div className="flex flex-wrap gap-2 mb-4 max-w-6xl mx-auto px-1 items-center">
+                <div className="flex items-center border border-primary/20">
+                  <button
+                    type="button"
+                    onClick={handleGenerateVariations}
+                    disabled={isGeneratingVariations}
+                    className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-zinc-500 hover:text-primary transition-all disabled:opacity-30 border-r border-primary/20"
+                  >
+                    <Layers className="w-3 h-3" /> Generate Variations
+                  </button>
+                  {([2, 3, 4] as const).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setVariationCount(n)}
+                      className={cn(
+                        "px-2.5 py-1.5 font-mono text-[11px] transition-all",
+                        variationCount === n
+                          ? "text-primary bg-primary/10"
+                          : "text-zinc-600 hover:text-zinc-400",
+                        n < 4 ? "border-r border-primary/20" : ""
+                      )}
+                    >
+                      {n}×
+                    </button>
+                  ))}
+                </div>
                 <button
                   type="button"
                   onClick={handleShareTemplate}
