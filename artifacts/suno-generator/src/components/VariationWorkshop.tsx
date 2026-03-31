@@ -26,7 +26,8 @@ interface Selection {
 }
 
 interface VariationWorkshopProps {
-  variations: SunoTemplate[];
+  /** Fixed-length array (one per slot). null = slot failed or still loading. */
+  variations: (SunoTemplate | null)[];
   pending?: boolean[];
   totalCount?: number;
   onMerge: (merged: SunoTemplate) => void;
@@ -517,14 +518,27 @@ export function VariationWorkshop({
   const numTotal = totalCount || variations.length;
   const isStillLoading = pending.some(Boolean);
 
-  const safeVariation = (idx: number) => variations[idx] ?? variations[0];
-  const selIdx = (key: SectionKey) =>
-    Math.min(selected[key], variations.length - 1);
+  const readySlots = variations.filter((v): v is SunoTemplate => v !== null);
+  const reference = readySlots[0] ?? null;
+
+  const safeVariation = (idx: number): SunoTemplate => {
+    const slot = variations[idx];
+    if (slot) return slot;
+    const fallback = readySlots[0];
+    if (fallback) return fallback;
+    return {} as SunoTemplate;
+  };
+
+  const selIdx = (key: SectionKey) => {
+    let idx = selected[key];
+    while (idx > 0 && !variations[idx]) idx--;
+    return idx;
+  };
 
   const merged: SunoTemplate =
-    variations.length > 0
+    reference !== null
       ? {
-          ...variations[0],
+          ...reference,
           styleOfMusic: safeVariation(selIdx("styleOfMusic")).styleOfMusic,
           title: safeVariation(selIdx("title")).title,
           lyrics: safeVariation(selIdx("lyrics")).lyrics,
@@ -551,12 +565,12 @@ export function VariationWorkshop({
           </span>
           <div className="flex items-center gap-2 mt-0.5">
             <h2 className="text-base font-bold text-white leading-tight">
-              {variations[0]?.songTitle ?? "Variation Workshop"}
+              {reference?.songTitle ?? "Variation Workshop"}
             </h2>
             <span className="font-mono text-[10px] text-zinc-600">
               {isStillLoading
-                ? `${variations.length}/${numTotal} ready`
-                : `${variations.length} variations`}
+                ? `${readySlots.length}/${numTotal} ready`
+                : `${readySlots.length} of ${numTotal} variations`}
             </span>
             {isStillLoading && (
               <span className="font-mono text-[9px] text-amber-400/80 animate-pulse">
@@ -689,7 +703,7 @@ export function VariationWorkshop({
                 variationIdx={i}
                 isReference={i === 0}
                 variation={v}
-                reference={variations[0]}
+                reference={reference ?? v}
                 selected={selected}
                 showDiff={showDiff}
                 onSelect={(key) => selectSection(key, i)}
@@ -723,8 +737,8 @@ export function VariationWorkshop({
                 <VariationColumn
                   variationIdx={mobileTab}
                   isReference={mobileTab === 0}
-                  variation={variations[mobileTab]}
-                  reference={variations[0]}
+                  variation={variations[mobileTab]!}
+                  reference={reference ?? variations[mobileTab]!}
                   selected={selected}
                   showDiff={showDiff}
                   onSelect={(key) => selectSection(key, mobileTab)}

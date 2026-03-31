@@ -1274,19 +1274,27 @@ router.post("/generate-variations", async (req, res) => {
       )
     );
 
-    const variations = results
-      .filter((r): r is PromiseFulfilledResult<ReturnType<typeof GenerateSunoTemplateResponse.parse>> => r.status === "fulfilled")
-      .map((r) => r.value);
+    const slots = results.map((r, i) => {
+      const variationIndex = i + 1;
+      if (r.status === "fulfilled") {
+        return { variationIndex, template: r.value };
+      }
+      const msg = r.reason instanceof Error ? r.reason.message : "Generation failed";
+      return { variationIndex, error: msg };
+    });
+
+    const variations = slots
+      .filter((s): s is { variationIndex: number; template: ReturnType<typeof GenerateSunoTemplateResponse.parse> } => "template" in s && s.template !== undefined)
+      .map((s) => s.template);
 
     if (variations.length === 0) {
-      const firstErr = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
-      const message = firstErr?.reason instanceof Error ? firstErr.reason.message : "All variations failed to generate";
-      res.status(500).json({ error: message });
+      const firstErr = slots.find((s) => "error" in s)?.error ?? "All variations failed to generate";
+      res.status(500).json({ error: firstErr });
       return;
     }
 
     console.log(`[variations] ${variations.length}/${count} variations succeeded`);
-    res.json({ variations });
+    res.json({ slots, variations });
   } catch (err: unknown) {
     console.error("Error generating variations:", err);
     const message = err instanceof Error ? err.message : "An unexpected error occurred";

@@ -97,6 +97,13 @@ export const GenerateVariationsBody = GenerateSunoTemplateBody.extend({
   count: zod.number().int().min(2).max(4).optional().describe("Number of variations to generate (2–4, default 2)"),
 });
 
+export const VariationSlot = zod.object({
+  variationIndex: zod.number().int().describe("1-based slot index, stable even if generation failed"),
+  template: GenerateSunoTemplateResponse.optional().describe("The generated template, present when the slot succeeded"),
+  error: zod.string().optional().describe("Error message for this slot, present when generation failed"),
+});
+
 export const GenerateVariationsResponse = zod.object({
-  variations: zod.array(GenerateSunoTemplateResponse),
+  slots: zod.array(VariationSlot).describe("One entry per requested variation, in slot order"),
+  variations: zod.array(GenerateSunoTemplateResponse).describe("Successful variations only (for backwards compat)"),
 });

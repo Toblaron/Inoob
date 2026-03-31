@@ -105,6 +105,13 @@ export interface GenerateVariationsRequest extends GenerateTemplateRequest {
   count?: 2 | 3 | 4;
 }
 
+export interface VariationSlot {
+  variationIndex: number;
+  template?: SunoTemplate;
+  error?: string;
+}
+
 export interface VariationsResponse {
+  slots: VariationSlot[];
   variations: SunoTemplate[];
 }
