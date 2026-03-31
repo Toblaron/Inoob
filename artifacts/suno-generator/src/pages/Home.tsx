@@ -442,6 +442,7 @@ export default function Home() {
   };
 
   const lastUrlRef = useRef<string>("");
+  const lastVideoIdRef = useRef<string>("");
   const lastOptionsRef = useRef<object>({});
   const previewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -557,7 +558,14 @@ export default function Home() {
       setLyricsStructure(null);
       setConfirmedStructure(null);
       setSuggestedDefaults(null);
+      lastVideoIdRef.current = "";
       return;
+    }
+    if (id !== lastVideoIdRef.current) {
+      lastVideoIdRef.current = id;
+      setLyricsStructure(null);
+      setConfirmedStructure(null);
+      setSuggestedDefaults(null);
     }
     setVideoPreview((prev) => prev ?? { title: "", author: "", thumbnail: `https://img.youtube.com/vi/${id}/mqdefault.jpg`, duration: null });
     // Show loading state immediately

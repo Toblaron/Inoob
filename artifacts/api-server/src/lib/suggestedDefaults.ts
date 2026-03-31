@@ -58,10 +58,10 @@ export function computeSuggestedDefaults(params: {
   if (params.bpm) {
     const bpm = params.bpm;
 
-    if (bpm >= 140) {
-      result.energy = "intense";
-    } else if (bpm >= 120) {
+    if (bpm > 140) {
       result.energy = "high";
+    } else if (bpm >= 120) {
+      result.energy = "intense";
     } else if (bpm >= 90) {
       result.energy = "medium";
     } else if (bpm >= 60) {
