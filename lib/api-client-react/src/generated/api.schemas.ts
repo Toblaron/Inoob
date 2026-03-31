@@ -76,6 +76,28 @@ export interface SuggestedDefaults {
   sources: Record<string, string>;
 }
 
+export interface SongFingerprint {
+  /** Energy level 0–10 derived from BPM and era */
+  energy: number;
+  /** Tempo feel 0–10 (slow=0, hyper=10) */
+  tempoFeel: number;
+  /** Vocal prominence 0–10 */
+  vocalPresence: number;
+  /** Arrangement/production complexity 0–10 */
+  instrumentalComplexity: number;
+  /** How strongly era-coded the track is 0–10 */
+  eraAuthenticity: number;
+  /** Emotional valence 0=dark/sad, 10=bright/happy */
+  moodValence: number;
+  /** How purely genre-focused vs. cross-genre 0–10 */
+  genrePurity: number;
+  videoId?: string;
+  songTitle?: string;
+  artist?: string;
+  /** Unix ms timestamp */
+  computedAt?: number;
+}
+
 export interface SunoTemplate {
   songTitle: string;
   artist: string;
@@ -95,6 +117,8 @@ export interface SunoTemplate {
   suggestedDefaults?: SuggestedDefaults;
   /** True when this result was served from the server-side cache */
   fromCache?: boolean;
+  /** Musical DNA fingerprint with normalized 0–10 scores */
+  fingerprint?: SongFingerprint;
 }
 
 export interface ErrorResponse {

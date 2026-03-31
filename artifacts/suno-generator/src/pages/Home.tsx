@@ -44,6 +44,7 @@ import { VariationWorkshop } from "@/components/VariationWorkshop";
 import { BatchDashboard } from "@/components/BatchDashboard";
 import { LoadingEq } from "@/components/LoadingEq";
 import { ExampleGallery } from "@/components/ExampleGallery";
+import { SongDnaPanel } from "@/components/SongDnaPanel";
 import { cn } from "@/lib/utils";
 
 const HISTORY_KEY = "suno-template-history";
@@ -2288,6 +2289,28 @@ export default function Home() {
                 regeneratingSection={regeneratingSection}
                 onRegenerateSection={handleRegenerateSection}
               />
+
+              {/* Song DNA Fingerprint Panel */}
+              {currentTemplate.fingerprint && (
+                <div className="max-w-5xl mx-auto w-full mt-4">
+                  <SongDnaPanel
+                    fingerprint={currentTemplate.fingerprint}
+                    videoId={currentTemplate.fingerprint.videoId}
+                    songTitle={currentTemplate.songTitle}
+                    artist={currentTemplate.artist}
+                    onBlendGenerate={(_blended, targetEnergy, targetTempo) => {
+                      const validEnergies = ["auto", "very chill", "chill", "medium", "high", "intense"] as const;
+                      const validTempos = ["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"] as const;
+                      if (validEnergies.includes(targetEnergy as typeof validEnergies[number])) {
+                        setEnergyLevel(targetEnergy as typeof energyLevel);
+                      }
+                      if (validTempos.includes(targetTempo as typeof validTempos[number])) {
+                        setTempo(targetTempo as typeof tempo);
+                      }
+                    }}
+                  />
+                </div>
+              )}
 
               {/* Lyrics Structure Panel */}
               {displayStructure && displayStructure.totalSections > 0 && (

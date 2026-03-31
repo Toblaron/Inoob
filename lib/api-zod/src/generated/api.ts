@@ -68,6 +68,20 @@ const SuggestedDefaultsSchema = zod.object({
   sources: zod.record(zod.string()),
 });
 
+export const SongFingerprintSchema = zod.object({
+  energy: zod.number().min(0).max(10).describe("Energy level 0–10 derived from BPM and era"),
+  tempoFeel: zod.number().min(0).max(10).describe("Tempo feel 0–10 (slow=0, hyper=10)"),
+  vocalPresence: zod.number().min(0).max(10).describe("Vocal prominence 0–10"),
+  instrumentalComplexity: zod.number().min(0).max(10).describe("Arrangement/production complexity 0–10"),
+  eraAuthenticity: zod.number().min(0).max(10).describe("How strongly era-coded the track is 0–10"),
+  moodValence: zod.number().min(0).max(10).describe("Emotional valence 0=dark/sad, 10=bright/happy"),
+  genrePurity: zod.number().min(0).max(10).describe("How purely genre-focused vs. cross-genre 0–10"),
+  videoId: zod.string().optional(),
+  songTitle: zod.string().optional(),
+  artist: zod.string().optional(),
+  computedAt: zod.number().optional().describe("Unix ms timestamp"),
+});
+
 export const GenerateSunoTemplateResponse = zod.object({
   songTitle: zod.string(),
   artist: zod.string(),
@@ -91,6 +105,7 @@ export const GenerateSunoTemplateResponse = zod.object({
   lyricsStructure: LyricsStructureSchema.optional().describe("Analyzed structure of the source lyrics"),
   suggestedDefaults: SuggestedDefaultsSchema.optional().describe("Smart defaults computed from BPM, era, and language data"),
   fromCache: zod.boolean().optional().describe("True when this result was served from the server-side cache"),
+  fingerprint: SongFingerprintSchema.optional().describe("Musical DNA fingerprint with normalized 0–10 scores"),
 });
 
 export const GenerateVariationsBody = GenerateSunoTemplateBody.extend({

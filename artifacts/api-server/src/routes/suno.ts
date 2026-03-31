@@ -7,6 +7,7 @@ import { detectAudioFeatures, type AudioFeatures } from "../lib/audioFeatures.js
 import { analyzeLyricsStructure } from "../lib/lyricsStructure.js";
 import { computeSuggestedDefaults } from "../lib/suggestedDefaults.js";
 import { cacheGet, cacheSet, cacheStats, hashParams, TTL } from "../lib/cache.js";
+import { computeFingerprint } from "../lib/fingerprint.js";
 
 const router: IRouter = Router();
 
@@ -1218,6 +1219,22 @@ ${context}`;
 
   const fromCache = baseFromCache && featuresFromCache && lyricsFromCache && templateFromCache;
 
+  const fingerprint = computeFingerprint({
+    audioFeatures,
+    isInstrumental,
+    vocalGender: vocalGender ?? "auto",
+    energyLevel: energyLevel ?? "auto",
+    era: era ?? "auto",
+    tempo,
+    styleOfMusic: aiResult.styleOfMusic,
+    tags: [],
+    musicBrainzGenres: base.musicBrainz?.genres ?? [],
+    keywords: base.keywords,
+    videoId: videoId ?? undefined,
+    songTitle: base.cleanTitle,
+    artist: base.cleanArtist || base.author,
+  });
+
   return GenerateSunoTemplateResponse.parse({
     songTitle: metadata.title,
     artist: metadata.cleanArtist || metadata.author,
@@ -1229,6 +1246,7 @@ ${context}`;
     lyricsStructure: lyricsStructure ?? undefined,
     suggestedDefaults: Object.keys(suggestedDefaults.sources).length > 0 ? suggestedDefaults : undefined,
     fromCache,
+    fingerprint,
   });
 }
 
