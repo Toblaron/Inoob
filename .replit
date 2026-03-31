@@ -29,6 +29,8 @@ timeoutMs = 20000
 
 [userenv.shared]
 GENIUS_API_TOKEN = "k1i7U80SDY5aCDyygYlHtAyH9wwaWGq96MTkruOz1A50tN8d711XjQhnP8WkYfm0"
+AI_MODEL = "gemini-2.5-flash-preview-04-17"
+AI_MINI_MODEL = "gemini-2.5-flash-preview-04-17"
 
 [[ports]]
 localPort = 8080
