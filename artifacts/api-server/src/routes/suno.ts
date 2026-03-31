@@ -1257,7 +1257,7 @@ negativePrompt: comma-separated, no spaces after commas, between 150 and 199 cha
 
     const metaCompletion = await openai.chat.completions.create({
       model: AI_MINI_MODEL,
-      max_completion_tokens: 2048,
+      max_completion_tokens: 800,   // style≤999 + title + negative≤199 ≈ 350 tokens; 800 is plenty
       messages: [{ role: "user", content: metaUserPrompt }],
       response_format: { type: "json_object" },
     });
@@ -1312,7 +1312,7 @@ If you finish the song structure and are under 4,900 chars: KEEP WRITING — add
 
     const lyricsCompletion = await openai.chat.completions.create({
       model: AI_MODEL,
-      max_completion_tokens: 8192,
+      max_completion_tokens: 2500,  // 4,900 chars ≈ 1,225 tokens; 2,500 is plenty with headroom
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: lyricsUserPrompt },
@@ -1322,30 +1322,31 @@ If you finish the song structure and are under 4,900 chars: KEEP WRITING — add
     let lyrics = lyricsCompletion.choices[0]?.message?.content?.trim() ?? "";
     console.log(`[lyrics] initial: ${lyrics.length} chars`);
 
-    // ── Expansion loop: up to 3 passes with AI_MODEL plain text ──────────────
-    for (let pass = 0; pass < 3 && lyrics.length < 4500; pass++) {
+    // ── Single expansion pass (token-efficient) ───────────────────────────────
+    // Only one pass to avoid burning through daily token limits on Groq free tier.
+    // If the primary prompt is well-tuned, expansion should rarely be needed.
+    if (lyrics.length < 4600) {
       const needed = 4900 - lyrics.length;
-      console.warn(`[expand] pass ${pass + 1}: ${lyrics.length} chars, need ${needed} more`);
+      console.warn(`[expand] ${lyrics.length} chars — running single expansion pass (need ${needed} more)`);
 
       const expandCompletion = await openai.chat.completions.create({
         model: AI_MODEL,
-        max_completion_tokens: 4096,
+        max_completion_tokens: 2500,
         messages: [{
           role: "user",
-          content: `The Suno lyrics below are ${lyrics.length} characters. You must ADD at least ${needed} more characters to reach the 4,900 minimum.
+          content: `The Suno lyrics below are ${lyrics.length} characters. You must expand them to reach at least 4,900 characters.
 
-Insert additional content throughout:
-- More [instrument cue] lines after every section header (add 1-2 more per section)
+Add ${needed}+ more characters by inserting throughout the text:
+- More [instrument cue] lines after every section header (add 2 more per section)
 - More (performance direction) parentheticals after lyric stanzas
-- More ad-lib variants in chorus sections: (yeah!), (oh-oh), (come on!), (let's go), (woah!)
-- Richer section header descriptors (3+ phrases each)
-- An additional [Bridge], [Breakdown], or [Interlude] section
-- Extended [Outro] with more instrument cues and fade directions
+- More ad-lib variants in choruses: (yeah!), (oh-oh), (come on!), (let's go), (woah!)
+- Richer section header descriptors (add 2–3 more descriptor phrases to each)
+- An additional [Breakdown] or [Interlude] section
+- Extended [Outro] with 4+ instrument cue lines and fade directions
 
-Do NOT change existing lyric lines. Do NOT omit any existing content.
-Output the COMPLETE expanded lyrics (not just the additions). No JSON, no commentary.
+Do NOT change existing lyric lines. Output the COMPLETE expanded lyrics. No JSON, no commentary.
 
-CURRENT LYRICS (${lyrics.length} chars — need ${needed} more):
+CURRENT LYRICS (${lyrics.length} chars):
 ${lyrics}`,
         }],
       });
@@ -1353,10 +1354,9 @@ ${lyrics}`,
       const expanded = expandCompletion.choices[0]?.message?.content?.trim() ?? "";
       if (expanded.length > lyrics.length) {
         lyrics = expanded;
-        console.log(`[expand] pass ${pass + 1}: ${lyrics.length} chars`);
+        console.log(`[expand] result: ${lyrics.length} chars`);
       } else {
-        console.warn(`[expand] pass ${pass + 1}: no improvement, stopping`);
-        break;
+        console.warn(`[expand] no improvement (${expanded.length} chars)`);
       }
     }
 
