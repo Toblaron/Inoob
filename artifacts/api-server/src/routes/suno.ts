@@ -9,6 +9,9 @@ import { computeSuggestedDefaults } from "../lib/suggestedDefaults.js";
 import { cacheGet, cacheSet, cacheStats, hashParams, TTL } from "../lib/cache.js";
 import { computeFingerprint } from "../lib/fingerprint.js";
 
+const AI_MODEL      = process.env.AI_MODEL      ?? "gpt-5.2";
+const AI_MINI_MODEL = process.env.AI_MINI_MODEL ?? "gpt-4.1-mini";
+
 const router: IRouter = Router();
 
 interface MusicBrainzData {
@@ -1189,7 +1192,7 @@ ${context}`;
 
   const runAiCall = async (): Promise<AiOutput> => {
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: AI_MODEL,
       max_completion_tokens: 8192,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -1826,7 +1829,7 @@ router.get("/suggest", async (req, res) => {
       (async () => {
         try {
           const completion = await openai.chat.completions.create({
-            model: "gpt-4.1-mini",
+            model: AI_MINI_MODEL,
             max_completion_tokens: 120,
             response_format: { type: "json_object" },
             messages: [
@@ -2058,7 +2061,7 @@ Apply the transformation and return the updated styleOfMusic and negativePrompt 
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: AI_MINI_MODEL,
       max_completion_tokens: 600,
       response_format: { type: "json_object" },
       messages: [

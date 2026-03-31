@@ -57,8 +57,17 @@ cd "$INSTALL_DIR"
 # ── 6. Environment file ───────────────────────────────────────────────────────
 if [[ ! -f "$INSTALL_DIR/.env" ]]; then
   cp .env.example .env
-  warn "Created .env from template. Edit it now with your OpenAI API key:"
-  warn "  nano $INSTALL_DIR/.env"
+  warn "Created .env from template."
+  echo ""
+  echo "  ┌─ FREE option (recommended) ──────────────────────────────────────────"
+  echo "  │  Groq: https://console.groq.com → API Keys → Create API Key"
+  echo "  │  Set OPENAI_API_KEY=gsk_...  and keep the Groq lines in .env"
+  echo "  ├─ Paid option ────────────────────────────────────────────────────────"
+  echo "  │  OpenAI: https://platform.openai.com → Billing → Add credits"
+  echo "  │  Set OPENAI_API_KEY=sk-...  and switch model lines in .env"
+  echo "  └───────────────────────────────────────────────────────────────────────"
+  echo ""
+  warn "Edit the .env file now:  nano $INSTALL_DIR/.env"
   echo ""
   read -rp "Press ENTER after you've saved your .env to continue, or Ctrl+C to exit and edit first..."
 fi
@@ -67,7 +76,7 @@ fi
 source "$INSTALL_DIR/.env" 2>/dev/null || true
 if [[ -z "${OPENAI_API_KEY:-}" ]]; then
   warn "OPENAI_API_KEY is not set in .env — the app will start but AI features will not work."
-  warn "Edit $INSTALL_DIR/.env and restart the service when ready."
+  warn "Get a free key at https://console.groq.com then edit $INSTALL_DIR/.env and restart the service."
 fi
 
 # Make sure PORT is set in .env (add if missing)
