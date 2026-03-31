@@ -70,7 +70,13 @@ export default defineConfig({
           },
           {
             urlPattern: /\/api\/.*/i,
-            handler: "NetworkOnly",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "api-cache",
+              networkTimeoutSeconds: 10,
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
           },
         ],
       },

@@ -7,14 +7,18 @@ interface BeforeInstallPromptEvent extends Event {
 
 interface PWAState {
   isOnline: boolean;
+  isOfflineMode: boolean;
   isInstallable: boolean;
   isInstalled: boolean;
   isIOS: boolean;
   promptInstall: () => Promise<void>;
+  reportApiFailure: () => void;
+  clearApiFailure: () => void;
 }
 
 export function usePWA(): PWAState {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [apiOffline, setApiOffline] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -26,7 +30,10 @@ export function usePWA(): PWAState {
     !(navigator as Navigator & { standalone?: boolean }).standalone;
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      setApiOffline(false);
+    };
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
@@ -61,11 +68,22 @@ export function usePWA(): PWAState {
     }
   }, [deferredPrompt]);
 
+  const reportApiFailure = useCallback(() => {
+    setApiOffline(true);
+  }, []);
+
+  const clearApiFailure = useCallback(() => {
+    setApiOffline(false);
+  }, []);
+
   return {
     isOnline,
+    isOfflineMode: !isOnline || apiOffline,
     isInstallable: !!deferredPrompt && !isInstalled,
     isInstalled,
     isIOS: isIOS && !isInstalled,
     promptInstall,
+    reportApiFailure,
+    clearApiFailure,
   };
 }

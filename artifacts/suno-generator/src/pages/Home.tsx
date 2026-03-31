@@ -384,7 +384,7 @@ function formatRelativeTime(ts: number): string {
 export default function Home() {
   const mainMutation = useGenerateSunoTemplate();
   const variationsMutation = useGenerateVariations();
-  const { isOnline, isInstallable, isIOS, promptInstall } = usePWA();
+  const { isOnline, isOfflineMode, isInstallable, isIOS, promptInstall, reportApiFailure, clearApiFailure } = usePWA();
   const [showIOSInstallTip, setShowIOSInstallTip] = useState(false);
   const [installDismissed, setInstallDismissed] = useState(false);
 
@@ -972,8 +972,10 @@ export default function Home() {
               instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
             });
           }
+          clearApiFailure();
         },
         onError: (err) => {
+          reportApiFailure();
           setApiError((err as { data?: { error?: string }; message?: string })?.data?.error ?? (err as Error)?.message ?? "Something went wrong");
         },
       }
@@ -1355,10 +1357,14 @@ export default function Home() {
       </AnimatePresence>
 
       {/* Offline banner */}
-      {!isOnline && (
+      {isOfflineMode && (
         <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 px-4 py-2 bg-zinc-900 border-b border-yellow-500/30 text-yellow-400 font-mono text-[11px] uppercase tracking-wider">
           <WifiOff className="w-3.5 h-3.5 shrink-0" />
-          <span>You&apos;re offline — showing cached templates only. Generation requires a connection.</span>
+          <span>
+            {!isOnline
+              ? "You\u2019re offline \u2014 showing cached templates only. Generation requires a connection."
+              : "API unreachable \u2014 check your connection. Showing cached templates."}
+          </span>
         </div>
       )}
 
@@ -2276,7 +2282,7 @@ export default function Home() {
                       <Trash2 className="w-3 h-3" /> Clear all
                     </button>
                   </div>
-                  {!isOnline && (
+                  {isOfflineMode && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/5 border border-yellow-500/20 text-yellow-500 font-mono text-[10px] uppercase tracking-wider">
                       <WifiOff className="w-3 h-3 shrink-0" />
                       <span>Offline — showing cached templates only</span>
