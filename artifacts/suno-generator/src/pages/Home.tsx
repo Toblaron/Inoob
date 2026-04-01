@@ -359,6 +359,69 @@ function saveHistory(entries: HistoryEntry[]) {
   } catch {}
 }
 
+/** Fire-and-forget: persist a history entry to the server SQLite store. */
+function syncEntryToServer(entry: HistoryEntry, videoPreview?: { thumbnail?: string | null }) {
+  const body = {
+    id: entry.id,
+    createdAt: entry.timestamp,
+    youtubeUrl: entry.youtubeUrl,
+    songTitle: entry.template.songTitle ?? undefined,
+    artist: entry.template.artist ?? undefined,
+    thumbnail: videoPreview?.thumbnail ?? undefined,
+    template: entry.template,
+    rating: entry.rating ?? null,
+    qualityScore: entry.qualityScore ?? null,
+    usedOptions: entry.usedOptions ?? undefined,
+  };
+  fetch("/api/history", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).catch(() => {/* ignore — server may not be reachable */});
+}
+
+/** Fire-and-forget: sync a rating update to the server. */
+function syncRatingToServer(id: string, rating: number | null) {
+  fetch(`/api/history/${encodeURIComponent(id)}/rating`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rating }),
+  }).catch(() => {});
+}
+
+/** Merge server history entries into localStorage-loaded entries (dedup by id, keep most recent). */
+function mergeHistories(local: HistoryEntry[], server: ServerHistoryEntry[]): HistoryEntry[] {
+  const byId = new Map<string, HistoryEntry>();
+  for (const e of local) byId.set(e.id, e);
+  for (const s of server) {
+    if (!byId.has(s.id)) {
+      byId.set(s.id, {
+        id: s.id,
+        timestamp: s.createdAt,
+        youtubeUrl: s.youtubeUrl,
+        template: s.template as SunoTemplate,
+        rating: s.rating ?? null,
+        qualityScore: s.qualityScore ?? null,
+        usedOptions: s.usedOptions as UsedOptions | undefined,
+      });
+    }
+  }
+  return [...byId.values()].sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_HISTORY);
+}
+
+interface ServerHistoryEntry {
+  id: string;
+  createdAt: number;
+  youtubeUrl: string;
+  songTitle?: string;
+  artist?: string;
+  thumbnail?: string;
+  template: unknown;
+  rating?: number | null;
+  qualityScore?: number | null;
+  usedOptions?: unknown;
+}
+
 function encodeShareState(state: SharedState): string {
   return LZString.compressToEncodedURIComponent(JSON.stringify(state));
 }
@@ -515,17 +578,48 @@ export default function Home() {
   const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setHistory(loadHistory());
+    const local = loadHistory();
+    setHistory(local);
+
+    // Merge server-persisted history in the background
+    fetch("/api/history?limit=50")
+      .then((r) => r.ok ? r.json() as Promise<{ entries: ServerHistoryEntry[] }> : Promise.resolve({ entries: [] }))
+      .then(({ entries }) => {
+        if (entries.length === 0) return;
+        setHistory((prev) => {
+          const merged = mergeHistories(prev, entries);
+          saveHistory(merged);
+          return merged;
+        });
+      })
+      .catch(() => {/* server may not be available */});
 
     const hash = window.location.hash.slice(1);
     if (hash) {
-      const decoded = decodeShareState(hash);
-      if (decoded) {
-        form.setValue("youtubeUrl", decoded.youtubeUrl);
-        setCurrentTemplate(decoded.template);
-        lastUrlRef.current = decoded.youtubeUrl;
-        fetchVideoPreview(decoded.youtubeUrl);
-        window.history.replaceState(null, "", window.location.pathname);
+      // Handle server-side short link: #share=XXXXXXXX
+      if (hash.startsWith("share=")) {
+        const shortHash = hash.slice(6);
+        fetch(`/api/share/${encodeURIComponent(shortHash)}`)
+          .then((r) => r.ok ? r.json() as Promise<{ youtubeUrl: string | null; template: SunoTemplate }> : null)
+          .then((data) => {
+            if (!data) return;
+            if (data.youtubeUrl) form.setValue("youtubeUrl", data.youtubeUrl);
+            setCurrentTemplate(data.template);
+            lastUrlRef.current = data.youtubeUrl ?? "";
+            if (data.youtubeUrl) fetchVideoPreview(data.youtubeUrl);
+            window.history.replaceState(null, "", window.location.pathname);
+          })
+          .catch(() => {});
+      } else {
+        // Legacy LZString-compressed share URL
+        const decoded = decodeShareState(hash);
+        if (decoded) {
+          form.setValue("youtubeUrl", decoded.youtubeUrl);
+          setCurrentTemplate(decoded.template);
+          lastUrlRef.current = decoded.youtubeUrl;
+          fetchVideoPreview(decoded.youtubeUrl);
+          window.history.replaceState(null, "", window.location.pathname);
+        }
       }
     }
   }, []);
@@ -679,6 +773,7 @@ export default function Home() {
       saveHistory(next);
       return next;
     });
+    syncEntryToServer(entry, videoPreview ?? undefined);
   };
 
   const rateCurrentTemplate = (rating: number) => {
@@ -692,6 +787,7 @@ export default function Home() {
           : e
       );
       saveHistory(next);
+      if (next[0]) syncRatingToServer(next[0].id, newRating);
       return next;
     });
     if (ratingTimerRef.current) clearTimeout(ratingTimerRef.current);
@@ -821,10 +917,27 @@ export default function Home() {
     if (!showStyleControls) setShowStyleControls(true);
   };
 
-  const handleShareTemplate = () => {
+  const handleShareTemplate = async () => {
     if (!currentTemplate || !lastUrlRef.current) return;
-    const encoded = encodeShareState({ youtubeUrl: lastUrlRef.current, template: currentTemplate });
-    const shareUrl = `${window.location.origin}${window.location.pathname}#${encoded}`;
+    let shareUrl = "";
+    try {
+      const resp = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ youtubeUrl: lastUrlRef.current, template: currentTemplate }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (resp.ok) {
+        const { hash } = await resp.json() as { hash: string };
+        shareUrl = `${window.location.origin}${window.location.pathname}#share=${hash}`;
+      } else {
+        throw new Error("server error");
+      }
+    } catch {
+      // Fallback to LZString URL if server is unreachable
+      const encoded = encodeShareState({ youtubeUrl: lastUrlRef.current, template: currentTemplate });
+      shareUrl = `${window.location.origin}${window.location.pathname}#${encoded}`;
+    }
     navigator.clipboard.writeText(shareUrl).then(() => {
       setShareToast("copied");
       if (shareTimerRef.current) clearTimeout(shareTimerRef.current);
@@ -1323,6 +1436,7 @@ export default function Home() {
   const handleClearHistory = () => {
     setHistory([]);
     saveHistory([]);
+    fetch("/api/history", { method: "DELETE" }).catch(() => {});
   };
 
   const handleApplyOptimizerFix = (patches: Partial<Record<"styleOfMusic" | "negativePrompt" | "lyrics", string>>) => {

@@ -8,7 +8,7 @@ if (!existsSync(CACHE_DIR)) mkdirSync(CACHE_DIR, { recursive: true });
 
 const DB_PATH = join(CACHE_DIR, "suno-cache.db");
 
-const db = new Database(DB_PATH);
+export const db = new Database(DB_PATH);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS cache (
