@@ -1316,26 +1316,50 @@ CRITICAL: The lyrics section MUST contain actual sung lyric lines. If you have t
     const raw = completion.choices[0]?.message?.content ?? "";
     if (!raw) throw new Error("AI returned empty response. Please try again.");
 
-    // ── Parse delimited output ────────────────────────────────────────────────
-    const extract = (tag: string): string => {
-      const start = raw.indexOf(`===${tag}===`);
+    // ── Parse response — try delimiters first, fall back to JSON ─────────────
+    // Gemini sometimes returns JSON even without response_format: json_object.
+    const extract = (text: string, tag: string): string => {
+      const start = text.indexOf(`===${tag}===`);
       if (start === -1) return "";
-      const after = raw.indexOf("\n", start) + 1;
-      const nextDelim = raw.indexOf("===", after);
-      return (nextDelim === -1 ? raw.slice(after) : raw.slice(after, nextDelim)).trim();
+      const after = text.indexOf("\n", start) + 1;
+      const nextDelim = text.indexOf("===", after);
+      return (nextDelim === -1 ? text.slice(after) : text.slice(after, nextDelim)).trim();
     };
 
-    const styleOfMusic  = extract("STYLE");
-    const title         = extract("TITLE") || "Untitled";
-    const negativePrompt = extract("NEGATIVE");
-    const lyrics        = extract("LYRICS");
+    // Strip markdown code fences if present (```json ... ```)
+    const stripped = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
-    console.log(`[ai] style=${styleOfMusic.length} lyrics=${lyrics.length} neg=${negativePrompt.length}`);
+    let styleOfMusic: string;
+    let title: string;
+    let negativePrompt: string;
+    let lyrics: string;
+
+    const delimStyle = extract(stripped, "STYLE");
+    if (delimStyle) {
+      // Delimiter format succeeded
+      styleOfMusic   = delimStyle;
+      title          = extract(stripped, "TITLE") || "Untitled";
+      negativePrompt = extract(stripped, "NEGATIVE");
+      lyrics         = extract(stripped, "LYRICS");
+      console.log(`[ai:delim] style=${styleOfMusic.length} lyrics=${lyrics.length} neg=${negativePrompt.length}`);
+    } else {
+      // Try JSON fallback (Gemini defaults to JSON)
+      try {
+        const parsed = JSON.parse(stripped) as Record<string, string>;
+        styleOfMusic   = parsed.styleOfMusic   ?? parsed.style          ?? "";
+        title          = parsed.title          ?? parsed.songTitle       ?? "Untitled";
+        negativePrompt = parsed.negativePrompt ?? parsed.negative        ?? "";
+        lyrics         = parsed.lyrics                                   ?? "";
+        console.log(`[ai:json] style=${styleOfMusic.length} lyrics=${lyrics.length} neg=${negativePrompt.length}`);
+      } catch {
+        console.warn("[ai] both parsers failed — raw snippet:", raw.slice(0, 300));
+        throw new Error("AI response format was unexpected. Please try again.");
+      }
+    }
 
     if (!styleOfMusic || !lyrics) {
-      // Fallback: try parsing as old two-call result format or log raw for debugging
-      console.warn("[ai] delimiter parse failed — raw snippet:", raw.slice(0, 300));
-      throw new Error("AI response format was unexpected. Please try again.");
+      console.warn("[ai] empty fields after parse — raw snippet:", raw.slice(0, 300));
+      throw new Error("AI returned incomplete data. Please try again.");
     }
 
     return { styleOfMusic, title, lyrics, negativePrompt };
