@@ -23,6 +23,7 @@ export interface FieldReport {
 export interface ValidationReport {
   valid: boolean;
   trimmed: boolean;
+  padded: boolean;
   fields: {
     styleOfMusic?: FieldReport;
     lyrics?: FieldReport;

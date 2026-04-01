@@ -1394,7 +1394,7 @@ ${lyrics}`,
       negativePrompt: aiResult.negativePrompt,
     });
     if (pyReport) {
-      const { fields, valid, trimmed, errors } = pyReport;
+      const { fields, valid, trimmed, padded, errors } = pyReport;
       const sm = fields.styleOfMusic;
       const ly = fields.lyrics;
       const np = fields.negativePrompt;
@@ -1402,15 +1402,16 @@ ${lyrics}`,
         `[py-validate] style  JS=${aiResult.styleOfMusic.length} PY=${sm?.original}→${sm?.final} ok=${sm?.ok}  ` +
         `lyrics JS=${aiResult.lyrics.length} PY=${ly?.original}→${ly?.final} ok=${ly?.ok}  ` +
         `neg JS=${aiResult.negativePrompt.length} PY=${np?.original}→${np?.final} ok=${np?.ok}  ` +
-        `valid=${valid} trimmed=${trimmed}`
+        `valid=${valid} trimmed=${trimmed} padded=${padded}`
       );
       if (errors.length) {
         console.warn(`[py-validate] ISSUES (unfixable): ${errors.join(" | ")}`);
       }
-      // Apply Python-trimmed values so the response respects the char limits
-      if (trimmed) {
+      // Apply Python values — covers both trim-down and pad-up corrections
+      if (trimmed || padded) {
         aiResult = { ...aiResult, ...pyReport.data };
-        console.log(`[py-validate] applied trimmed values to response`);
+        const action = trimmed && padded ? "trimmed+padded" : trimmed ? "trimmed" : "padded";
+        console.log(`[py-validate] applied ${action} values to response`);
       }
     }
   } catch { /* never block generation */ }
