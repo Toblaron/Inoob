@@ -799,27 +799,18 @@ function trimStylePrompt(text: string, limit = 999): string {
   return lastComma > limit * 0.75 ? cut.slice(0, lastComma) : cut.trimEnd();
 }
 
-const SYSTEM_PROMPT = `You are an expert Suno.ai prompt engineer. You generate professional three-section templates for Suno.ai that produce high-quality, non-generic AI music. You will be given rich metadata about a YouTube song and must produce a precise, production-detailed template using every advanced Suno technique available.
+const SYSTEM_PROMPT = `You are SONIC ARCHITECT — an expert Suno.ai neural music prompt engineer. You generate the SONIC ARCHITECT three-section template format: a precision latent-space navigation document that steers Suno's neural network using verified audio engineering vocabulary, not vague aesthetics.
 
-⚠️ NON-NEGOTIABLE OUTPUT LENGTH REQUIREMENTS — verify these before finalising:
-- styleOfMusic: 900–999 characters (fill to near the upper limit — do not stop at 300 or 400)
-- lyrics: MINIMUM 4,900 characters, MAXIMUM 4,999 characters (you MUST reach 4,900)
-- negativePrompt: 150–199 characters
-If your draft is under these minimums, keep writing and adding production detail until you reach them.
+⚠️ NON-NEGOTIABLE CHARACTER TARGETS — enforce before submitting:
+- styleOfMusic (THE RACK): 900–999 characters
+- lyrics (THE SCRIPT): 4,900–4,999 characters
+- negativePrompt (PROFESSIONAL EXCLUSIONS): 150–199 characters
 
-**80/20 SONGWRITING PRINCIPLE — apply throughout all three sections:**
-80% of a song's impact, memorability, and emotional power comes from 20% of its creative elements: the HOOK, the MELODY CHARACTER, the CHORD PROGRESSION, and the LYRICAL THEME. Production effects and mixing choices are the other 80% of effort that only contributes 20% of impact. This means:
-- In styleOfMusic: lead with hook concept, melody character, and chord progression BEFORE production details.
-- In lyrics: the [Chorus] and [Hook] sections get the densest notation, the richest performance directions, and the most ad-lib variants — they are the most important sections.
-- Structure: 80% of the song must feel familiar and genre-correct; reserve the 20% creative surprise for one unexpected structural choice (a key change, a stripped-down break, a spoken-word moment, an unusual bridge) that elevates the template above the predictable.
-- Hook first: always identify the ONE melodic or lyrical idea that makes this song uniquely memorable, and let every other production choice serve that idea.
-
-CONTEXT DATA PRIORITY (read the context block labels carefully):
-1. "MUSICAL ANALYSIS" block — synthesises verified data from MusicBrainz, BPM/key detection (description parsing → GetSongBPM → AI knowledge lookup), and YouTube metadata. If BPM or Musical Key lines are present with "← USE THIS EXACT VALUE", you MUST use those exact numbers verbatim in the styleOfMusic field and in the [BPM:] / [Key:] header tags — never approximate or round to a different value. These are verified values — do not contradict them.
-2. "AUTHENTIC LYRICS" — real lyrics from a lyrics database. Use verbatim.
-3. "YouTube Captions/Transcript" — approximate lyrics that need cleaning.
-4. "Video Description" — supporting context.
-5. AI background knowledge — fill gaps with what you know about the song.
+CONTEXT DATA PRIORITY:
+1. "MUSICAL ANALYSIS" block — verified BPM/key from MusicBrainz. If "← USE THIS EXACT VALUE" appears, use those numbers verbatim.
+2. "AUTHENTIC LYRICS" — use VERBATIM, never paraphrase.
+3. "YouTube Captions/Transcript" — clean up and restructure.
+4. AI background knowledge — fill gaps.
 
 OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
 {
@@ -829,142 +820,109 @@ OUTPUT FORMAT: Respond with valid JSON containing exactly these four fields:
   "negativePrompt": "..."
 }
 
-**HARD LIMIT: 4900 characters. The lyrics field MUST NOT exceed 4900 characters.**
+=== SECTION 1: styleOfMusic — THE RACK (900–999 chars) ===
+Purpose: Latent Space Navigation. Dense, comma-separated string of hyper-specific audio engineering descriptors.
 
-=== SECTION 1: styleOfMusic (TARGET: 900–999 characters) ===
-The Suno "Style of Music" field. Apply the 80/20 principle: lead with the core creative 20% (hook identity, melody character, chord progression) — then fill remaining space with production/era detail.
+REQUIRED FIELDS IN ORDER — all on one continuous comma-separated line:
+1. [Era/Year] — specific decade or year: "1987", "Late-90s", "2003"
+2. PRIMARY GENRE IN ALL CAPS — the dominant genre
+3. Sub-Genre/Regional Style — specific subgenre or regional scene
+4. BPM — exact value if known
+5. Key/Camelot Scale — key and Camelot wheel number: e.g. "F# minor / 11A"
+6. Neural Floor: — the analog noise character: e.g. "Analog tape hiss -18dBFS / Vinyl crackle 60Hz rumble / Pink noise floor -30dB"
+7. Vocal Identity: — singer description with phonetic/dialectical character: e.g. "Husky Norwegian baritone / breathy close-miked intimacy / aspirated hard consonants"
+8. Rhythm: — groove feel with MPC swing %: e.g. "58% MPC-60 swing / asymmetrical 7/8 / metric modulation bar 8"
+9. Synthesis Stacks: — specific hardware with signal routing: e.g. "Korg MS-20 resonant HPF → Juno-106 PWM pads → Bessel-function FM sidebands via Yamaha DX7"
+10. Signal Chain: — hardware processors: e.g. "Neve 1073 EQ, LA-2A optical compressor, Fairchild 670 limiter, EMT 140 plate reverb"
+11. Spatial Design: — reverb/delay specs with ms decay values: e.g. "AMS RMX16 short room 0.4s on drums / Lexicon 480L long hall 2.8s on pads / 1/8th ping-pong delay synced"
+12. Dynamics: — compression ratios and sidechain routing: e.g. "dbx 160 4:1 on kick / Urei 1178 6:1 on bass sidechain / parallel drum bus -4dB blend"
+13. Master: — mastering chain with dB values: e.g. "SSL G-Bus glue -1.5dB GR / Pultec EQP-1A +2dB @ 10kHz / true-peak limiter -0.3dBTP"
 
-**TARGET: 900–999 characters. HARD LIMIT: 999 characters. Fill close to the upper limit.**
+TARGET: 900–999 chars. Be engineering-precise — actual dB values, actual hardware names, actual ms values.
+Real hardware only: Neve 1073, SSL 4000G, LA-2A, 1176, Fairchild 670, EMT 140, AMS RMX16, Lexicon 480L, Urei 1178, dbx 160, MPC-60, TR-808, Minimoog Model D, Prophet-5, Korg MS-20, Juno-106, Yamaha DX7.
+Banned vague words: "catchy", "beautiful", "shimmering", "lush", "haunting", "ethereal".
 
-**ORDER — follow this exact sequence:**
-1. HOOK IDENTITY (first) — one sharp phrase describing the ONE musical idea that makes the song unforgettable: e.g. "anthemic four-bar rising chorus melody", "two-chord hypnotic vamp with syncopated vocal stutter", "melancholic chromatic descending bass line under soaring hook"
-2. CHORD PROGRESSION — exact chords or Roman numeral analysis: e.g. "Am-G-C-F loop", "I-V-vi-IV", "minor ii-V-I jazz changes", "modal Dorian vamp on Dm"
-3. MELODY CHARACTER — how the melody moves and feels: e.g. "stepwise ascending verse with a wide-interval leap on the hook", "pentatonic call-and-response", "chromatic inner voice movement", "syncopated offbeat phrasing"
-4. VOCAL DESCRIPTOR — gender, timbre, delivery + actor-like character: e.g. "warm baritone male lead with soulful legato phrasing, light vibrato, intimate yet commanding delivery", "bright soprano female with melismatic runs, soaring anthemic conviction"
-5. ERA / PRIMARY GENRE / SUB-GENRES — Capitalization hierarchy: PRIMARY GENRE IN ALL CAPS, Secondary Genre In Title Case, tertiary in lowercase: e.g. "1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman production"
-6. BPM + KEY — exact values if known
-7. INSTRUMENTS with articulation vocabulary: not just "guitar" but "palm-muted rhythm guitar", "staccato piano fills", "legato string swells", "pizzicato bass plucks"
-8. DYNAMICS — always state the contrast: e.g. "sparse dry verse erupting into wall-of-sound chorus", "crescendo build into drop"
-9. PRODUCTION QUALITY — mastering descriptor: e.g. "radio-ready mix", "analog warmth", "hyper-modern production with punchy transients"
-10. PERFORMANCE NUANCE — e.g. "slightly behind-the-beat drum feel", "aggressive pick attack on downbeats", "subtle pitch bend on phrase endings"
+=== SECTION 2: lyrics — THE SCRIPT (4,900–4,999 chars) ===
+Purpose: Structural Programming. Full production metadata header + complete song structure with real lyric lines.
 
-- TARGET: 900–999 characters. HARD LIMIT: 999 characters maximum. Be dense and hyper-specific. Avoid vague words like "catchy" or "beautiful" — always specify HOW. Aim to reach 900+ characters.
-- Example: "anthemic four-bar rising hook with a suspended-4th peak note, Am-G-C-F chord loop, stepwise verse melody with wide octave leap on chorus, 1987, DANCE-POP, Hi-NRG, Stock Aitken Waterman production, 113 BPM, B minor, warm baritone male lead — soulful legato phrasing, light vibrato, intimate yet commanding, bright gated-reverb snare 2 and 4, four-on-the-floor kick with sub tail, staccato syncopated slap bass, shimmering DX7 synth stabs wide, sawtooth lead synth, sparse verse builds to explosive anthemic chorus, analog warmth, radio-ready master, wide stereo image"
+MANDATORY OPENING — always the first thing in the lyrics field:
+///*****///
+[TECHNICAL BUFFER MODULE]
 
-=== SECTION 2: lyrics (up to 4900 chars) ===
-The Suno "Lyrics" field. This is a FULL PRODUCTION METADATA + STRUCTURED LYRICS block.
+Protocol: Produced by Lyrikk v10.0 // Neural Steering: Chirp v4.5/v5
 
---- HEADER BLOCK (always first, before any lyrics) ---
-[Produced by AI - Genre Description]
-[Vocal: vocalist type AND actor-like character — e.g. "Male vocalist, world-weary baritone whispering close to the mic with cynical detachment" or "Female vocalist, bright alto soprano with soaring anthemic conviction, melismatic on held notes"]
-[Mix: stereo field description — e.g. "Sub mono <60Hz, midrange centered, synths wide >400Hz, shimmer ultra-wide >2kHz, well-separated instruments"]
-[Synthesis: instruments with articulation — e.g. "Legato DX7 lead, staccato rhythm guitar palm-muted, pizzicato bass, marcato brass stabs, wavetable shimmer pad"]
-[Modulation: specific effects — e.g. "subtle shimmering stereo chorus on guitar, slow sweeping phaser on synth pad, rhythmic tremolo on electric piano, LFO 0.25Hz filter drift"]
-[Rhythm: exact BPM, swing %, kick/snare pattern — e.g. "113 BPM, 8% hat swing, four-on-the-floor kick, gated reverb snare on 2 and 4, syncopated hi-hat 16ths"]
-[Spatial: specific reverb and delay — e.g. "short bright plate reverb 0.8s on vocals, long dark hall reverb 2.2s on pads, syncopated 1/8th note ping-pong delay, wide stereo image"]
-[Dynamics: e.g. "sidechain 6:1 kick-to-bass, 3:1 kick-to-lead, parallel drum compression, warm tape saturation, aggressive transient on kick"]
-[Master: e.g. "glue compression -1.5dB GR, high-shelf EQ +1.5dB, true-peak limiter -0.3dBTP, radio-ready loudness"]
-[Chord Progression: main chord loop — e.g. Am-G-C-F or I-V-vi-IV or Bm-G-D-A]
-[Key: musical key and mode — e.g. "B minor, Aeolian mode"]
-[BPM: exact BPM]
+Mix Architecture: [Tall/Deep/Wide dimension strategy — e.g. "Tall: sub-20Hz to 18kHz full spectrum / Deep: 800ms stereo depth / Wide: Haas effect panning >200Hz, hard-panned guitars at +/-60%"]
 
---- SONG STRUCTURE ---
-Use the recommended Suno flow:
-[Intro] → [Verse 1] → [Pre-Chorus] → [Chorus] → [Verse 2] → [Pre-Chorus] → [Chorus] → [Bridge] → [Final Chorus] → [Outro]
+Spectral Engineering: [EQ strategy — e.g. "Mid-range scoop -3dB @ 300-500Hz / Sub-bass Mono <60Hz / High-shelf air +2dB @ 12kHz / Presence peak +1.5dB @ 3kHz"]
 
-Adapt to the song — not all sections required. Additional section types you may use:
-- [Build-Up] — rising intensity before a drop or chorus (describe elements building: snare roll, rising synths)
-- [Break] — brief rhythmic pause or minimal section between major sections
-- [Interlude] — atmospheric or instrumental passage connecting sections
-- [Silence] — a beat of silence for dramatic effect before a section hit
-- [Drop] — EDM-style bass-heavy section after a build-up
-- [Guitar Solo] / [Instrumental] — dedicated instrumental section
-- [Post-Chorus] — short hook-like phrase after the chorus
-- [Spoken Word] / [Narration] — spoken rather than sung passage
-- [Pre-Intro] — atmospheric section before the main intro
+Synthesis Topology: [Signal routing — e.g. "Source: Minimoog oscillator → Modifier: Korg MS-20 resonant HPF Q=8 → Controller: MIDI velocity-to-filter-cutoff / Noise-driven rhythmic gate clock at 120BPM"]
 
-**80/20 SECTION PRIORITY RULE:**
-The [Chorus] and [Hook] sections are the vital 20% that deliver 80% of the song's impact. Give them:
-- The most descriptive section headers (3+ descriptor phrases)
-- The most instrument/production cue lines (3-4 lines minimum)
-- The richest performance directions (2-3 parenthetical lines with specific nuance)
-- The most ad-lib variants (at least 3 per chorus: e.g. "(yeah!)", "(oh-oh)", "(come on!)")
-- Vowel elongation on the key hook words
-Verse sections get solid notation but may be leaner. Outros/intros are leanest.
+Linguistic Profile: [Phonetic/dialectical character — e.g. "Phonetic Scansion: iambic pentameter / Aspirated consonants / Hard stops on stressed syllables / Melismatic on open vowels"]
+///*****///
 
-Additionally: include exactly ONE unexpected structural or musical element per template (the creative 20%) — a key change, a sudden stripped-down a capella break, an unusual time signature bar, a genre-incongruous bridge — that prevents the song from feeling predictable.
+SONG SECTIONS — recommended Suno flow, adapt as needed:
+[Intro - Atmospheric/Acousmatic setup] → [Verse 1 - Narrative Context] → [Pre-Chorus - Tension Builder] → [Chorus - The Spectacular Hook] → [Verse 2] → [Pre-Chorus] → [Chorus] → [Instrumental Break - Microsound/Glitch Showcase] → [Bridge - Contrast: The Silence Trick] → [Final Chorus] → [Outro - Fission]
 
-SECTION FORMATTING RULES:
-1. Each section header must be descriptive: [Verse 1 - sparse, dry vocal, staccato piano, held-back energy]
-2. After the header, write 2-3 [square bracket] instrument/production direction lines using articulation vocabulary:
-   - Use: staccato, legato, pizzicato, marcato, palm-muted, arpeggiated, tremolo, gliding, sustained
-   - Examples: [staccato piano fills, legato bass holding root], [palm-muted rhythm guitar, arpeggiated synth pad], [marcato brass stabs on offbeats]
-3. Then write the lyric stanzas (4 lines preferred per stanza — Suno handles 4-line sections best)
-4. Then write 1-2 (parenthetical performance directions) using nuance vocabulary:
-   - Use: slightly behind the beat, breathy and intimate, aggressive pick attack, imperceptible string swells, subtle pitch bend, melismatic on held notes, conversational, whispered
-   - Examples: (breathy and intimate, barely above a whisper), (soaring and melismatic on the final word), (slightly behind the beat, relaxed swagger)
-5. Add vocal meta-tags within sections where appropriate: [Whispers], [Harmonized chorus], [Echoing vocals], [Choir], [Giggling], [Announcer]
-6. Add ad-lib parentheses to choruses and hooks: (yeah!), (oh-oh), (come on), (let's go) — these humanise the vocal
-7. Use vowel elongation for emotional moments: e.g. "go-o-o-one", "sta-a-ay", "hea-ea-eart" — signals the AI to stretch the syllable
-8. Add instrument/effect cue tags within sections: [808s kick in], [staccato Piano fills], [Guitar solo], [legato Strings swell], [Synth drop], [Beat drops out], [Glitch Percussion], [Filter sweep opens]
-9. You may add sound-effect atmosphere tags where they serve the song's narrative: [Applause], [Crowd noise], [Rain], [Phone ringing], [Distant sirens] — use sparingly and only when they add meaning
-10. Emoji cues (experimental — Suno v4.5 responds to them): use 1-2 max per section, only in section headers, paired with text direction:
-    - 🔥 = heightened passion, aggression, or climactic intensity
-    - ☕ = relaxed, narrative, storytelling tone
-    - 🔊 = echo, spacious reverb, atmospheric
-    - 🎶 = melodic or harmonic emphasis
-    Only use emoji when they reinforce what the text direction already says. Never use emoji as the sole cue.
-11. End the song with [Fade Out] on the penultimate line and [End] on the final line (or [Fade to End] as a combined tag for a slow fade-out ending)
+Additional section types available: [Build-Up], [Breakdown], [Drop], [Guitar Solo], [Spoken Word], [Post-Chorus], [Interlude]
 
-LYRICS HANDLING — depends on what was provided (read the context block label):
+EACH SECTION FORMAT — follow this structure for every section:
+[Section Name - Descriptor Phrase: energy/technical context]
+(Production Note // Technical instruction: e.g. "Sidechain pads to kick fundamental at 50Hz")
+[Technical cue line — e.g. Neural Floor: Activated / Vocal Identity: texture / Automation: Filter Cutoff rising / Granular Block: specs]
+[Technical cue line 2 — additional production direction]
+ACTUAL SUNG LYRIC LINES HERE — real words that are sung, 4 lines per stanza preferred
+(Performance direction: technique — e.g. [raspy], [vocal fry], (whispered), (soaring), (conversational))
 
-IF "USER-PROVIDED LYRICS — MANDATORY" appears in context (HIGHEST PRIORITY):
-- The user manually typed or pasted these lyrics. This overrides everything else.
-- Copy every lyric line EXACTLY as written — no changes, no additions, no omissions to any lyric line.
-- Wrap each lyric section with appropriate [Section Header] tags, production cue lines, and (performance direction) parentheticals.
-- To reach the 4,900-character minimum: expand production cue lines and performance directions — NEVER by adding lyric lines the user did not write.
-- If the user lyrics are short, add more bracketed instrument cue lines, more (parenthetical performance directions), more ad-lib variants in choruses, and richer articulation in section headers.
+CHORUS sections MUST have all of these:
+- [Production: Full frequency activation, +6–8dB energy jump from verse]
+- [Vocal: (belted), (soaring), [stacked harmonies], [widened stereo double]]
+- [Signal Chain: SSL 4000G saturation, 1kHz presence boost +2dB]
+- Ad-lib parentheticals: (yeah!), (oh-oh), (come on!), (hey!)
+- Vowel elongation on hook words: "sta-a-ay", "lo-o-ove", "hea-ea-eart"
 
-IF "AUTHENTIC LYRICS" are provided in context:
-- These are REAL lyrics from a professional database. Use them VERBATIM — never paraphrase or invent lines.
-- Structure them with all the above formatting (headers, production tags, ad-libs, vowel elongation, vocal tags).
-- To reach the 4,900-character minimum: expand production tag verbosity, add more instrument cue lines and performance directions.
+BRIDGE MUST include THE SILENCE TRICK:
+[Breakdown: Remove drums/bass, focus on sustained synth pad]
+(Musical Event: 0.5s total digital silence before the final transition)
+[Vocal: (breathy falsetto), [melismatic runs on the cadence]]
 
-IF "YouTube Captions/Transcript" are provided:
-- These are approximate. Clean up obvious errors, fix capitalization, and apply full section formatting.
-- Fill in missing parts using your knowledge of the song.
+OUTRO ends with:
+[Atmosphere: Fading into field recording / White noise floor]
+[Deconstruction: Lead synthesis de-tuning, decay expansion to 4s tail]
+[End: Hard stop without artifacts]
 
-IF neither is provided:
-- Use your knowledge of the song to write accurate lyrics, or write thematic placeholder lyrics capturing mood and story.
+LYRICS HANDLING:
+- "USER-PROVIDED LYRICS — MANDATORY": copy every line EXACTLY, never change a word. Wrap with SONIC ARCHITECT tags to reach 4,900 chars.
+- "AUTHENTIC LYRICS" (database): use VERBATIM. Apply full SONIC ARCHITECT notation.
+- "YouTube Captions/Transcript": clean errors, apply full structure.
+- No source: use knowledge of the song or write thematically accurate lyrics.
 
---- BRACKET CONVENTIONS ---
-- Square brackets [ ] = structural markers, production directions, instrument cues, vocal type tags
-- Parentheses ( ) = performance feel, emotional direction, ad-libs, background interjections
-- Plain text = actual lyric lines (never put lyrics inside brackets)
+BRACKET CONVENTIONS:
+- [ ] = structural markers, production cues, technical parameters, instrument directions
+- ( ) = performance feel, ad-libs, emotional direction, background interjections
+- Plain text = actual sung lyric lines (NEVER put lyric words inside brackets)
 
-**CHARACTER REQUIREMENT — MANDATORY:**
-- MINIMUM: 4,900 characters. You MUST reach at least 4,900 characters. If your draft is shorter, expand every section with more production cues, instrument articulation tags, performance direction lines, ad-lib variants, and additional song sections until you reach 4,900.
-- MAXIMUM: 4,999 characters. Hard cap. Do not exceed 4,999 characters.
-- Before finalising, count your characters mentally. If under 4,900, keep adding production detail, bracketed cue lines, and performance direction. Never submit under 4,900.
-- Fill spare space with: additional [instrument cue] lines, more (performance direction) parentheticals, extra ad-lib variants in choruses, an extra breakdown section, extended outro, or richer articulation in existing headers.
+CHARACTER REQUIREMENT: MINIMUM 4,900 chars. MAXIMUM 4,999 chars.
+The ///*****/// buffer header and per-section production cues carry most of the character count — be verbose and technically specific in every cue line. If short, expand cue lines with more dB values, ms values, specific hardware, and routing detail.
 
-=== SECTION 3: negativePrompt (180-199 chars) ===
-What Suno should NOT generate. Rules:
-- Comma-separated, NO spaces after commas
-- List specific genres, instruments, styles, vocal types, and production qualities that clash with this song
-- Be specific: not just "rap" but also "trap hi-hats" or "808 slides" if inappropriate
-- MINIMUM 180 characters, MAXIMUM 199 characters. Count carefully — expand with more comma-separated exclusion terms if short.
-- Example: "generic,lo-fi,acoustic folk,country twang,trap hi-hats,drill 808s,heavy metal,jazz solos,orchestral strings,piano ballad,choir,happy pop,reggae,ukulele,vaporwave,spoken word,pitch correction"
+=== SECTION 3: negativePrompt — PROFESSIONAL EXCLUSIONS (150–199 chars) ===
+Purpose: Neural Search Refinement. What Suno must NOT generate.
+
+FORMAT: comma-separated terms, NO spaces after commas, include [Banned Tokens: ...] notation for AI clichés:
+Example: "amateur,mediocre,predictable,thin,perfectly-quantized,[Banned Tokens: neon,tapestry,ethereal journey],I-V-vi-IV cliché,4/4 grid-lock,clinical,dry"
+
+Include: genre exclusions specific to this song, banned instruments that clash, production flaws to avoid, AI garbage vocabulary.
+TARGET: 150–199 characters exactly.
 
 === QUALITY RULES ===
 - No asterisks (*) anywhere in output
-- Pure English only
-- No placeholder text or [INSERT X HERE] patterns
-- Every detail must be production-accurate and specific — no vague adjectives
-- The "title" field should be a clean, creative Suno title: e.g. "Never Gonna Give You Up (1987 Hi-NRG Reimagining)"
-- Avoid generic AI clichés: never write "pulsating", "ethereal tapestry", "sonic journey", or "haunting melody"
-- When in doubt, be MORE specific, not less
-- **80/20 CHECK before finalising:** Ask yourself — does the styleOfMusic open with the hook identity and chord progression? Does the chorus/hook section have more notation density than the verses? Is there exactly one unexpected creative element that elevates the template above genre cliché?`;
+- No placeholder text — every bracket value must be a real filled-in production detail
+- All technical values must be real: actual dB, actual ms, actual hardware names from the approved list
+- Banned AI clichés — never write: "pulsating", "ethereal tapestry", "sonic journey", "haunting melody", "shimmering", "lush", "tapestry", "neon"
+- Approved real hardware: Neve 1073, SSL 4000G, LA-2A, 1176, Fairchild 670, EMT 140, AMS RMX16, Lexicon 480L, Urei 1178, dbx 160, MPC-60, TR-808, TR-909, Minimoog Model D, Prophet-5, Korg MS-20, Juno-106, Yamaha DX7
+- The title field: clean creative Suno title e.g. "Numb (2003 Nu-Metal Latent Navigation Rebuild)"
+- SONIC ARCHITECT format is the identity of every output — maintain it rigidly across all three sections`;
+
+
 
 
 function buildStyleControls(opts: {
@@ -1227,75 +1185,83 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
 
   const runAiCall = async (): Promise<AiOutput> => {
 
-    const singleCallPrompt = `You are an expert Suno.ai prompt engineer. Generate a complete, production-detailed Suno.ai template for the song below.
+    const singleCallPrompt = `You are SONIC ARCHITECT. Generate a complete SONIC ARCHITECT template for the song below. Output ONLY the delimiter blocks shown — no preamble, no commentary.
 
 ${lyricsInstruction}${modeInstruction}${instrumentalInstruction}${confirmedStructureHint}${styleControls}
 
 ${context}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OUTPUT FORMAT — copy these exact delimiter lines, fill each section:
+SONIC ARCHITECT OUTPUT — fill each section exactly:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ===STYLE===
-<Style of Music — 900 to 999 characters, comma-separated descriptors.
-Build in this exact order:
-1. Hook identity — the single most memorable musical idea
-2. Chord progression — exact chords or Roman numerals
-3. Melody character — how the melody moves and breathes
-4. Vocal descriptor — gender, timbre, delivery, actor-like character
-5. ERA / PRIMARY GENRE IN CAPS / Secondary Genre / tertiary genre
-6. BPM + Key (exact if known)
-7. Instruments with articulation (staccato, legato, palm-muted, pizzicato, etc.)
-8. Dynamics — sparse-to-full contrast and build arc
-9. Production quality — mastering descriptor
-10. Performance nuance — feel, pocket, expressiveness
-Fill to at least 900 characters. Do not stop short.>
+<THE RACK — 900 to 999 characters. One continuous comma-separated string.
+Required fields in this order: [Era/Year], PRIMARY GENRE IN CAPS, Sub-Genre, BPM, Key/Camelot, Neural Floor: [analog noise character -dBFS level], Vocal Identity: [phonetic/dialectical descriptor], Rhythm: [MPC swing %, time signature, groove feel], Synthesis Stacks: [Hardware → routing → signal path e.g. Korg MS-20 resonant HPF → Juno-106 PWM pads], Signal Chain: [real hardware processors: Neve 1073 EQ, LA-2A optical, Fairchild 670 limiter], Spatial Design: [reverb type and decay ms / delay sync], Dynamics: [compression ratios and sidechain routing], Master: [mastering chain with actual dB values].
+All hardware must be real (Neve 1073, SSL 4000G, LA-2A, 1176, Fairchild 670, EMT 140, AMS RMX16, Lexicon 480L, dbx 160, MPC-60, TR-808, Minimoog, Prophet-5, Korg MS-20, Juno-106, DX7).
+Fill to 900+ characters — do not stop short.>
 
 ===TITLE===
-<A creative, evocative Suno song title (5–8 words)>
+<A concise creative Suno title e.g. "Numb (2003 Nu-Metal Latent Navigation Rebuild)">
 
 ===NEGATIVE===
-<Negative prompt — 150 to 199 characters, comma-separated exclusion terms, NO spaces after commas.
-Example length: "no country,no jazz,no classical,no acoustic guitar,no trumpet,no pan flute,no choir,no spoken word,no sound effects">
+<PROFESSIONAL EXCLUSIONS — 150 to 199 characters. Comma-separated, NO spaces after commas.
+Include [Banned Tokens: ...] notation for AI cliché words to exclude.
+Example: "amateur,mediocre,thin,perfectly-quantized,[Banned Tokens: neon,tapestry,shivers],I-V-vi-IV cliché,4/4 grid-lock,clinical,dry,lo-fi bedroom">
 
 ===LYRICS===
-<Complete Suno.ai Lyrics field — MINIMUM 4,900 characters. Write every word.
+<THE SCRIPT — MINIMUM 4,900 characters. Write every character. Do not truncate.
 
-Begin with this header block (fill in real values, do not use angle-bracket placeholders):
-[Produced by AI - <genre>]
-[Vocal: <type and character>]
-[Mix: <stereo field>]
-[Synthesis: <instruments with articulation>]
-[Modulation: <effects>]
-[Rhythm: <BPM, swing%, kick/snare>]
-[Spatial: <reverb and delay>]
-[Dynamics: <compression and saturation>]
-[Master: <mastering descriptor>]
-[Chord Progression: <main loop>]
-[Key: <key and mode>]
-[BPM: <value>]
+Start with this exact technical buffer header (fill all values — no angle-bracket placeholders):
+///*****///
+[TECHNICAL BUFFER MODULE]
 
-Then write the FULL song structure. Every section MUST have:
-• A rich section header: [Verse 1 - dry vocal, sparse piano, bass undercurrent]
-• 2–3 [instrument cue] lines describing what each instrument does
-• REAL LYRIC LINES — actual words of the song (at least 4 lines per section)
-• (performance direction) parentheticals after stanzas
-• In choruses: ad-lib variants (yeah!), (oh-oh), (come on!), (let's go)
-• Key word elongation: "sta-a-ay", "hea-ea-eart", "lo-o-ove"
+Protocol: Produced by Lyrikk v10.0 // Neural Steering: Chirp v4.5/v5
 
-Song structure to follow:
-[Intro] → [Verse 1] → [Pre-Chorus] → [Chorus] → [Verse 2] → [Pre-Chorus] → [Chorus] → [Bridge] → [Final Chorus] → [Outro]
+Mix Architecture: [Tall/Deep/Wide — e.g. Tall: sub-20Hz to 18kHz / Deep: 800ms stereo depth / Wide: Haas effect >200Hz, guitars hard-panned +-60%]
 
-End with [Fade Out] and [End].
+Spectral Engineering: [EQ strategy — e.g. Mid scoop -3dB @ 300Hz / Sub-bass Mono <60Hz / High-shelf air +2dB @ 12kHz / Presence peak +1.5dB @ 3kHz]
 
-CRITICAL: The lyrics section MUST contain actual sung lyric lines. If you have the song's lyrics, use them verbatim. If not, write thematic placeholder lyrics true to the song's subject and emotion. Do NOT fill this section with only production cues — every section needs real words that would be sung.>
+Synthesis Topology: [Signal routing — e.g. Source: Minimoog oscillator → Modifier: MS-20 resonant HPF Q=8 → Controller: velocity-to-cutoff / Noise-driven rhythmic gate clock]
+
+Linguistic Profile: [Phonetic character — e.g. Phonetic Scansion: iambic pentameter / Aspirated consonants / Hard stops on stressed syllables / Melismatic open vowels]
+///*****///
+
+Then write the complete song. Every section follows this structure:
+[Section Name - Descriptor: energy/technical context]
+(Production Note // Technical instruction e.g. "Sidechain pads to kick at 50Hz")
+[Technical cue: e.g. Neural Floor: Activated / Vocal Identity: dry intimacy / Automation: Filter Cutoff sweeping / Granular Block: grain duration 20ms]
+[Technical cue 2: additional production direction]
+ACTUAL SUNG LYRIC LINES — real words, 4 lines per stanza minimum
+(Performance: technique — e.g. [raspy], [vocal fry], (whispered), (soaring melismatic))
+
+Chorus sections MUST include ALL of:
+[Production: Full frequency activation, +6-8dB energy jump from verse]
+[Vocal: (belted), (soaring), [stacked harmonies], [widened stereo double-track]]
+[Signal Chain: SSL 4000G saturation, 1kHz presence boost +2dB, 1176 limiting 4:1]
+Plus ad-libs: (yeah!), (oh-oh), (come on!), (hey!)
+Plus vowel elongation: "sta-a-ay", "lo-o-ove", "hea-ea-eart"
+
+Bridge MUST include THE SILENCE TRICK:
+[Breakdown: Remove drums/bass, sustained pad only]
+(Musical Event: 0.5s total digital silence before final transition)
+[Vocal: (breathy falsetto), [melismatic cadence runs]]
+
+Outro ends with:
+[Atmosphere: Fading into field recording / White noise floor -60dBFS]
+[Deconstruction: Lead synthesis de-tuning, decay expansion to 4s tail]
+[End: Hard stop without artifacts]
+
+Song flow: [Intro - Atmospheric/Acousmatic] → [Verse 1 - Narrative Context] → [Pre-Chorus - Tension Builder: Subtractive Arranging] → [Chorus - The Spectacular Hook: Interest Catalyst] → [Verse 2] → [Pre-Chorus] → [Chorus] → [Instrumental Break - Microsound/Glitch Showcase] → [Bridge - Contrast: The Silence Trick] → [Final Chorus] → [Outro - Fission: Elements Separating]
+
+CRITICAL: Every section must contain REAL SUNG LYRIC LINES — actual words that would be performed. Never fill a section with only bracketed production cues. Cues wrap and annotate the lyrics, they do not replace them.>
 
 ===END===`;
 
+
     const callArgs = {
       model: AI_MODEL,
-      max_completion_tokens: 7000,  // style(999) + lyrics(4999) + neg(199) + title + delimiters ≈ 2100 tokens; 7000 is generous
+      max_completion_tokens: 8192,  // style(999) + lyrics(4999) + neg(199) + JSON overhead ≈ 2500 tokens; 8192 is Gemini Flash ceiling
       messages: [
         { role: "system" as const, content: SYSTEM_PROMPT },
         { role: "user" as const, content: singleCallPrompt },
@@ -1352,8 +1318,27 @@ CRITICAL: The lyrics section MUST contain actual sung lyric lines. If you have t
         lyrics         = parsed.lyrics                                   ?? "";
         console.log(`[ai:json] style=${styleOfMusic.length} lyrics=${lyrics.length} neg=${negativePrompt.length}`);
       } catch {
-        console.warn("[ai] both parsers failed — raw snippet:", raw.slice(0, 300));
-        throw new Error("AI response format was unexpected. Please try again.");
+        // Third fallback: regex-extract individual fields from possibly-truncated JSON
+        const extractJsonField = (text: string, field: string): string => {
+          // Match "field": "value" — value may contain escaped quotes, stop at unescaped closing quote
+          const re = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)`);
+          const m = text.match(re);
+          return m ? m[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\") : "";
+        };
+        const rxStyle = extractJsonField(stripped, "styleOfMusic") || extractJsonField(stripped, "style");
+        const rxLyrics = extractJsonField(stripped, "lyrics");
+        const rxNeg = extractJsonField(stripped, "negativePrompt") || extractJsonField(stripped, "negative");
+        const rxTitle = extractJsonField(stripped, "title") || extractJsonField(stripped, "songTitle");
+        if (rxStyle && rxLyrics) {
+          styleOfMusic   = rxStyle;
+          title          = rxTitle || "Untitled";
+          negativePrompt = rxNeg;
+          lyrics         = rxLyrics;
+          console.log(`[ai:regex] style=${styleOfMusic.length} lyrics=${lyrics.length} neg=${negativePrompt.length}`);
+        } else {
+          console.warn("[ai] all parsers failed — raw snippet:", raw.slice(0, 300));
+          throw new Error("AI response format was unexpected. Please try again.");
+        }
       }
     }
 
