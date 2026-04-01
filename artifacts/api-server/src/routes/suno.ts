@@ -1311,32 +1311,42 @@ If you finish the song structure and are under 4,900 chars: KEEP WRITING — add
 [instrument cue] lines, (performance direction) lines, extended [Outro], or an extra
 [Breakdown] / [Interlude] section until you reach 4,900. DO NOT STOP BEFORE 4,900 CHARACTERS.`;
 
-    const lyricsCompletion = await openai.chat.completions.create({
+    // ── Lyrics call with one 429-retry ───────────────────────────────────────
+    const lyricsCallArgs = {
       model: AI_MODEL,
-      max_completion_tokens: 6000,  // generous cap — Gemini Flash can be concise, give it room
+      max_completion_tokens: 6000,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: lyricsUserPrompt },
+        { role: "system" as const, content: SYSTEM_PROMPT },
+        { role: "user" as const, content: lyricsUserPrompt },
       ],
-      // No response_format — plain text removes the JSON length bias
-    });
+    };
+    let lyricsCompletion = await openai.chat.completions.create(lyricsCallArgs)
+      .catch(async (err) => {
+        if (err?.status === 429) {
+          console.warn("[lyrics] 429 rate limit — waiting 8s then retrying...");
+          await new Promise(r => setTimeout(r, 8000));
+          return openai.chat.completions.create(lyricsCallArgs);
+        }
+        throw err;
+      });
     let lyrics = lyricsCompletion.choices[0]?.message?.content?.trim() ?? "";
     console.log(`[lyrics] initial: ${lyrics.length} chars`);
 
-    // ── Expansion loop: up to 3 passes ───────────────────────────────────────
-    // Gemini Flash tends to produce concise output; multiple passes bridge the
-    // gap to the 4,900-char minimum.  Each pass is capped at 3,000 tokens to
-    // stay well within rate limits for both Gemini (req/day) and Groq (TPD).
+    // ── Expansion loop: up to 3 passes (each wrapped to survive 429) ─────────
+    // Gemini Flash is concise; Python padding will guarantee the minimum if
+    // expansion passes fail.  Wrap each pass so a rate-limit doesn't abort
+    // the whole generation — just skip that pass and let Python fill the gap.
     for (let pass = 0; pass < 3 && lyrics.length < 4600; pass++) {
       const needed = 4900 - lyrics.length;
       console.warn(`[expand] pass ${pass + 1}: ${lyrics.length} chars, need ${needed} more`);
 
-      const expandCompletion = await openai.chat.completions.create({
-        model: AI_MODEL,
-        max_completion_tokens: 3000,
-        messages: [{
-          role: "user",
-          content: `The Suno lyrics below are ${lyrics.length} characters. Expand them to at least 4,900 characters.
+      try {
+        const expandCompletion = await openai.chat.completions.create({
+          model: AI_MODEL,
+          max_completion_tokens: 3000,
+          messages: [{
+            role: "user",
+            content: `The Suno lyrics below are ${lyrics.length} characters. Expand them to at least 4,900 characters.
 
 Add ${needed}+ more characters throughout:
 - More [instrument cue] lines after every section header (add 2–3 per section)
@@ -1350,16 +1360,23 @@ Do NOT change existing lyric lines. Output the COMPLETE expanded lyrics. No JSON
 
 CURRENT LYRICS (${lyrics.length} chars — need ${needed} more):
 ${lyrics}`,
-        }],
-      });
+          }],
+        });
 
-      const expanded = expandCompletion.choices[0]?.message?.content?.trim() ?? "";
-      if (expanded.length > lyrics.length) {
-        lyrics = expanded;
-        console.log(`[expand] pass ${pass + 1}: ${lyrics.length} chars`);
-      } else {
-        console.warn(`[expand] pass ${pass + 1}: no improvement (${expanded.length} chars) — stopping`);
-        break;
+        const expanded = expandCompletion.choices[0]?.message?.content?.trim() ?? "";
+        if (expanded.length > lyrics.length) {
+          lyrics = expanded;
+          console.log(`[expand] pass ${pass + 1}: ${lyrics.length} chars`);
+        } else {
+          console.warn(`[expand] pass ${pass + 1}: no improvement (${expanded.length} chars) — stopping`);
+          break;
+        }
+      } catch (expandErr: any) {
+        if (expandErr?.status === 429) {
+          console.warn(`[expand] pass ${pass + 1}: 429 rate limit — skipping, Python will pad`);
+          break;
+        }
+        throw expandErr;  // unexpected errors still propagate
       }
     }
 
