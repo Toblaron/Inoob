@@ -3,3 +3,6 @@ node_modules/
 dist/
 *.tsbuildinfo
 .DS_Store
+
+# Capacitor Android — generated project (run `npx cap add android` locally)
+artifacts/suno-generator/android/

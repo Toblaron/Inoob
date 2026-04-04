@@ -271,10 +271,23 @@ async function parseSuccessBody(
   }
 }
 
+// Prefix relative API paths with the configured base URL (e.g. for mobile APK builds)
+const API_BASE =
+  typeof import.meta !== "undefined" && (import.meta as Record<string, unknown>).env
+    ? ((import.meta as Record<string, { VITE_API_BASE_URL?: string }>).env.VITE_API_BASE_URL ?? "")
+    : "";
+
+function resolveApiUrl(input: RequestInfo | URL): RequestInfo | URL {
+  if (API_BASE === "") return input;
+  if (typeof input === "string" && input.startsWith("/")) return `${API_BASE}${input}`;
+  return input;
+}
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
 ): Promise<T> {
+  input = resolveApiUrl(input);
   const { responseType = "auto", headers: headersInit, ...init } = options;
 
   const method = resolveMethod(input, init.method);
