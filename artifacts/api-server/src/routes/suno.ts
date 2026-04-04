@@ -1055,7 +1055,7 @@ router.post("/generate-template", async (req, res) => {
 ${context}`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: "llama-3.3-70b-versatile",
       max_completion_tokens: 8192,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -1381,7 +1381,7 @@ router.get("/suggest", async (req, res) => {
       (async () => {
         try {
           const completion = await openai.chat.completions.create({
-            model: "gpt-4.1-mini",
+            model: "llama-3.1-8b-instant",
             max_completion_tokens: 120,
             response_format: { type: "json_object" },
             messages: [
@@ -1553,7 +1553,7 @@ router.post("/batch", async (req, res) => {
         const userMessage = `Create a Suno.ai template for this song. ${lyricsInstruction}${modeInstruction}${instrumentalInstruction}${styleControls}\n\n${context}`;
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-5.2",
+          model: "llama-3.3-70b-versatile",
           max_completion_tokens: 8192,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
@@ -1643,7 +1643,7 @@ router.post("/multi-track", async (req, res) => {
         const userMessage = `${track.instruction}\n\nThis is part of a multi-track arrangement. The base song is below. Generate ONLY this specific track type.\n\n${context}${baseControls}`;
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-5.2",
+          model: "llama-3.3-70b-versatile",
           max_completion_tokens: 8192,
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
@@ -1735,7 +1735,7 @@ Generate a Suno.ai template for the TRANSITION PIECE ONLY (not Song A or B thems
 - negativePrompt: Exclude elements that would break the blend between both songs`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: "llama-3.3-70b-versatile",
       max_completion_tokens: 6000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -1945,7 +1945,7 @@ router.post("/reverse", async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "llama-3.1-8b-instant",
       max_completion_tokens: 600,
       response_format: { type: "json_object" },
       messages: [
@@ -2028,7 +2028,7 @@ router.post("/mood-to-settings", async (req, res) => {
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "llama-3.1-8b-instant",
       max_completion_tokens: 300,
       response_format: { type: "json_object" },
       messages: [

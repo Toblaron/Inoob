@@ -259,7 +259,7 @@ async function fetchAiKnowledge(
 ): Promise<AudioFeatures | null> {
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "llama-3.1-8b-instant",
       max_completion_tokens: 120,
       messages: [
         {
