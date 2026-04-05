@@ -481,7 +481,7 @@ async function fetchCaptions(info: ytdl.videoInfo): Promise<string | null> {
   }
 }
 
-async function fetchViaOembed(url: string): Promise<{ title: string; author: string }> {
+async function fetchViaOembed(url: string): Promise<{ title: string; author: string; thumbnail?: string }> {
   const headers = { "User-Agent": "Mozilla/5.0 (compatible; TrackTemplate/1.0)" };
   const timeout = 8000;
 
@@ -498,8 +498,8 @@ async function fetchViaOembed(url: string): Promise<{ title: string; author: str
       const response = await fetch(endpoint, { headers, signal: controller.signal });
       clearTimeout(timer);
       if (!response.ok) continue;
-      const data = await response.json() as { title: string; author_name: string };
-      if (data.title && data.author_name) return { title: data.title, author: data.author_name };
+      const data = await response.json() as { title: string; author_name: string; thumbnail_url?: string };
+      if (data.title && data.author_name) return { title: data.title, author: data.author_name, thumbnail: data.thumbnail_url };
     } catch {
       // try next endpoint
     }
@@ -1270,8 +1270,8 @@ CRITICAL: Every section must contain REAL SUNG LYRIC LINES — actual words that
 
     // One 429-retry with 8-second backoff
     const completion = await openai.chat.completions.create(callArgs)
-      .catch(async (err) => {
-        if (err?.status === 429) {
+      .catch(async (err: unknown) => {
+        if ((err as { status?: number })?.status === 429) {
           console.warn("[ai] 429 rate limit — waiting 8s then retrying once...");
           await new Promise(r => setTimeout(r, 8000));
           return openai.chat.completions.create(callArgs);
@@ -2301,6 +2301,275 @@ router.get("/cache/stats", (req, res) => {
     }
   }
   res.json(cacheStats());
+});
+
+/**
+ * POST /api/multi-track
+ * Generates 4 complementary Suno templates for a full arrangement:
+ * lead vocal, harmony/backing, instrumental bed, rhythm/percussion.
+ * Each is tuned to complement the others in key, BPM, and energy arc.
+ */
+router.post("/multi-track", async (req, res) => {
+  const { youtubeUrl, vocalGender, energyLevel, era, mode, genres, moods, instruments } =
+    req.body as {
+      youtubeUrl?: string;
+      vocalGender?: string;
+      energyLevel?: string;
+      era?: string;
+      mode?: string;
+      genres?: string[];
+      moods?: string[];
+      instruments?: string[];
+    };
+
+  if (!youtubeUrl) {
+    res.status(400).json({ error: "youtubeUrl is required" });
+    return;
+  }
+
+  const baseParams = {
+    youtubeUrl,
+    vocalGender: vocalGender as GenerateInput["vocalGender"],
+    energyLevel: energyLevel as GenerateInput["energyLevel"],
+    era: era as GenerateInput["era"],
+    mode: mode as GenerateInput["mode"],
+    genres,
+    moods,
+    instruments,
+  };
+
+  const TRACK_DEFS = [
+    {
+      id: "lead",
+      label: "Lead Vocal",
+      icon: "mic",
+      genreNudge: "lead vocal arrangement, main melody prominent, full production",
+    },
+    {
+      id: "harmony",
+      label: "Harmony / Backing",
+      icon: "layers",
+      genreNudge: "backing vocals, harmonies, supporting arrangement, complementary layers",
+    },
+    {
+      id: "instrumental",
+      label: "Instrumental Bed",
+      icon: "music",
+      genreNudge: "instrumental only, no vocals, rich atmospheric bed, melodic instruments",
+    },
+    {
+      id: "rhythm",
+      label: "Rhythm / Percussion",
+      icon: "drum",
+      genreNudge: "percussion-focused, drum patterns, groove-driven, rhythmic bed",
+    },
+  ] as const;
+
+  try {
+    const results = await Promise.allSettled(
+      TRACK_DEFS.map((track, i) =>
+        generateOneTemplate({
+          ...baseParams,
+          variationIndex: i + 1,
+          genreNudge: track.genreNudge,
+          isInstrumental: track.id === "instrumental" || track.id === "rhythm",
+        })
+      )
+    );
+
+    const tracks = results.map((r, i) => ({
+      id: TRACK_DEFS[i].id,
+      label: TRACK_DEFS[i].label,
+      icon: TRACK_DEFS[i].icon,
+      template: r.status === "fulfilled" ? r.value : null,
+      error: r.status === "rejected" ? String((r.reason as Error).message ?? r.reason) : null,
+    }));
+
+    res.json({ tracks });
+  } catch (err) {
+    console.error("[multi-track] error:", err);
+    res.status(500).json({ error: "Multi-track generation failed" });
+  }
+});
+
+/**
+ * POST /api/transition
+ * Generates a bridge/transition template between two songs.
+ * Analyzes both and creates a crossfade-appropriate template.
+ */
+router.post("/transition", async (req, res) => {
+  const {
+    fromUrl,
+    toUrl,
+    style = "smooth",
+    vocalGender,
+    energyLevel,
+  } = req.body as {
+    fromUrl?: string;
+    toUrl?: string;
+    style?: "smooth" | "key-change" | "genre-blend" | "breakdown";
+    vocalGender?: string;
+    energyLevel?: string;
+  };
+
+  if (!fromUrl || !toUrl) {
+    res.status(400).json({ error: "fromUrl and toUrl are required" });
+    return;
+  }
+  if (!isValidYouTubeUrl(fromUrl) || !isValidYouTubeUrl(toUrl)) {
+    res.status(400).json({ error: "Both URLs must be valid YouTube URLs" });
+    return;
+  }
+
+  const STYLE_NUDGES: Record<string, string> = {
+    smooth: "seamless crossfade blend, gradual energy shift, overlapping textures",
+    "key-change": "dramatic key modulation, key change transition, harmonic pivot, tension and release",
+    "genre-blend": "genre fusion hybrid, blending two musical worlds, stylistic bridge",
+    breakdown: "breakdown drop, stripped-back minimal section, tension build, sudden energy drop then rise",
+  };
+
+  const nudge = STYLE_NUDGES[style] ?? STYLE_NUDGES.smooth;
+
+  const typedVocalGender = vocalGender as GenerateInput["vocalGender"];
+  const typedEnergyLevel = energyLevel as GenerateInput["energyLevel"];
+
+  try {
+    const [fromResult, toResult] = await Promise.allSettled([
+      generateOneTemplate({ youtubeUrl: fromUrl, vocalGender: typedVocalGender, energyLevel: typedEnergyLevel }),
+      generateOneTemplate({ youtubeUrl: toUrl, vocalGender: typedVocalGender, energyLevel: typedEnergyLevel }),
+    ]);
+
+    const fromTemplate = fromResult.status === "fulfilled" ? fromResult.value : null;
+    const toTemplate = toResult.status === "fulfilled" ? toResult.value : null;
+
+    if (!fromTemplate || !toTemplate) {
+      res.status(500).json({ error: "Could not analyze one or both songs" });
+      return;
+    }
+
+    // Build a transition style that blends both
+    const blendedStyle = `${fromTemplate.styleOfMusic.slice(0, 300)}, transition bridge, ${nudge}, ${toTemplate.styleOfMusic.slice(0, 200)}`;
+    const transitionTitle = `${fromTemplate.songTitle} → ${toTemplate.songTitle} Transition`;
+
+    // Generate a transition-specific template using the blended context
+    const transitionTemplate = await generateOneTemplate({
+      youtubeUrl: fromUrl,
+      vocalGender: typedVocalGender,
+      energyLevel: typedEnergyLevel,
+      genreNudge: `transition bridge between two songs: ${nudge}. Song A: ${fromTemplate.artist} — ${fromTemplate.songTitle}. Song B: ${toTemplate.artist} — ${toTemplate.songTitle}. Create a smooth 30-second transition template.`,
+    });
+
+    res.json({
+      from: { title: fromTemplate.songTitle, artist: fromTemplate.artist, template: fromTemplate },
+      to: { title: toTemplate.songTitle, artist: toTemplate.artist, template: toTemplate },
+      transition: {
+        ...transitionTemplate,
+        title: transitionTitle,
+        styleOfMusic: blendedStyle.slice(0, 999),
+      },
+      style,
+    });
+  } catch (err) {
+    console.error("[transition] error:", err);
+    res.status(500).json({ error: "Transition generation failed" });
+  }
+});
+
+/**
+ * POST /api/reverse
+ * Reverse-engineers a Suno template back to inferred source song and settings.
+ * Useful when you have a great Suno output and want to recreate/modify the prompt.
+ */
+router.post("/reverse", async (req, res) => {
+  const { templateText } = req.body as { templateText?: string };
+  if (!templateText || templateText.trim().length < 20) {
+    res.status(400).json({ error: "templateText is required (min 20 chars)" });
+    return;
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: AI_MINI_MODEL,
+      max_completion_tokens: 400,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `You are a music analyst. Given a Suno.ai music generation template (style prompt, lyrics, and/or negative prompt), analyze it and reverse-engineer the likely source material and generation settings. Return a JSON object with exactly these fields:
+- "inferredSong": string — most likely song title being covered/inspired (or null if unclear)
+- "inferredArtist": string — most likely artist (or null if unclear)
+- "inferredGenres": string[] — array of 1–4 genre names you detect in the template
+- "inferredEra": string — detected decade/era (50s/60s/70s/80s/90s/2000s/2010s/modern)
+- "inferredEnergy": string — one of: very chill, chill, medium, high, intense
+- "inferredTempo": string — one of: ballad, slow, mid, groove, uptempo, fast, hyper
+- "inferredMoods": string[] — array of 1–3 mood descriptors
+- "inferredInstruments": string[] — array of prominent instruments mentioned
+- "keySignature": string — detected key if mentioned (e.g. "E minor", "C major", or null)
+- "bpm": number — detected BPM if mentioned (or null)
+- "styleConfidence": number — confidence 0–100 in your genre/style inference
+- "reasoning": string — brief explanation (max 80 words) of your analysis`,
+        },
+        {
+          role: "user",
+          content: `Analyze this Suno template:\n\n${templateText.slice(0, 3000)}`,
+        },
+      ],
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(raw);
+    res.json(parsed);
+  } catch (err) {
+    console.error("[reverse] error:", err);
+    res.status(500).json({ error: "Reverse analysis failed" });
+  }
+});
+
+/**
+ * POST /api/mood-to-settings
+ * Converts a free-text vibe/mood description into structured style settings.
+ * e.g. "rainy Sunday morning, coffee shop, slightly melancholy but hopeful"
+ * → { genres, moods, energy, tempo, era, instruments, reasoning }
+ */
+router.post("/mood-to-settings", async (req, res) => {
+  const { description } = req.body as { description?: string };
+  if (!description || description.trim().length < 5) {
+    res.status(400).json({ error: "description is required (min 5 chars)" });
+    return;
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: AI_MINI_MODEL,
+      max_completion_tokens: 300,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `You are a music vibe translator. Convert a user's mood/vibe description into structured Suno.ai generation settings. Return a JSON object with exactly these fields:
+- "genres": string[] — array of 1–3 genre names that match the vibe
+- "moods": string[] — array of 2–4 mood tags (e.g. Melancholic, Hopeful, Serene)
+- "energy": string — one of: very chill, chill, medium, high, intense
+- "tempo": string — one of: ballad, slow, mid, groove, uptempo, fast, hyper
+- "era": string — most fitting era (50s/60s/70s/80s/90s/2000s/2010s/modern)
+- "instruments": string[] — array of 2–4 instruments that fit the vibe
+- "primaryGenre": string — the single most fitting genre
+- "reasoning": string — brief explanation (max 60 words) of your mapping choices`,
+        },
+        {
+          role: "user",
+          content: `Vibe description: "${description.slice(0, 500)}"`,
+        },
+      ],
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(raw);
+    res.json(parsed);
+  } catch (err) {
+    console.error("[mood-to-settings] error:", err);
+    res.status(500).json({ error: "Mood translation failed" });
+  }
 });
 
 export default router;

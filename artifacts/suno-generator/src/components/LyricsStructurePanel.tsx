@@ -143,7 +143,7 @@ function SectionPill({
         </div>
 
         <p className="font-mono text-[10px] text-zinc-600 mt-1">
-          {section.lines.filter((l) => l.trim()).length} lines
+          {section.lines.filter((l: string) => l.trim()).length} lines
         </p>
       </div>
 

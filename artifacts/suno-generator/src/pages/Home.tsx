@@ -41,7 +41,7 @@ import {
   Share,
 } from "lucide-react";
 import { useGenerateSunoTemplate, useGenerateVariations } from "@workspace/api-client-react";
-import type { SunoTemplate, LyricsStructure, SuggestedDefaults, BatchTrackResult, PlaylistTrack } from "@workspace/api-client-react";
+import type { SunoTemplate, LyricsStructure, SuggestedDefaults, BatchTrackResult, PlaylistTrack, VariationsResponse, VariationSlot } from "@workspace/api-client-react";
 import { TemplateResult } from "@/components/TemplateResult";
 import { LyricsStructurePanel, type ConfirmedSection } from "@/components/LyricsStructurePanel";
 import { VariationWorkshop } from "@/components/VariationWorkshop";
@@ -52,6 +52,14 @@ import { SongDnaPanel } from "@/components/SongDnaPanel";
 import { PromptOptimizerCard } from "@/components/PromptOptimizerCard";
 import { RemixToolbar, TRANSFORM_PRESETS } from "@/components/RemixToolbar";
 import { RemixChain, type RemixSnapshot } from "@/components/RemixChain";
+import { TheoryTooltips } from "@/components/TheoryTooltips";
+import { TemplateVersionControl } from "@/components/TemplateVersionControl";
+import { ReverseMode } from "@/components/ReverseMode";
+import { GenreGenomeMap } from "@/components/GenreGenomeMap";
+import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
+import { MoodBoard } from "@/components/MoodBoard";
+import { MultiTrackBuilder } from "@/components/MultiTrackBuilder";
+import { TransitionBuilder } from "@/components/TransitionBuilder";
 import { scoreTemplate } from "@/lib/promptScorer";
 import { cn } from "@/lib/utils";
 
@@ -401,7 +409,7 @@ function mergeHistories(local: HistoryEntry[], server: ServerHistoryEntry[]): Hi
         youtubeUrl: s.youtubeUrl,
         template: s.template as SunoTemplate,
         rating: s.rating ?? null,
-        qualityScore: s.qualityScore ?? null,
+        qualityScore: s.qualityScore ?? undefined,
         usedOptions: s.usedOptions as UsedOptions | undefined,
       });
     }
@@ -684,7 +692,7 @@ export default function Home() {
               if (structure && structure.totalSections > 0) {
                 // Only set if this URL is still the active one
                 if (extractVideoId(form.getValues("youtubeUrl") ?? "") === targetId) {
-                  setLyricsStructure((prev) => prev ?? structure);
+                  setLyricsStructure((prev: LyricsStructure | null) => prev ?? (structure as LyricsStructure));
                 }
               }
             })
@@ -1034,7 +1042,7 @@ export default function Home() {
     mainMutation.mutate(
       { data: { youtubeUrl: values.youtubeUrl, ...opts } },
       {
-        onSuccess: (data) => {
+        onSuccess: (data: SunoTemplate) => {
           setCurrentTemplate(data);
           addToHistory(values.youtubeUrl, data, usedOpts);
           if (data.lyricsStructure) setLyricsStructure(data.lyricsStructure);
@@ -1065,7 +1073,7 @@ export default function Home() {
               setAutoFillValues((prev) => ({ ...prev, ...newSavedValues }));
             }
             if (d.instrumentHints && d.instrumentHints.length > 0 && selectedInstruments.length === 0) {
-              const knownHints = d.instrumentHints.filter((h) => INSTRUMENT_TAGS.includes(h)).slice(0, MAX_INSTRUMENTS);
+              const knownHints = d.instrumentHints.filter((h: string) => INSTRUMENT_TAGS.includes(h)).slice(0, MAX_INSTRUMENTS);
               if (knownHints.length > 0) {
                 setSelectedInstruments(knownHints);
                 setAutoFilledFields((prev) => { const next = new Set(prev); next.add("instruments"); return next; });
@@ -1090,7 +1098,7 @@ export default function Home() {
           }
           clearApiFailure();
         },
-        onError: (err) => {
+        onError: (err: unknown) => {
           reportApiFailure();
           setApiError((err as { data?: { error?: string }; message?: string })?.data?.error ?? (err as Error)?.message ?? "Something went wrong");
         },
@@ -1116,16 +1124,16 @@ export default function Home() {
         },
       },
       {
-        onSuccess: (data) => {
+        onSuccess: (data: VariationsResponse) => {
           const slots = data.slots.map(
-            (s): SunoTemplate | null | { error: string } =>
+            (s: VariationSlot): SunoTemplate | null | { error: string } =>
               s.template ? s.template : { error: s.error ?? "Generation failed" }
           );
           setVariationWorkshop(slots);
           setVariationPending([]);
           setIsGeneratingVariations(false);
         },
-        onError: (err) => {
+        onError: (err: unknown) => {
           setApiError(
             (err as { data?: { error?: string }; message?: string })?.data?.error ??
               (err as Error)?.message ??
@@ -1410,13 +1418,13 @@ export default function Home() {
     mainMutation.mutate(
       { data: { youtubeUrl: lastUrlRef.current, ...(lastOptionsRef.current as object), noCache: true } },
       {
-        onSuccess: (newData) => {
-          setCurrentTemplate((prev) =>
-            prev ? { ...prev, [section]: newData[section] } : newData
+        onSuccess: (newData: SunoTemplate) => {
+          setCurrentTemplate((prev: SunoTemplate | null) =>
+            prev ? { ...prev, [section]: newData[section as keyof SunoTemplate] } : newData
           );
           setRegeneratingSection(null);
         },
-        onError: (err) => {
+        onError: (err: unknown) => {
           setRegeneratingSection(null);
           setApiError(err instanceof Error ? err.message : "Regeneration failed — please try again.");
         },
@@ -1440,7 +1448,7 @@ export default function Home() {
   };
 
   const handleApplyOptimizerFix = (patches: Partial<Record<"styleOfMusic" | "negativePrompt" | "lyrics", string>>) => {
-    setCurrentTemplate((prev) => prev ? { ...prev, ...patches } : prev);
+    setCurrentTemplate((prev: SunoTemplate | null) => prev ? { ...prev, ...patches } : prev);
   };
 
   const isLoading = mainMutation.isPending && !regeneratingSection && !isGeneratingVariations;
@@ -2207,6 +2215,31 @@ export default function Home() {
                       className="w-full px-3 py-2 rounded-lg bg-background/50 border border-border text-xs text-foreground placeholder:text-zinc-600 focus:outline-none focus:border-primary/50 transition-colors"
                     />
                   </div>
+
+                  {/* Mood Board — vibe to settings */}
+                  <MoodBoard
+                    onApplySettings={(settings) => {
+                      if (settings.genres?.length) setSelectedGenres(settings.genres.slice(0, MAX_GENRES));
+                      if (settings.moods?.length) setSelectedMoods(settings.moods.slice(0, MAX_MOODS));
+                      if (settings.instruments?.length) setSelectedInstruments(settings.instruments.slice(0, MAX_INSTRUMENTS));
+                      if (settings.energy) setEnergyLevel(settings.energy as typeof energyLevel);
+                      if (settings.era) setEra(settings.era as typeof era);
+                    }}
+                  />
+
+                  {/* Genre Genome Map */}
+                  <GenreGenomeMap
+                    selectedGenres={selectedGenres}
+                    onSelectGenre={(genre) => {
+                      setSelectedGenres((prev) =>
+                        prev.includes(genre)
+                          ? prev.filter((g) => g !== genre)
+                          : prev.length < MAX_GENRES
+                            ? [...prev, genre]
+                            : prev
+                      );
+                    }}
+                  />
                 </div>
               </motion.div>
             )}
@@ -2578,6 +2611,14 @@ export default function Home() {
                 onRegenerateSection={handleRegenerateSection}
               />
 
+              {/* Version Control — auto-saves on every template change */}
+              <div className="max-w-5xl mx-auto w-full mt-2">
+                <TemplateVersionControl
+                  template={currentTemplate}
+                  onRestore={(restored) => setCurrentTemplate(restored)}
+                />
+              </div>
+
               {/* Remix Chain breadcrumbs */}
               <RemixChain
                 chain={remixChain}
@@ -2633,6 +2674,61 @@ export default function Home() {
                   isLocked={confirmedStructure !== null}
                 />
               )}
+
+              {/* Music Theory Tooltips — educational context for audio features */}
+              {(() => {
+                const style = currentTemplate.styleOfMusic ?? "";
+                const bpmMatch = style.match(/\b(\d{2,3})\s*(?:bpm|BPM)\b/);
+                const keyMatch = style.match(/\b([A-G][#b]?\s*(?:major|minor|maj|min))\b/i);
+                const chordMatch = style.match(/\b(I[-–]V[-–]vi[-–]IV|I[-–]IV[-–]V|ii[-–]V[-–]I|I[-–]vi[-–]IV[-–]V|vi[-–]IV[-–]I[-–]V)\b/);
+                const timeSigMatch = style.match(/\b(4\/4|3\/4|6\/8|5\/4|7\/8)\b/);
+                const hasSomething = bpmMatch || keyMatch || chordMatch || timeSigMatch;
+                if (!hasSomething) return null;
+                return (
+                  <div className="max-w-5xl mx-auto w-full mt-4">
+                    <TheoryTooltips
+                      info={{
+                        bpm: bpmMatch ? parseInt(bpmMatch[1]) : null,
+                        key: keyMatch ? keyMatch[1].trim() : null,
+                        chordProgression: chordMatch ? chordMatch[1] : null,
+                        timeSignature: timeSigMatch ? timeSigMatch[1] : null,
+                      }}
+                    />
+                  </div>
+                );
+              })()}
+
+              {/* Multi-Track Arrangement Builder */}
+              <div className="max-w-5xl mx-auto w-full mt-4">
+                <MultiTrackBuilder
+                  youtubeUrl={urlValue}
+                  vocalGender={vocalGender === "auto" ? undefined : vocalGender}
+                  energyLevel={energyLevel === "auto" ? undefined : energyLevel}
+                  era={era === "auto" ? undefined : era}
+                  mode={mode ?? undefined}
+                  genres={selectedGenres.length > 0 ? selectedGenres : undefined}
+                  moods={selectedMoods.length > 0 ? selectedMoods : undefined}
+                  instruments={selectedInstruments.length > 0 ? selectedInstruments : undefined}
+                />
+              </div>
+
+              {/* Transition Builder */}
+              <div className="max-w-5xl mx-auto w-full mt-4">
+                <TransitionBuilder />
+              </div>
+
+              {/* Reverse Suno — analyze any template to infer settings */}
+              <div className="max-w-5xl mx-auto w-full mt-4">
+                <ReverseMode
+                  onApplySettings={(settings) => {
+                    if (settings.genres?.length) setSelectedGenres(settings.genres.slice(0, MAX_GENRES));
+                    if (settings.moods?.length) setSelectedMoods(settings.moods.slice(0, MAX_MOODS));
+                    if (settings.instruments?.length) setSelectedInstruments(settings.instruments.slice(0, MAX_INSTRUMENTS));
+                    if (settings.energy) setEnergyLevel(settings.energy as typeof energyLevel);
+                    if (settings.era) setEra(settings.era as typeof era);
+                  }}
+                />
+              </div>
 
               {/* Suggested defaults banner (from BPM analysis after generation) */}
               {suggestedDefaults && (suggestedDefaults.instrumentHints?.length || suggestedDefaults.languageGenreHint) && (
@@ -2704,6 +2800,11 @@ export default function Home() {
             </motion.div>
           ) : null}
         </AnimatePresence>
+      </div>
+
+      {/* Analytics Dashboard — always visible at bottom */}
+      <div className="w-full max-w-5xl mt-8">
+        <AnalyticsDashboard />
       </div>
 
       {/* Attribution footer — required by GetSongBPM API terms */}
