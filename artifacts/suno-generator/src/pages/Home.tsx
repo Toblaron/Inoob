@@ -62,10 +62,13 @@ import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import { MoodBoard } from "@/components/MoodBoard";
 import { MultiTrackBuilder } from "@/components/MultiTrackBuilder";
 import { TransitionBuilder } from "@/components/TransitionBuilder";
-import { scoreTemplate } from "@/lib/promptScorer";
+import { detectConflicts, scoreTemplate } from "@/lib/promptScorer";
 import { cn } from "@/lib/utils";
 
 const HISTORY_KEY = "suno-template-history";
+const PROFILES_KEY = "suno-saved-profiles";
+const FAVORITES_KEY = "suno-history-favorites";
+const PANEL_STATE_KEY = "suno-panel-state";
 const MAX_HISTORY = 10;
 const MAX_GENRES = 5;
 const MAX_MOODS = 4;
@@ -314,6 +317,36 @@ interface HistoryEntry {
   qualityScore?: number;
 }
 
+interface SavedProfile {
+  id: string;
+  name: string;
+  createdAt: number;
+  settings: {
+    vocalGender: "auto" | "male" | "female" | "mixed" | "duet" | "no vocals";
+    energyLevel: "auto" | "very chill" | "chill" | "medium" | "high" | "intense";
+    era: "auto" | "50s" | "60s" | "70s" | "80s" | "90s" | "2000s" | "2010s" | "modern";
+    genreNudge: string;
+    selectedGenres: string[];
+    selectedMoods: string[];
+    selectedInstruments: string[];
+    mode: "cover" | "inspired" | null;
+    tempo: "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper" | null;
+    excludeTags: string[];
+    customExclusions: string;
+    isInstrumental: boolean;
+    sunoVersion: "v4" | "v5" | "v5.5";
+    bpmTarget: string;
+    chordProgression: string;
+    vocalPersona: string;
+    sonicDna: string;
+    metaTagsText: string;
+    pronunciationGuide: string;
+    weirdness: number;
+    styleInfluence: number;
+    audioInfluence: number;
+  };
+}
+
 interface VideoPreview {
   title: string;
   author: string;
@@ -386,6 +419,36 @@ function loadHistory(): HistoryEntry[] {
 function saveHistory(entries: HistoryEntry[]) {
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_HISTORY)));
+  } catch {}
+}
+
+function loadProfiles(): SavedProfile[] {
+  try {
+    const raw = localStorage.getItem(PROFILES_KEY);
+    return raw ? (JSON.parse(raw) as SavedProfile[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveProfiles(profiles: SavedProfile[]) {
+  try {
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles.slice(0, 50)));
+  } catch {}
+}
+
+function loadFavorites(): string[] {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFavorites(ids: string[]) {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
   } catch {}
 }
 
@@ -492,10 +555,20 @@ export default function Home() {
   const [currentTemplate, setCurrentTemplate] = useState<SunoTemplate | null>(null);
   const [regeneratingSection, setRegeneratingSection] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showProfiles, setShowProfiles] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profiles, setProfiles] = useState<SavedProfile[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyFilter, setHistoryFilter] = useState<"all" | "favorites" | "rated">("all");
+  const [cacheStats, setCacheStats] = useState<{ entries: number; sizeBytes: number; hits: number; misses: number; hitRate: string } | null>(null);
+  const [lastRequestBody, setLastRequestBody] = useState<object | null>(null);
 
   const [showStyleControls, setShowStyleControls] = useState(false);
   const [showManualLyrics, setShowManualLyrics] = useState(false);
   const [showNegBuilder, setShowNegBuilder] = useState(false);
+  const [showSunoLab, setShowSunoLab] = useState(false);
   const [manualLyrics, setManualLyrics] = useState("");
   const [vocalGender, setVocalGender] = useState<"auto" | "male" | "female" | "mixed" | "duet" | "no vocals">("auto");
   const [energyLevel, setEnergyLevel] = useState<"auto" | "very chill" | "chill" | "medium" | "high" | "intense">("auto");
@@ -511,6 +584,15 @@ export default function Home() {
   const [customExclusions, setCustomExclusions] = useState("");
   const [isInstrumental, setIsInstrumental] = useState(false);
   const [sunoVersion, setSunoVersion] = useState<"v4" | "v5" | "v5.5">("v5.5");
+  const [bpmTarget, setBpmTarget] = useState<string>("");
+  const [chordProgression, setChordProgression] = useState("");
+  const [vocalPersona, setVocalPersona] = useState("");
+  const [sonicDna, setSonicDna] = useState("");
+  const [metaTagsText, setMetaTagsText] = useState("");
+  const [pronunciationGuide, setPronunciationGuide] = useState("");
+  const [weirdness, setWeirdness] = useState<number>(62);
+  const [styleInfluence, setStyleInfluence] = useState<number>(80);
+  const [audioInfluence, setAudioInfluence] = useState<number>(25);
   const [showCompare, setShowCompare] = useState(false);
 
   const [videoPreview, setVideoPreview] = useState<VideoPreview | null>(null);
@@ -612,6 +694,22 @@ export default function Home() {
   useEffect(() => {
     const local = loadHistory();
     setHistory(local);
+    setProfiles(loadProfiles());
+    setFavoriteIds(loadFavorites());
+
+    try {
+      const panelRaw = localStorage.getItem(PANEL_STATE_KEY);
+      if (panelRaw) {
+        const panels = JSON.parse(panelRaw) as Record<string, boolean>;
+        setShowStyleControls(!!panels.showStyleControls);
+        setShowManualLyrics(!!panels.showManualLyrics);
+        setShowNegBuilder(!!panels.showNegBuilder);
+        setShowSunoLab(!!panels.showSunoLab);
+        setShowHistory(!!panels.showHistory);
+        setShowProfiles(!!panels.showProfiles);
+        setShowDebug(!!panels.showDebug);
+      }
+    } catch {}
 
     // Merge server-persisted history in the background
     fetch("/api/history?limit=50")
@@ -674,6 +772,23 @@ export default function Home() {
     return () => window.removeEventListener("focus", handleFocus);
   }, []);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(PANEL_STATE_KEY, JSON.stringify({
+        showStyleControls,
+        showManualLyrics,
+        showNegBuilder,
+        showSunoLab,
+        showHistory,
+        showProfiles,
+        showDebug,
+      }));
+    } catch {}
+  }, [showStyleControls, showManualLyrics, showNegBuilder, showSunoLab, showHistory, showProfiles, showDebug]);
+
+  useEffect(() => { saveProfiles(profiles); }, [profiles]);
+  useEffect(() => { saveFavorites(favoriteIds); }, [favoriteIds]);
+
   // Ctrl+Enter / Cmd+Enter keyboard shortcut to trigger generation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -686,6 +801,21 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const key = e.key.toLowerCase();
+      if (key === "s") setShowStyleControls((v) => !v);
+      if (key === "n") setShowNegBuilder((v) => !v);
+      if (key === "l") setShowSunoLab((v) => !v);
+      if (key === "h") setShowHistory((v) => !v);
+      if (key === "p") setShowProfiles((v) => !v);
+      if (key === "d") setShowDebug((v) => !v);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const fetchVideoPreview = useCallback(async (url: string) => {
     const id = extractVideoId(url);
@@ -771,6 +901,14 @@ export default function Home() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!showDebug) return;
+    fetch("/api/cache/stats")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setCacheStats(data); })
+      .catch(() => {});
+  }, [showDebug, currentTemplate]);
+
   const urlValue = form.watch("youtubeUrl");
   useEffect(() => {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
@@ -807,21 +945,22 @@ export default function Home() {
 
   const addToHistory = (url: string, template: SunoTemplate, opts?: UsedOptions) => {
     const { overall: qualityScore } = scoreTemplate(template);
-    const entry: HistoryEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      timestamp: Date.now(),
-      youtubeUrl: url,
-      template,
-      rating: null,
-      usedOptions: opts,
-      qualityScore,
-    };
     setHistory((prev) => {
+      const existing = prev.find((e) => e.youtubeUrl === url);
+      const entry: HistoryEntry = {
+        id: existing?.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        timestamp: Date.now(),
+        youtubeUrl: url,
+        template,
+        rating: existing?.rating ?? null,
+        usedOptions: opts ?? existing?.usedOptions,
+        qualityScore,
+      };
       const next = [entry, ...prev.filter((e) => e.youtubeUrl !== url)].slice(0, MAX_HISTORY);
       saveHistory(next);
+      syncEntryToServer(entry, videoPreview ?? undefined);
       return next;
     });
-    syncEntryToServer(entry, videoPreview ?? undefined);
   };
 
   const rateCurrentTemplate = (rating: number) => {
@@ -912,7 +1051,9 @@ export default function Home() {
       ...excludeTags,
       ...customExclusions.split(",").map((s) => s.trim()).filter(Boolean),
       ...(isInstrumental ? ["vocals", "singing", "spoken word"] : []),
-    ];
+    ].slice(0, 5);
+    const metaTags = metaTagsText.split(",").map((s) => s.trim()).filter(Boolean);
+    const bpmNumber = bpmTarget.trim() ? Number.parseInt(bpmTarget.trim(), 10) : undefined;
     return {
       manualLyrics: manualLyrics.trim() || undefined,
       vocalGender: isInstrumental ? ("no vocals" as const) : (vocalGender !== "auto" ? vocalGender : undefined),
@@ -928,6 +1069,42 @@ export default function Home() {
       isInstrumental: isInstrumental || undefined,
       feedbackContext: buildFeedbackContext(),
       confirmedStructure: confirmedStructure ?? undefined,
+      bpmTarget: bpmNumber && !Number.isNaN(bpmNumber) ? bpmNumber : undefined,
+      chordProgression: chordProgression.trim() || undefined,
+      vocalPersona: vocalPersona.trim() || undefined,
+      sonicDna: sonicDna.trim() || undefined,
+      metaTags: metaTags.length > 0 ? metaTags : undefined,
+      pronunciationGuide: pronunciationGuide.trim() || undefined,
+      weirdness,
+      styleInfluence,
+      audioInfluence,
+    };
+  };
+
+  const buildBatchOptions = () => {
+    const opts = buildOptions();
+    return {
+      vocalGender: opts.vocalGender,
+      energyLevel: opts.energyLevel,
+      era: opts.era,
+      mode: opts.mode,
+      genres: opts.genres,
+      moods: opts.moods,
+      instruments: opts.instruments,
+      excludeTags: opts.excludeTags,
+      genreNudge: opts.genreNudge,
+      tempo: opts.tempo,
+      isInstrumental: opts.isInstrumental,
+      sunoVersion: sunoVersion !== "v4" ? sunoVersion : undefined,
+      bpmTarget: opts.bpmTarget,
+      chordProgression: opts.chordProgression,
+      vocalPersona: opts.vocalPersona,
+      sonicDna: opts.sonicDna,
+      metaTags: opts.metaTags,
+      pronunciationGuide: opts.pronunciationGuide,
+      weirdness: opts.weirdness,
+      styleInfluence: opts.styleInfluence,
+      audioInfluence: opts.audioInfluence,
     };
   };
 
@@ -992,6 +1169,79 @@ export default function Home() {
       shareTimerRef.current = setTimeout(() => setShareToast("idle"), 2500);
     });
   };
+
+  const saveCurrentProfile = () => {
+    const name = profileName.trim();
+    if (!name) return;
+    const profile: SavedProfile = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      createdAt: Date.now(),
+      settings: {
+        vocalGender,
+        energyLevel,
+        era,
+        genreNudge,
+        selectedGenres,
+        selectedMoods,
+        selectedInstruments,
+        mode,
+        tempo,
+        excludeTags,
+        customExclusions,
+        isInstrumental,
+        sunoVersion,
+        bpmTarget,
+        chordProgression,
+        vocalPersona,
+        sonicDna,
+        metaTagsText,
+        pronunciationGuide,
+        weirdness,
+        styleInfluence,
+        audioInfluence,
+      },
+    };
+    setProfiles((prev) => [profile, ...prev.filter((p) => p.name.toLowerCase() !== name.toLowerCase())]);
+    setProfileName("");
+  };
+
+  const applyProfile = (profile: SavedProfile) => {
+    const s = profile.settings;
+    setVocalGender(s.vocalGender);
+    setEnergyLevel(s.energyLevel);
+    setEra(s.era);
+    setGenreNudge(s.genreNudge);
+    setSelectedGenres(s.selectedGenres);
+    setSelectedMoods(s.selectedMoods);
+    setSelectedInstruments(s.selectedInstruments);
+    setMode(s.mode);
+    setTempo(s.tempo);
+    setExcludeTags(s.excludeTags);
+    setCustomExclusions(s.customExclusions);
+    setIsInstrumental(s.isInstrumental);
+    setSunoVersion(s.sunoVersion);
+    setBpmTarget(s.bpmTarget);
+    setChordProgression(s.chordProgression);
+    setVocalPersona(s.vocalPersona);
+    setSonicDna(s.sonicDna);
+    setMetaTagsText(s.metaTagsText);
+    setPronunciationGuide(s.pronunciationGuide);
+    setWeirdness(s.weirdness);
+    setStyleInfluence(s.styleInfluence);
+    setAudioInfluence(s.audioInfluence);
+  };
+
+  const filteredHistory = history.filter((entry) => {
+    const matchesFilter =
+      historyFilter === "favorites" ? favoriteIds.includes(entry.id)
+      : historyFilter === "rated" ? typeof entry.rating === "number"
+      : true;
+    if (!matchesFilter) return false;
+    const q = historySearch.trim().toLowerCase();
+    if (!q) return true;
+    return `${entry.template.songTitle} ${entry.template.artist}`.toLowerCase().includes(q);
+  });
 
   const handleTransform = useCallback(async (transformId: string) => {
     if (!currentTemplate || activeTransformId) return;
@@ -1059,8 +1309,25 @@ export default function Home() {
 
   const onSubmit = (values: FormValues) => {
     const opts = buildOptions();
+    const preflightStyle = [
+      selectedMoods.join(", "),
+      energyLevel !== "auto" ? energyLevel : "",
+      selectedGenres.join(", "),
+      selectedInstruments.join(", "),
+      genreNudge,
+      chordProgression,
+      sonicDna,
+      vocalPersona,
+    ].filter(Boolean).join(", ");
+    const conflicts = detectConflicts(preflightStyle);
+    if (conflicts.length > 0) {
+      setApiError(`Conflicting style controls detected: ${conflicts.map((c) => `${c.a} vs ${c.b}`).join("; ")}`);
+      return;
+    }
     lastUrlRef.current = values.youtubeUrl;
+    const requestBody = { youtubeUrl: values.youtubeUrl, ...opts, sunoVersion: sunoVersion !== "v4" ? sunoVersion : undefined };
     lastOptionsRef.current = { ...opts, sunoVersion: sunoVersion !== "v4" ? sunoVersion : undefined };
+    setLastRequestBody(requestBody);
     setApiError(null);
     setRegeneratingSection(null);
     setVariationWorkshop(null);
@@ -1080,7 +1347,7 @@ export default function Home() {
       tempo: tempo ?? undefined,
     };
     mainMutation.mutate(
-      { data: { youtubeUrl: values.youtubeUrl, ...opts, sunoVersion: sunoVersion !== "v4" ? sunoVersion : undefined } },
+      { data: requestBody },
       {
         onSuccess: (data: SunoTemplate) => {
           setCurrentTemplate(data);
@@ -1185,6 +1452,11 @@ export default function Home() {
         },
       }
     );
+    setLastRequestBody({
+      youtubeUrl: lastUrlRef.current!,
+      ...(lastOptionsRef.current as object),
+      count,
+    });
   };
 
   const handleMergeVariation = (merged: SunoTemplate) => {
@@ -1329,15 +1601,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           urls,
-          vocalGender: vocalGender !== "auto" ? vocalGender : undefined,
-          energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
-          era: era !== "auto" ? era : undefined,
-          mode: mode ?? undefined,
-          genres: selectedGenres.length > 0 ? selectedGenres : undefined,
-          moods: selectedMoods.length > 0 ? selectedMoods : undefined,
-          instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
-          excludeTags: excludeTags.length > 0 ? excludeTags : undefined,
-          genreNudge: genreNudge.trim() || undefined,
+          ...buildBatchOptions(),
         }),
         signal: abort.signal,
       });
@@ -1380,7 +1644,7 @@ export default function Home() {
     } finally {
       setIsBatchRunning(false);
     }
-  }, [batchUrlsText, parseBatchUrls, detectPlaylistUrl, playlistPreview, vocalGender, energyLevel, era, mode, selectedGenres, selectedMoods, selectedInstruments, excludeTags, genreNudge]);
+  }, [batchUrlsText, parseBatchUrls, detectPlaylistUrl, playlistPreview, buildBatchOptions]);
 
   const handleBatchRetry = useCallback((track: BatchTrackResult) => {
     const urls = [track.url];
@@ -1399,15 +1663,7 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         urls,
-        vocalGender: vocalGender !== "auto" ? vocalGender : undefined,
-        energyLevel: energyLevel !== "auto" ? energyLevel : undefined,
-        era: era !== "auto" ? era : undefined,
-        mode: mode ?? undefined,
-        genres: selectedGenres.length > 0 ? selectedGenres : undefined,
-        moods: selectedMoods.length > 0 ? selectedMoods : undefined,
-        instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
-        excludeTags: excludeTags.length > 0 ? excludeTags : undefined,
-        genreNudge: genreNudge.trim() || undefined,
+        ...buildBatchOptions(),
       }),
     })
       .then(async (resp) => {
@@ -1449,7 +1705,16 @@ export default function Home() {
           prev ? prev.map((t) => t.index === track.index ? { ...t, status: "failed", error: "Retry failed" } : t) : prev
         );
       });
-  }, [vocalGender, energyLevel, era, mode, selectedGenres, selectedMoods, selectedInstruments, excludeTags, genreNudge]);
+  }, [buildBatchOptions]);
+
+  const handleRetryFailedBatch = useCallback(() => {
+    if (!batchTracks) return;
+    batchTracks
+      .filter((track) => track.status === "failed")
+      .forEach((track, index) => {
+        window.setTimeout(() => handleBatchRetry(track), index * 250);
+      });
+  }, [batchTracks, handleBatchRetry]);
 
   const handleRegenerateSection = (section: keyof SunoTemplate) => {
     if (!lastUrlRef.current) return;
@@ -1475,7 +1740,9 @@ export default function Home() {
   const handleLoadHistory = (entry: HistoryEntry) => {
     form.setValue("youtubeUrl", entry.youtubeUrl);
     lastUrlRef.current = entry.youtubeUrl;
+    lastOptionsRef.current = buildOptions();
     setCurrentTemplate(entry.template);
+    setTemplateRating(entry.rating ?? null);
     setShowHistory(false);
     setVariationWorkshop(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1485,7 +1752,9 @@ export default function Home() {
   const handleLoadAndRemix = (entry: HistoryEntry) => {
     form.setValue("youtubeUrl", entry.youtubeUrl);
     lastUrlRef.current = entry.youtubeUrl;
+    lastOptionsRef.current = buildOptions();
     setCurrentTemplate(entry.template);
+    setTemplateRating(entry.rating ?? null);
     setRemixChain([{ label: "Original", template: entry.template }]);
     setRemixChainIndex(0);
     setShowHistory(false);
@@ -1495,6 +1764,7 @@ export default function Home() {
 
   const handleClearHistory = () => {
     setHistory([]);
+    setFavoriteIds([]);
     saveHistory([]);
     fetch("/api/history", { method: "DELETE" }).catch(() => {});
   };
@@ -1514,6 +1784,15 @@ export default function Home() {
     selectedMoods.length > 0,
     selectedInstruments.length > 0,
     tempo !== null,
+    bpmTarget.trim().length > 0,
+    chordProgression.trim().length > 0,
+    vocalPersona.trim().length > 0,
+    sonicDna.trim().length > 0,
+    metaTagsText.trim().length > 0,
+    pronunciationGuide.trim().length > 0,
+    weirdness !== 62,
+    styleInfluence !== 80,
+    audioInfluence !== 25,
   ].filter(Boolean).length;
 
   const customExclusionCount = customExclusions.split(",").map((s) => s.trim()).filter(Boolean).length;
@@ -1720,7 +1999,7 @@ export default function Home() {
 
                 {/* Suno version toggle */}
                 <div
-                  title="Target Suno model version — v5/v5.5 uses denser cue notation"
+                  title="Target Suno model version — current model is v5.5"
                   className="flex border border-primary/20 overflow-hidden shrink-0"
                 >
                   {(["v4", "v5", "v5.5"] as const).map((v) => (
@@ -1735,7 +2014,7 @@ export default function Home() {
                           : "text-zinc-600 hover:text-zinc-400 border-r border-primary/10 last:border-r-0"
                       )}
                     >
-                      {v}
+                      {v === "v5.5" ? `${v} current` : v}
                     </button>
                   ))}
                 </div>
@@ -1969,6 +2248,23 @@ export default function Home() {
               activeCount={styleActiveCount}
             />
             <ExpandToggle
+              active={showSunoLab}
+              onClick={() => setShowSunoLab((v) => !v)}
+              icon={<Gauge className="w-3.5 h-3.5" />}
+              label="Suno Lab"
+              activeCount={[
+                bpmTarget.trim().length > 0,
+                chordProgression.trim().length > 0,
+                vocalPersona.trim().length > 0,
+                sonicDna.trim().length > 0,
+                metaTagsText.trim().length > 0,
+                pronunciationGuide.trim().length > 0,
+                weirdness !== 62,
+                styleInfluence !== 80,
+                audioInfluence !== 25,
+              ].filter(Boolean).length}
+            />
+            <ExpandToggle
               active={showNegBuilder}
               onClick={() => setShowNegBuilder((v) => !v)}
               icon={<Ban className="w-3.5 h-3.5" />}
@@ -1981,6 +2277,20 @@ export default function Home() {
               icon={<FileText className="w-3.5 h-3.5" />}
               label="Override Lyrics"
               activeCount={manualLyrics.trim().length > 0 ? 1 : 0}
+            />
+            <ExpandToggle
+              active={showProfiles}
+              onClick={() => setShowProfiles((v) => !v)}
+              icon={<Tags className="w-3.5 h-3.5" />}
+              label={`Profiles (${profiles.length})`}
+              activeCount={profiles.length}
+            />
+            <ExpandToggle
+              active={showDebug}
+              onClick={() => setShowDebug((v) => !v)}
+              icon={<BrainCircuit className="w-3.5 h-3.5" />}
+              label="Debug"
+              activeCount={lastRequestBody ? 1 : 0}
             />
             {history.length > 0 && (
               <ExpandToggle
@@ -2320,6 +2630,145 @@ export default function Home() {
             )}
           </AnimatePresence>
 
+          <AnimatePresence>
+            {showSunoLab && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-card border border-primary/15 p-4 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Suno mechanics</p>
+                      <p className="font-mono text-[11px] text-zinc-500 mt-1">
+                        Top-load mood/energy/instruments, keep exclusions to five, and use meta-tags to control arrangement.
+                      </p>
+                    </div>
+                    <div className="font-mono text-[10px] text-primary/60 border border-primary/20 px-2 py-1">
+                      Suggested: W {weirdness} / S {styleInfluence} / A {audioInfluence}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider">BPM Anchor</label>
+                      <input
+                        value={bpmTarget}
+                        onChange={(e) => setBpmTarget(e.target.value.replace(/[^\d]/g, "").slice(0, 3))}
+                        placeholder="118"
+                        className="w-full px-3 py-2 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider">Chord Progression</label>
+                      <input
+                        value={chordProgression}
+                        onChange={(e) => setChordProgression(e.target.value)}
+                        placeholder="Am - F - C - G"
+                        className="w-full px-3 py-2 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider">Vocal Persona</label>
+                      <textarea
+                        value={vocalPersona}
+                        onChange={(e) => setVocalPersona(e.target.value)}
+                        rows={3}
+                        placeholder="Male singer, early 30s, weathered raspy baritone, dynamic from whisper to belt..."
+                        className="w-full px-3 py-2 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors font-mono resize-y"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider">Sonic DNA</label>
+                      <textarea
+                        value={sonicDna}
+                        onChange={(e) => setSonicDna(e.target.value)}
+                        rows={3}
+                        placeholder="Vintage synths, punchy drums, ethereal falsetto, dark neon tension..."
+                        className="w-full px-3 py-2 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors font-mono resize-y"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider">Meta-Tags</label>
+                      <input
+                        value={metaTagsText}
+                        onChange={(e) => setMetaTagsText(e.target.value)}
+                        placeholder="[Intro],[Verse],[Pre-Chorus],[Chorus],[Drop],[Instrumental Fade Out]"
+                        className="w-full px-3 py-2 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="font-mono text-[10px] text-zinc-500 uppercase tracking-wider">Pronunciation Guide</label>
+                      <input
+                        value={pronunciationGuide}
+                        onChange={(e) => setPronunciationGuide(e.target.value)}
+                        placeholder="Paradigm = ˈpærədaɪm, bass = bahss"
+                        className="w-full px-3 py-2 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between font-mono text-[10px] text-zinc-500 uppercase tracking-wider">
+                        <span>Weirdness</span>
+                        <span>{weirdness}%</span>
+                      </label>
+                      <input type="range" min={0} max={100} value={weirdness} onChange={(e) => setWeirdness(Number(e.target.value))} className="w-full" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between font-mono text-[10px] text-zinc-500 uppercase tracking-wider">
+                        <span>Style Influence</span>
+                        <span>{styleInfluence}%</span>
+                      </label>
+                      <input type="range" min={0} max={100} value={styleInfluence} onChange={(e) => setStyleInfluence(Number(e.target.value))} className="w-full" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center justify-between font-mono text-[10px] text-zinc-500 uppercase tracking-wider">
+                        <span>Audio Influence</span>
+                        <span>{audioInfluence}%</span>
+                      </label>
+                      <input type="range" min={0} max={100} value={audioInfluence} onChange={(e) => setAudioInfluence(Number(e.target.value))} className="w-full" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setWeirdness(25); setStyleInfluence(80); setAudioInfluence(85); }}
+                      className="px-3 py-2 font-mono text-[10px] uppercase tracking-wider border border-primary/20 text-zinc-400 hover:border-primary/50 hover:text-primary transition-all"
+                    >
+                      Polish 25/80/85
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setWeirdness(40); setStyleInfluence(80); setAudioInfluence(50); }}
+                      className="px-3 py-2 font-mono text-[10px] uppercase tracking-wider border border-primary/20 text-zinc-400 hover:border-primary/50 hover:text-primary transition-all"
+                    >
+                      Rebuild 40/80/50
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setWeirdness(62); setStyleInfluence(80); setAudioInfluence(25); }}
+                      className="px-3 py-2 font-mono text-[10px] uppercase tracking-wider border border-primary/20 text-zinc-400 hover:border-primary/50 hover:text-primary transition-all"
+                    >
+                      Balanced 62/80/25
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Negative Prompt Builder */}
           <AnimatePresence>
             {showNegBuilder && (
@@ -2331,6 +2780,9 @@ export default function Home() {
                 className="overflow-hidden"
               >
                 <div className="bg-card border border-primary/15 p-5 space-y-5">
+                  <p className="font-mono text-[10px] text-zinc-600">
+                    Suno negative prompting works best with five focused exclusions or fewer. The generator will only send the first five terms.
+                  </p>
 
                   {/* Quality / vibe exclusions */}
                   <div className="space-y-2">
@@ -2492,6 +2944,73 @@ export default function Home() {
             )}
           </AnimatePresence>
 
+          <AnimatePresence>
+            {showProfiles && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-card border border-primary/15 p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <p className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Saved profiles</p>
+                      <p className="font-mono text-[10px] text-zinc-700 mt-1">Store the current Suno configuration and reload it later.</p>
+                    </div>
+                    <span className="font-mono text-[10px] text-primary/60 uppercase tracking-wider">{profiles.length} saved</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={profileName}
+                      onChange={(e) => setProfileName(e.target.value)}
+                      placeholder="Profile name"
+                      className="flex-1 px-3 py-2 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={saveCurrentProfile}
+                      disabled={!profileName.trim()}
+                      className="px-4 py-2 font-mono text-[11px] uppercase tracking-wider border border-primary/30 text-primary hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      Save current setup
+                    </button>
+                  </div>
+                  {profiles.length > 0 ? (
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
+                      {profiles.map((profile) => (
+                        <div key={profile.id} className="flex items-center gap-3 px-3 py-2.5 bg-background border border-primary/10">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-mono text-[12px] text-zinc-200 truncate">{profile.name}</p>
+                            <p className="font-mono text-[10px] text-zinc-600 mt-0.5">{formatRelativeTime(profile.createdAt)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => applyProfile(profile)}
+                            className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider border border-primary/25 text-primary/70 hover:border-primary hover:text-primary transition-all"
+                          >
+                            Apply
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setProfiles((prev) => prev.filter((p) => p.id !== profile.id))}
+                            className="px-3 py-1.5 font-mono text-[10px] uppercase tracking-wider border border-zinc-700 text-zinc-500 hover:border-red-500/40 hover:text-red-400 transition-all"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="font-mono text-[11px] text-zinc-600">No saved profiles yet.</p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* History Panel */}
           <AnimatePresence>
             {showHistory && history.length > 0 && (
@@ -2509,6 +3028,34 @@ export default function Home() {
                       <Trash2 className="w-3 h-3" /> Clear all
                     </button>
                   </div>
+                  <div className="flex flex-col lg:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      placeholder="Search title or artist"
+                      className="flex-1 px-3 py-2 bg-background border border-primary/20 text-sm text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:border-primary/50 transition-colors font-mono"
+                    />
+                    <div className="flex border border-primary/15">
+                      {([
+                        ["all", "All"],
+                        ["favorites", "Favorites"],
+                        ["rated", "Rated"],
+                      ] as const).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setHistoryFilter(value)}
+                          className={cn(
+                            "px-3 py-2 font-mono text-[10px] uppercase tracking-wider border-r border-primary/10 last:border-r-0 transition-colors",
+                            historyFilter === value ? "bg-primary/15 text-primary" : "text-zinc-500 hover:text-zinc-300"
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   {isOfflineMode && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/5 border border-yellow-500/20 text-yellow-500 font-mono text-[10px] uppercase tracking-wider">
                       <WifiOff className="w-3 h-3 shrink-0" />
@@ -2516,11 +3063,21 @@ export default function Home() {
                     </div>
                   )}
                   <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
-                    {history.map((entry) => (
+                    {filteredHistory.map((entry) => (
                       <div
                         key={entry.id}
                         className="flex items-stretch gap-1 bg-background border border-primary/10 hover:border-primary/25 transition-all group"
                       >
+                        <button
+                          type="button"
+                          title={favoriteIds.includes(entry.id) ? "Remove favorite" : "Add favorite"}
+                          onClick={() => setFavoriteIds((prev) =>
+                            prev.includes(entry.id) ? prev.filter((id) => id !== entry.id) : [entry.id, ...prev]
+                          )}
+                          className="shrink-0 px-2 border-r border-primary/10 text-zinc-600 hover:text-yellow-400 hover:bg-yellow-500/5 transition-colors"
+                        >
+                          <Star className={cn("w-3.5 h-3.5", favoriteIds.includes(entry.id) && "fill-yellow-400 text-yellow-400")} />
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleLoadHistory(entry)}
@@ -2533,6 +3090,11 @@ export default function Home() {
                             </div>
                             <div className="flex flex-col items-end gap-1 shrink-0">
                               <span className="text-xs text-zinc-600">{formatRelativeTime(entry.timestamp)}</span>
+                              {typeof entry.rating === "number" && (
+                                <span className="font-mono text-[9px] px-1 py-0.5 border border-yellow-500/25 bg-yellow-500/5 text-yellow-400">
+                                  {`${entry.rating}/5`}
+                                </span>
+                              )}
                               {entry.qualityScore !== undefined && (
                                 <span className={cn(
                                   "font-mono text-[9px] px-1 py-0.5 border",
@@ -2558,6 +3120,89 @@ export default function Home() {
                         </button>
                       </div>
                     ))}
+                    {filteredHistory.length === 0 && (
+                      <div className="px-3 py-4 border border-primary/10 bg-background font-mono text-[11px] text-zinc-600">
+                        No history entries match the current filter.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {showDebug && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="bg-card border border-primary/15 p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <p className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Debug panel</p>
+                      <p className="font-mono text-[10px] text-zinc-700 mt-1">Inspect the last request body, replay it, and monitor cache usage.</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={!lastRequestBody || mainMutation.isPending}
+                      onClick={() => {
+                        if (!lastRequestBody) return;
+                        const replayBody = { ...(lastRequestBody as Record<string, unknown>) };
+                        delete replayBody.count;
+                        setApiError(null);
+                        mainMutation.mutate(
+                          { data: replayBody as never },
+                          {
+                            onSuccess: (data: SunoTemplate) => {
+                              setCurrentTemplate(data);
+                              if ("youtubeUrl" in replayBody) {
+                                const youtubeUrl = String(replayBody.youtubeUrl ?? "");
+                                if (youtubeUrl) {
+                                  const { youtubeUrl: _ignoredUrl, ...replayOptions } = replayBody;
+                                  lastUrlRef.current = youtubeUrl;
+                                  lastOptionsRef.current = replayOptions;
+                                  addToHistory(youtubeUrl, data, extractUsedOptions());
+                                }
+                              }
+                            },
+                            onError: (err: unknown) => {
+                              setApiError((err as { data?: { error?: string }; message?: string })?.data?.error ?? (err as Error)?.message ?? "Replay failed");
+                            },
+                          }
+                        );
+                      }}
+                      className="px-4 py-2 font-mono text-[11px] uppercase tracking-wider border border-primary/30 text-primary hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      Replay last request
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                    <div className="px-3 py-2 border border-primary/10 bg-background">
+                      <p className="font-mono text-[10px] text-zinc-700 uppercase tracking-wider">Cache entries</p>
+                      <p className="font-mono text-sm text-zinc-200 mt-1">{cacheStats?.entries ?? "..."}</p>
+                    </div>
+                    <div className="px-3 py-2 border border-primary/10 bg-background">
+                      <p className="font-mono text-[10px] text-zinc-700 uppercase tracking-wider">Cache size</p>
+                      <p className="font-mono text-sm text-zinc-200 mt-1">{cacheStats ? `${Math.round(cacheStats.sizeBytes / 1024)} KB` : "..."}</p>
+                    </div>
+                    <div className="px-3 py-2 border border-primary/10 bg-background">
+                      <p className="font-mono text-[10px] text-zinc-700 uppercase tracking-wider">Hits / misses</p>
+                      <p className="font-mono text-sm text-zinc-200 mt-1">{cacheStats ? `${cacheStats.hits} / ${cacheStats.misses}` : "..."}</p>
+                    </div>
+                    <div className="px-3 py-2 border border-primary/10 bg-background">
+                      <p className="font-mono text-[10px] text-zinc-700 uppercase tracking-wider">Hit rate</p>
+                      <p className="font-mono text-sm text-zinc-200 mt-1">{cacheStats?.hitRate ?? "..."}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="font-mono text-[10px] text-zinc-600 uppercase tracking-widest">Last request body</p>
+                    <pre className="max-h-72 overflow-auto bg-background border border-primary/10 px-3 py-3 text-[11px] text-zinc-300 font-mono whitespace-pre-wrap break-all">
+                      {lastRequestBody ? JSON.stringify(lastRequestBody, null, 2) : "No request recorded yet."}
+                    </pre>
                   </div>
                 </div>
               </motion.div>
@@ -2614,6 +3259,7 @@ export default function Home() {
               <BatchDashboard
                 tracks={batchTracks}
                 onRetry={handleBatchRetry}
+                onRetryFailed={handleRetryFailedBatch}
                 onUseTemplate={(template) => {
                   setCurrentTemplate(template);
                   setBatchMode(false);

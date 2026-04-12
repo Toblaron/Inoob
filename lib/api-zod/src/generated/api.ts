@@ -96,6 +96,50 @@ export const GenerateSunoTemplateBody = zod.object({
     .enum(["v4", "v5", "v5.5"])
     .optional()
     .describe("Target Suno AI version"),
+  bpmTarget: zod
+    .number()
+    .min(40)
+    .max(240)
+    .optional()
+    .describe("Explicit BPM anchor for Suno prompt generation"),
+  chordProgression: zod
+    .string()
+    .optional()
+    .describe("Explicit chord progression or harmonic instruction"),
+  vocalPersona: zod
+    .string()
+    .optional()
+    .describe("Detailed vocal identity or stacked persona descriptor"),
+  sonicDna: zod
+    .string()
+    .optional()
+    .describe("Artist-like sonic DNA phrased as legal descriptive traits"),
+  metaTags: zod
+    .array(zod.string())
+    .optional()
+    .describe("Structural or production meta-tags to inject into the lyrics blueprint"),
+  pronunciationGuide: zod
+    .string()
+    .optional()
+    .describe("IPA or phonetic guidance for difficult words"),
+  weirdness: zod
+    .number()
+    .min(0)
+    .max(100)
+    .optional()
+    .describe("Heuristic Suno weirdness slider target"),
+  styleInfluence: zod
+    .number()
+    .min(0)
+    .max(100)
+    .optional()
+    .describe("Heuristic Suno style influence slider target"),
+  audioInfluence: zod
+    .number()
+    .min(0)
+    .max(100)
+    .optional()
+    .describe("Heuristic Suno audio influence slider target"),
 });
 
 export const generateSunoTemplateResponseFingerprintEnergyMin = 0;
@@ -292,6 +336,50 @@ export const GenerateVariationsBody = zod
       .enum(["v4", "v5", "v5.5"])
       .optional()
       .describe("Target Suno AI version"),
+    bpmTarget: zod
+      .number()
+      .min(40)
+      .max(240)
+      .optional()
+      .describe("Explicit BPM anchor for Suno prompt generation"),
+    chordProgression: zod
+      .string()
+      .optional()
+      .describe("Explicit chord progression or harmonic instruction"),
+    vocalPersona: zod
+      .string()
+      .optional()
+      .describe("Detailed vocal identity or stacked persona descriptor"),
+    sonicDna: zod
+      .string()
+      .optional()
+      .describe("Artist-like sonic DNA phrased as legal descriptive traits"),
+    metaTags: zod
+      .array(zod.string())
+      .optional()
+      .describe("Structural or production meta-tags to inject into the lyrics blueprint"),
+    pronunciationGuide: zod
+      .string()
+      .optional()
+      .describe("IPA or phonetic guidance for difficult words"),
+    weirdness: zod
+      .number()
+      .min(0)
+      .max(100)
+      .optional()
+      .describe("Heuristic Suno weirdness slider target"),
+    styleInfluence: zod
+      .number()
+      .min(0)
+      .max(100)
+      .optional()
+      .describe("Heuristic Suno style influence slider target"),
+    audioInfluence: zod
+      .number()
+      .min(0)
+      .max(100)
+      .optional()
+      .describe("Heuristic Suno audio influence slider target"),
   })
   .and(
     zod.object({
@@ -638,11 +726,23 @@ export const BatchGenerateBody = zod.object({
     ])
     .optional(),
   mode: zod.enum(["cover", "inspired"]).optional(),
+  tempo: zod.enum(["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"]).optional(),
+  isInstrumental: zod.boolean().optional(),
+  sunoVersion: zod.enum(["v4", "v5", "v5.5"]).optional(),
   genres: zod.array(zod.string()).optional(),
   moods: zod.array(zod.string()).optional(),
   instruments: zod.array(zod.string()).optional(),
   excludeTags: zod.array(zod.string()).optional(),
   genreNudge: zod.string().optional(),
+  bpmTarget: zod.number().min(40).max(240).optional(),
+  chordProgression: zod.string().optional(),
+  vocalPersona: zod.string().optional(),
+  sonicDna: zod.string().optional(),
+  metaTags: zod.array(zod.string()).optional(),
+  pronunciationGuide: zod.string().optional(),
+  weirdness: zod.number().min(0).max(100).optional(),
+  styleInfluence: zod.number().min(0).max(100).optional(),
+  audioInfluence: zod.number().min(0).max(100).optional(),
 });
 
 /**

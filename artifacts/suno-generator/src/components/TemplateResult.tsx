@@ -18,6 +18,7 @@ import {
   ChevronUp,
   RotateCcw,
   Pencil,
+  FileJson,
 } from "lucide-react";
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard";
 import type { SunoTemplate } from "@workspace/api-client-react";
@@ -202,6 +203,7 @@ export function TemplateResult({
   const { copy } = useCopyToClipboard();
   const [validatorExpanded, setValidatorExpanded] = useState(false);
   const [openSunoCopied, setOpenSunoCopied] = useState(false);
+  const [copyMode, setCopyMode] = useState<"all" | "style" | "lyrics" | "bundle">("all");
 
   const [editedStyle, setEditedStyle] = useState(template.styleOfMusic ?? "");
   const [editedLyrics, setEditedLyrics] = useState(template.lyrics ?? "");
@@ -236,15 +238,29 @@ export function TemplateResult({
   };
 
   const copyAll = () => {
-    const fullText = [
-      `=== STYLE OF MUSIC ===\n${editedStyle}`,
-      `=== TITLE ===\n${editedTitle}`,
-      `=== LYRICS / METADATA ===\n${editedLyrics}`,
-      editedNeg ? `=== NEGATIVE PROMPT ===\n${editedNeg}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    copy(fullText, "Full template copied to clipboard!");
+    const payload =
+      copyMode === "style"
+        ? editedStyle
+        : copyMode === "lyrics"
+          ? editedLyrics
+          : copyMode === "bundle"
+            ? JSON.stringify({
+                songTitle: template.songTitle,
+                artist: template.artist,
+                title: editedTitle,
+                styleOfMusic: editedStyle,
+                lyrics: editedLyrics,
+                negativePrompt: editedNeg,
+              }, null, 2)
+            : [
+                `=== STYLE OF MUSIC ===\n${editedStyle}`,
+                `=== TITLE ===\n${editedTitle}`,
+                `=== LYRICS / METADATA ===\n${editedLyrics}`,
+                editedNeg ? `=== NEGATIVE PROMPT ===\n${editedNeg}` : "",
+              ]
+                .filter(Boolean)
+                .join("\n\n");
+    copy(payload, copyMode === "bundle" ? "JSON bundle copied!" : "Template copied to clipboard!");
   };
 
   const exportAsTxt = () => {
@@ -279,6 +295,28 @@ export function TemplateResult({
     const a = document.createElement("a");
     a.href = url;
     a.download = `${template.artist} - ${template.songTitle} - SONIC ARCHITECT.txt`
+      .replace(/[/\\?%*:|"<>]/g, "")
+      .trim();
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAsJson = () => {
+    const blob = new Blob([JSON.stringify({
+      songTitle: template.songTitle,
+      artist: template.artist,
+      title: editedTitle,
+      styleOfMusic: editedStyle,
+      lyrics: editedLyrics,
+      negativePrompt: editedNeg,
+      fingerprint: template.fingerprint ?? null,
+      lyricsStructure: template.lyricsStructure ?? null,
+      suggestedDefaults: template.suggestedDefaults ?? null,
+    }, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${template.artist} - ${template.songTitle} - SONIC ARCHITECT.json`
       .replace(/[/\\?%*:|"<>]/g, "")
       .trim();
     a.click();
@@ -323,6 +361,25 @@ export function TemplateResult({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex border border-primary/20">
+            {([
+              ["all", "Full"],
+              ["style", "Style"],
+              ["lyrics", "Lyrics"],
+              ["bundle", "JSON"],
+            ] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                onClick={() => setCopyMode(mode)}
+                className={cn(
+                  "px-2 py-1 font-mono text-[10px] uppercase tracking-wider border-r border-primary/10 last:border-r-0 transition-colors",
+                  copyMode === mode ? "bg-primary/15 text-primary" : "text-zinc-600 hover:text-zinc-300"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <button
             onClick={handleOpenSuno}
             title="Copies the Style Prompt to your clipboard, then opens Suno.ai"
@@ -344,11 +401,18 @@ export function TemplateResult({
             Export .txt
           </button>
           <button
+            onClick={exportAsJson}
+            className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border border-primary/25 text-zinc-400 hover:border-primary/50 hover:text-zinc-300 transition-all"
+          >
+            <FileJson className="w-3 h-3" />
+            Export .json
+          </button>
+          <button
             onClick={copyAll}
             className="flex items-center gap-1.5 px-4 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider border border-primary bg-primary text-black hover:bg-primary/90 transition-all"
           >
             <Copy className="w-3 h-3" />
-            Copy All
+            Copy {copyMode === "all" ? "All" : copyMode === "bundle" ? "JSON" : copyMode === "style" ? "Style" : "Lyrics"}
           </button>
         </div>
       </motion.div>

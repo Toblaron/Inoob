@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { GitBranch, Clock, RotateCcw, ChevronDown, ChevronUp, Trash2, Plus, GitCompare } from "lucide-react";
+import { GitBranch, Clock, RotateCcw, ChevronDown, ChevronUp, Trash2, Plus, GitCompare, FileJson } from "lucide-react";
 import type { SunoTemplate } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ export interface TemplateVersion {
   template: SunoTemplate;
   savedAt: number;
   isAuto: boolean; // auto-saved vs manually named
+  note?: string;
 }
 
 function loadVersions(songKey: string): TemplateVersion[] {
@@ -77,9 +78,10 @@ interface VersionRowProps {
   isCurrent: boolean;
   onRestore: (v: TemplateVersion) => void;
   onDelete: (id: string) => void;
+  onExport: (v: TemplateVersion) => void;
 }
 
-function VersionRow({ version, prevVersion, isCurrent, onRestore, onDelete }: VersionRowProps) {
+function VersionRow({ version, prevVersion, isCurrent, onRestore, onDelete, onExport }: VersionRowProps) {
   const [showDiff, setShowDiff] = useState(false);
   const changes = prevVersion ? diffSummary(prevVersion.template, version.template) : [];
 
@@ -124,6 +126,9 @@ function VersionRow({ version, prevVersion, isCurrent, onRestore, onDelete }: Ve
               </button>
             )}
           </div>
+          {version.note && (
+            <p className="font-mono text-[10px] text-zinc-500 mt-1">{version.note}</p>
+          )}
           <AnimatePresence>
             {showDiff && changes.length > 0 && (
               <motion.div
@@ -161,6 +166,13 @@ function VersionRow({ version, prevVersion, isCurrent, onRestore, onDelete }: Ve
             >
               <Trash2 className="w-3 h-3" />
             </button>
+            <button
+              onClick={() => onExport(version)}
+              title="Export this version as JSON"
+              className="p-1 text-zinc-700 hover:text-primary transition-colors"
+            >
+              <FileJson className="w-3 h-3" />
+            </button>
           </div>
         )}
       </div>
@@ -177,6 +189,7 @@ export function TemplateVersionControl({ template, onRestore }: TemplateVersionC
   const [expanded, setExpanded] = useState(false);
   const [versions, setVersions] = useState<TemplateVersion[]>([]);
   const [customLabel, setCustomLabel] = useState("");
+  const [customNote, setCustomNote] = useState("");
   const [showSaveInput, setShowSaveInput] = useState(false);
   const key = songKey(template);
 
@@ -214,13 +227,15 @@ export function TemplateVersionControl({ template, onRestore }: TemplateVersionC
       template,
       savedAt: Date.now(),
       isAuto: false,
+      note: customNote.trim() || undefined,
     };
     const updated = [newVersion, ...versions].slice(0, MAX_VERSIONS);
     saveVersions(key, updated);
     setVersions(updated);
     setCustomLabel("");
+    setCustomNote("");
     setShowSaveInput(false);
-  }, [customLabel, template, versions, key]);
+  }, [customLabel, customNote, template, versions, key]);
 
   const handleDelete = useCallback((id: string) => {
     const updated = versions.filter((v) => v.id !== id);
@@ -236,6 +251,16 @@ export function TemplateVersionControl({ template, onRestore }: TemplateVersionC
     saveVersions(key, []);
     setVersions([]);
   }, [key]);
+
+  const handleExport = useCallback((version: TemplateVersion) => {
+    const blob = new Blob([JSON.stringify(version, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${version.label.replace(/[/\\?%*:|"<>]/g, "").trim() || "template-version"}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, []);
 
   if (versions.length === 0) return null;
 
@@ -278,6 +303,12 @@ export function TemplateVersionControl({ template, onRestore }: TemplateVersionC
                         if (e.key === "Escape") setShowSaveInput(false);
                       }}
                       placeholder="Name this version..."
+                      className="flex-1 bg-zinc-900 border border-primary/20 px-2 py-1 font-mono text-[11px] text-zinc-300 focus:outline-none focus:border-primary/50"
+                    />
+                    <input
+                      value={customNote}
+                      onChange={(e) => setCustomNote(e.target.value)}
+                      placeholder="Optional note..."
                       className="flex-1 bg-zinc-900 border border-primary/20 px-2 py-1 font-mono text-[11px] text-zinc-300 focus:outline-none focus:border-primary/50"
                     />
                     <button
@@ -326,6 +357,7 @@ export function TemplateVersionControl({ template, onRestore }: TemplateVersionC
                     isCurrent={i === 0}
                     onRestore={handleRestore}
                     onDelete={handleDelete}
+                    onExport={handleExport}
                   />
                 ))}
               </div>

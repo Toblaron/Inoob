@@ -881,12 +881,23 @@ function trimStylePrompt(text: string, limit = 999): string {
   return lastComma > limit * 0.75 ? cut.slice(0, lastComma) : cut.trimEnd();
 }
 
+function clampSlider(value: number | undefined, min: number, max: number): number | undefined {
+  if (typeof value !== "number" || Number.isNaN(value)) return undefined;
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
 const SYSTEM_PROMPT = `You are SONIC ARCHITECT — an expert Suno.ai neural music prompt engineer. You generate the SONIC ARCHITECT three-section template format: a precision latent-space navigation document that steers Suno's neural network using verified audio engineering vocabulary, not vague aesthetics.
 
 ⚠️ NON-NEGOTIABLE CHARACTER TARGETS — enforce before submitting:
 - styleOfMusic (THE RACK): 900–999 characters
 - lyrics (THE SCRIPT): 4,900–4,999 characters
 - negativePrompt (PROFESSIONAL EXCLUSIONS): 150–199 characters
+
+SUNO MECHANICS TO RESPECT:
+- Top-load Section 1: Mood -> Energy -> 1-3 anchor instruments -> Vocal Identity
+- Use meta-tags in Section 2 as structural instructions, not decoration
+- Keep negative prompting focused; five exclusions beat a noisy laundry list
+- If BPM, key, chord progression, persona, or slider targets are supplied, treat them as high-priority controls
 
 CONTEXT DATA PRIORITY:
 1. "MUSICAL ANALYSIS" block — verified BPM/key from MusicBrainz. If "← USE THIS EXACT VALUE" appears, use those numbers verbatim.
@@ -1019,8 +1030,21 @@ function buildStyleControls(opts: {
   excludeTags?: string[];
   variationIndex?: number;
   feedbackContext?: string;
+  bpmTarget?: number;
+  chordProgression?: string;
+  vocalPersona?: string;
+  sonicDna?: string;
+  metaTags?: string[];
+  pronunciationGuide?: string;
+  weirdness?: number;
+  styleInfluence?: number;
+  audioInfluence?: number;
 }): string {
   const lines: string[] = [];
+  const weirdness = clampSlider(opts.weirdness, 0, 100);
+  const styleInfluence = clampSlider(opts.styleInfluence, 0, 100);
+  const audioInfluence = clampSlider(opts.audioInfluence, 0, 100);
+  lines.push("SUNO OPERATING RULES - Use a top-loaded palette in Section 1: lead with one dominant mood, then energy, then 1-3 anchor instruments, then vocal identity.");
   if (opts.genres && opts.genres.length > 0) {
     lines.push(`USER PREFERENCE — Selected genres: ${opts.genres.join(", ")}. These are the core genre(s) the user wants. Make them prominent in Section 1 and structure the template around these genre conventions.`);
   }
@@ -1050,6 +1074,9 @@ function buildStyleControls(opts: {
     };
     lines.push(`USER PREFERENCE — Energy level: ${energyMap[opts.energyLevel] ?? opts.energyLevel}.`);
   }
+  if (opts.bpmTarget) {
+    lines.push(`HARD RHYTHMIC ANCHOR - Use ${opts.bpmTarget} BPM explicitly in Section 1 and section pacing.`);
+  }
   if (opts.tempo) {
     const tempoMap: Record<string, string> = {
       ballad: "ballad tempo, under 60 BPM — slow, emotional, spacious phrasing, long sustained notes",
@@ -1075,10 +1102,33 @@ function buildStyleControls(opts: {
     };
     lines.push(`USER PREFERENCE — Era: ${eraMap[opts.era] ?? opts.era}. Make the style reflect this era's production aesthetics.`);
   }
+  if (opts.vocalPersona && opts.vocalPersona.trim()) {
+    lines.push(`VOCAL PERSONA STACK - ${opts.vocalPersona.trim()}. Preserve this voice consistently and prevent timbre drift.`);
+  }
+  if (opts.sonicDna && opts.sonicDna.trim()) {
+    lines.push(`SONIC DNA - ${opts.sonicDna.trim()}. Translate it into descriptive traits only, not direct artist-name imitation.`);
+  }
+  if (opts.chordProgression && opts.chordProgression.trim()) {
+    lines.push(`HARMONIC DIRECTIVE - Use this chord progression or tonal map where musically appropriate: ${opts.chordProgression.trim()}.`);
+  }
+  if (opts.metaTags && opts.metaTags.length > 0) {
+    lines.push(`META-TAG COMPILER - Inject these exact tags into Section 2 where relevant: ${opts.metaTags.join(", ")}.`);
+  }
+  if (opts.pronunciationGuide && opts.pronunciationGuide.trim()) {
+    lines.push(`PHONETIC OVERRIDE - Use this pronunciation guidance exactly where relevant: ${opts.pronunciationGuide.trim()}.`);
+  }
+  if (styleInfluence !== undefined || weirdness !== undefined || audioInfluence !== undefined) {
+    const sliderParts: string[] = [];
+    if (styleInfluence !== undefined) sliderParts.push(`Style Influence ${styleInfluence}%`);
+    if (weirdness !== undefined) sliderParts.push(`Weirdness ${weirdness}%`);
+    if (audioInfluence !== undefined) sliderParts.push(`Audio Influence ${audioInfluence}%`);
+    lines.push(`SLIDER HEURISTICS - ${sliderParts.join(", ")}. High Style Influence means obey meta-tags and chord injections strictly; reduce Weirdness as prompts become denser.`);
+  }
   if (opts.genreNudge && opts.genreNudge.trim()) {
     lines.push(`USER PREFERENCE — Genre/style nudge: "${opts.genreNudge.trim()}". Incorporate this into the style prompt.`);
   }
   if (opts.excludeTags && opts.excludeTags.length > 0) {
+    lines.push(`FOCUSED NEGATIVE STRATEGY - Apply the rule of five and prioritise only these exclusions: ${opts.excludeTags.slice(0, 5).join(", ")}.`);
     lines.push(`USER EXCLUSION TAGS — The user explicitly wants to EXCLUDE these from the output. Add them prominently to Section 3 (Negative Prompt): ${opts.excludeTags.join(", ")}.`);
   }
   if (opts.variationIndex && opts.variationIndex >= 2) {
@@ -1116,14 +1166,23 @@ interface GenerateInput {
   isInstrumental?: boolean;
   confirmedStructure?: Array<{ label: string; lines: string[] }>;
   noCache?: boolean;
-  /** Target Suno model version. v5/v5.5 support longer style prompts and denser cue notation. */
+  /** Target Suno model version. Current model is v5.5; v5/v5.5 support denser cue notation than v4. */
   sunoVersion?: "v4" | "v5" | "v5.5";
+  bpmTarget?: number;
+  chordProgression?: string;
+  vocalPersona?: string;
+  sonicDna?: string;
+  metaTags?: string[];
+  pronunciationGuide?: string;
+  weirdness?: number;
+  styleInfluence?: number;
+  audioInfluence?: number;
 }
 
 type AiOutput = { styleOfMusic: string; title: string; lyrics: string; negativePrompt: string };
 
 async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<typeof GenerateSunoTemplateResponse.parse>> {
-  const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext, isInstrumental, confirmedStructure, noCache, sunoVersion } = data;
+  const { youtubeUrl, manualLyrics, vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, feedbackContext, isInstrumental, confirmedStructure, noCache, sunoVersion, bpmTarget, chordProgression, vocalPersona, sonicDna, metaTags, pronunciationGuide, weirdness, styleInfluence, audioInfluence } = data;
 
   if (!isValidSourceUrl(youtubeUrl)) {
     throw new Error("Invalid URL. Please provide a valid YouTube (youtube.com / youtu.be) or Deezer (deezer.com/track/...) link.");
@@ -1227,7 +1286,7 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
 
   const context = buildPromptContext(metadata);
   const effectiveVocalGender = isInstrumental ? "no vocals" : vocalGender;
-  const styleControls = buildStyleControls({ vocalGender: effectiveVocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex, feedbackContext });
+  const styleControls = buildStyleControls({ vocalGender: effectiveVocalGender, energyLevel, era, genreNudge, genres, moods, instruments, tempo, excludeTags, variationIndex, feedbackContext, bpmTarget, chordProgression, vocalPersona, sonicDna, metaTags, pronunciationGuide, weirdness, styleInfluence, audioInfluence });
 
   const lyricsInstruction =
     metadata.lyricsSource === "user-override"
@@ -1262,13 +1321,13 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
     : "";
 
   const sunoVersionHint = (sunoVersion === "v5" || sunoVersion === "v5.5")
-    ? `\n\n🎛️ TARGET MODEL: Suno ${sunoVersion}. This model supports denser cue notation, longer section headers with compound descriptors, and responds better to expanded Synthesis Topology chains. Push the production detail ceiling — add extra [Automation:] sub-lines, secondary [Neural Floor:] activations per section, and compound hardware routing chains in THE RACK.`
+    ? `\n\n🎛️ TARGET MODEL: Suno ${sunoVersion}. Current Suno model is v5.5. This model family supports denser cue notation, longer section headers with compound descriptors, and responds better to expanded Synthesis Topology chains. Push the production detail ceiling — add extra [Automation:] sub-lines, secondary [Neural Floor:] activations per section, and compound hardware routing chains in THE RACK.`
     : "";
 
   // Template cache (keyed by videoId + params; feedbackContext excluded; user-override not cached; noCache bypasses)
   const useTemplateCache = videoId && metadata.lyricsSource !== "user-override" && !noCache;
   const templateCacheKey = useTemplateCache
-    ? `template:${videoId}:${hashParams({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, isInstrumental, confirmedStructure, sunoVersion })}`
+    ? `template:${videoId}:${hashParams({ vocalGender, energyLevel, era, genreNudge, genres, moods, instruments, mode, tempo, excludeTags, variationIndex, isInstrumental, confirmedStructure, sunoVersion, bpmTarget, chordProgression, vocalPersona, sonicDna, metaTags, pronunciationGuide, weirdness, styleInfluence, audioInfluence })}`
     : null;
 
   let aiResult: AiOutput;

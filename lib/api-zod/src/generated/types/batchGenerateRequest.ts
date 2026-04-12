@@ -8,6 +8,8 @@
 import type { EnergyLevel } from "./energyLevel";
 import type { Era } from "./era";
 import type { Mode } from "./mode";
+import type { SunoVersion } from "./sunoVersion";
+import type { Tempo } from "./tempo";
 import type { VocalGender } from "./vocalGender";
 
 export interface BatchGenerateRequest {
@@ -20,9 +22,21 @@ export interface BatchGenerateRequest {
   energyLevel?: EnergyLevel;
   era?: Era;
   mode?: Mode;
+  tempo?: Tempo;
+  isInstrumental?: boolean;
+  sunoVersion?: SunoVersion;
   genres?: string[];
   moods?: string[];
   instruments?: string[];
   excludeTags?: string[];
   genreNudge?: string;
+  bpmTarget?: number;
+  chordProgression?: string;
+  vocalPersona?: string;
+  sonicDna?: string;
+  metaTags?: string[];
+  pronunciationGuide?: string;
+  weirdness?: number;
+  styleInfluence?: number;
+  audioInfluence?: number;
 }

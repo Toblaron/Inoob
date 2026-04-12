@@ -19,6 +19,7 @@ interface BatchDashboardProps {
   tracks: BatchTrackResult[];
   onRetry: (track: BatchTrackResult) => void;
   onUseTemplate: (template: SunoTemplate) => void;
+  onRetryFailed?: () => void;
 }
 
 function statusLabel(status: BatchTrackResult["status"]): string {
@@ -196,7 +197,28 @@ function downloadAllTemplates(tracks: BatchTrackResult[]) {
   URL.revokeObjectURL(url);
 }
 
-export function BatchDashboard({ tracks, onRetry, onUseTemplate }: BatchDashboardProps) {
+function downloadBatchCsv(tracks: BatchTrackResult[]) {
+  const rows = [
+    ["index", "status", "title", "artist", "url", "error"].join(","),
+    ...tracks.map((t) => [
+      String(t.index),
+      t.status,
+      `"${(t.template?.songTitle ?? t.title ?? "").replace(/"/g, '""')}"`,
+      `"${(t.template?.artist ?? "").replace(/"/g, '""')}"`,
+      `"${t.url.replace(/"/g, '""')}"`,
+      `"${(t.error ?? "").replace(/"/g, '""')}"`,
+    ].join(",")),
+  ];
+  const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `suno-batch-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export function BatchDashboard({ tracks, onRetry, onUseTemplate, onRetryFailed }: BatchDashboardProps) {
   const doneCount = tracks.filter((t) => t.status === "done").length;
   const failedCount = tracks.filter((t) => t.status === "failed").length;
   const activeCount = tracks.filter((t) => t.status === "analyzing" || t.status === "generating").length;
@@ -239,6 +261,24 @@ export function BatchDashboard({ tracks, onRetry, onUseTemplate }: BatchDashboar
           <Download className="w-3 h-3" />
           Download All ({doneCount})
         </button>
+        <button
+          type="button"
+          onClick={() => downloadBatchCsv(tracks)}
+          className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border border-primary/20 text-zinc-400 hover:border-primary/50 hover:text-primary transition-all"
+        >
+          <Download className="w-3 h-3" />
+          CSV
+        </button>
+        {failedCount > 0 && onRetryFailed && (
+          <button
+            type="button"
+            onClick={onRetryFailed}
+            className="flex items-center gap-1.5 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider border border-red-500/30 text-red-400 hover:border-red-500 transition-all"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Retry Failed ({failedCount})
+          </button>
+        )}
       </div>
 
       <div className="w-full h-1 bg-zinc-800">

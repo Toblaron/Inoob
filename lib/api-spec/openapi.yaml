@@ -286,6 +286,43 @@ components:
           type: string
           enum: [v4, v5, v5.5]
           description: Target Suno AI version
+        bpmTarget:
+          type: integer
+          minimum: 40
+          maximum: 240
+          description: Explicit BPM anchor for Suno prompt generation
+        chordProgression:
+          type: string
+          description: Explicit chord progression or harmonic instruction
+        vocalPersona:
+          type: string
+          description: Detailed vocal identity or stacked persona descriptor
+        sonicDna:
+          type: string
+          description: Artist-like sonic DNA phrased as legal descriptive traits
+        metaTags:
+          type: array
+          items:
+            type: string
+          description: Structural or production meta-tags to inject into the lyrics blueprint
+        pronunciationGuide:
+          type: string
+          description: IPA or phonetic guidance for difficult words
+        weirdness:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Heuristic Suno weirdness slider target
+        styleInfluence:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Heuristic Suno style influence slider target
+        audioInfluence:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Heuristic Suno audio influence slider target
       required:
         - youtubeUrl
     GenerateVariationsRequest:
@@ -315,6 +352,12 @@ components:
           $ref: "#/components/schemas/Era"
         mode:
           $ref: "#/components/schemas/Mode"
+        tempo:
+          $ref: "#/components/schemas/Tempo"
+        isInstrumental:
+          type: boolean
+        sunoVersion:
+          $ref: "#/components/schemas/SunoVersion"
         genres:
           type: array
           items:
@@ -333,6 +376,34 @@ components:
             type: string
         genreNudge:
           type: string
+        bpmTarget:
+          type: integer
+          minimum: 40
+          maximum: 240
+        chordProgression:
+          type: string
+        vocalPersona:
+          type: string
+        sonicDna:
+          type: string
+        metaTags:
+          type: array
+          items:
+            type: string
+        pronunciationGuide:
+          type: string
+        weirdness:
+          type: integer
+          minimum: 0
+          maximum: 100
+        styleInfluence:
+          type: integer
+          minimum: 0
+          maximum: 100
+        audioInfluence:
+          type: integer
+          minimum: 0
+          maximum: 100
       required:
         - urls
     TransformTemplateRequest:

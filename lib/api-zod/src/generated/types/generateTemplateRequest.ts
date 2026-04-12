@@ -45,4 +45,22 @@ export interface GenerateTemplateRequest {
   noCache?: boolean;
   /** Target Suno AI version */
   sunoVersion?: GenerateTemplateRequestSunoVersion;
+  /** Explicit BPM anchor for Suno prompt generation */
+  bpmTarget?: number;
+  /** Explicit chord progression or harmonic instruction */
+  chordProgression?: string;
+  /** Detailed vocal identity or stacked persona descriptor */
+  vocalPersona?: string;
+  /** Artist-like sonic DNA phrased as legal descriptive traits */
+  sonicDna?: string;
+  /** Structural or production meta-tags to inject into the lyrics blueprint */
+  metaTags?: string[];
+  /** IPA or phonetic guidance for difficult words */
+  pronunciationGuide?: string;
+  /** Heuristic Suno weirdness slider target */
+  weirdness?: number;
+  /** Heuristic Suno style influence slider target */
+  styleInfluence?: number;
+  /** Heuristic Suno audio influence slider target */
+  audioInfluence?: number;
 }
