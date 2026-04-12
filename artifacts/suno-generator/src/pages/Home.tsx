@@ -510,7 +510,7 @@ export default function Home() {
   const [excludeTags, setExcludeTags] = useState<string[]>([]);
   const [customExclusions, setCustomExclusions] = useState("");
   const [isInstrumental, setIsInstrumental] = useState(false);
-  const [sunoVersion, setSunoVersion] = useState<"v4" | "v5">("v4");
+  const [sunoVersion, setSunoVersion] = useState<"v4" | "v5" | "v5.5">("v5.5");
   const [showCompare, setShowCompare] = useState(false);
 
   const [videoPreview, setVideoPreview] = useState<VideoPreview | null>(null);
@@ -1720,10 +1720,10 @@ export default function Home() {
 
                 {/* Suno version toggle */}
                 <div
-                  title="Target Suno model version — v5 uses denser cue notation"
+                  title="Target Suno model version — v5/v5.5 uses denser cue notation"
                   className="flex border border-primary/20 overflow-hidden shrink-0"
                 >
-                  {(["v4", "v5"] as const).map((v) => (
+                  {(["v4", "v5", "v5.5"] as const).map((v) => (
                     <button
                       key={v}
                       type="button"

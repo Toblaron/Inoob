@@ -21,68 +21,103 @@ export const HealthCheckResponse = zod.object({
  */
 export const GenerateSunoTemplateBody = zod.object({
   youtubeUrl: zod.string().describe("A YouTube video URL"),
-  manualLyrics: zod.string().optional().describe("Optional manually provided lyrics to use instead of fetching from APIs"),
-  vocalGender: zod.enum(["auto", "male", "female", "mixed", "duet", "no vocals"]).optional().describe("Preferred vocal type for the style prompt"),
-  energyLevel: zod.enum(["auto", "very chill", "chill", "medium", "high", "intense"]).optional().describe("Energy level of the track"),
-  era: zod.enum(["auto", "50s", "60s", "70s", "80s", "90s", "2000s", "2010s", "modern"]).optional().describe("Target musical era or decade"),
-  genreNudge: zod.string().optional().describe("Optional genre or style override"),
-  genres: zod.array(zod.string()).optional().describe("Selected genre tags to incorporate into the style prompt"),
-  moods: zod.array(zod.string()).optional().describe("Mood/vibe tags"),
-  instruments: zod.array(zod.string()).optional().describe("Featured instrument hints"),
-  mode: zod.enum(["cover", "inspired"]).optional().describe("Generation mode"),
-  tempo: zod.enum(["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"]).optional().describe("Target BPM range"),
-  excludeTags: zod.array(zod.string()).optional().describe("Tags to explicitly exclude"),
-  variationIndex: zod.number().optional().describe("Which variation to generate (1 or 2)"),
-  feedbackContext: zod.string().optional().describe("Learning context derived from the user's past template ratings"),
-  isInstrumental: zod.boolean().optional().describe("When true, generate as a fully instrumental track — no lyrics, only structural cues"),
-  confirmedStructure: zod.array(zod.object({
-    label: zod.string(),
-    lines: zod.array(zod.string()),
-  })).optional().describe("User-confirmed lyrics structure to use as a constraint in generation"),
-  noCache: zod.boolean().optional().describe("When true, bypass the template cache and always run a fresh AI generation"),
-  sunoVersion: zod.enum(["v4", "v5"]).optional().describe("Target Suno AI version — v4 (default) or v5"),
+  manualLyrics: zod
+    .string()
+    .optional()
+    .describe(
+      "Optional manually provided lyrics to use instead of fetching from APIs",
+    ),
+  vocalGender: zod
+    .enum(["auto", "male", "female", "mixed", "duet", "no vocals"])
+    .optional(),
+  energyLevel: zod
+    .enum(["auto", "very chill", "chill", "medium", "high", "intense"])
+    .optional(),
+  era: zod
+    .enum([
+      "auto",
+      "50s",
+      "60s",
+      "70s",
+      "80s",
+      "90s",
+      "2000s",
+      "2010s",
+      "modern",
+    ])
+    .optional(),
+  genreNudge: zod
+    .string()
+    .optional()
+    .describe("Optional genre or style override"),
+  genres: zod
+    .array(zod.string())
+    .optional()
+    .describe("Selected genre tags to incorporate into the style prompt"),
+  moods: zod.array(zod.string()).optional().describe("Mood\/vibe tags"),
+  instruments: zod
+    .array(zod.string())
+    .optional()
+    .describe("Featured instrument hints"),
+  mode: zod.enum(["cover", "inspired"]).optional(),
+  tempo: zod
+    .enum(["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"])
+    .optional(),
+  excludeTags: zod
+    .array(zod.string())
+    .optional()
+    .describe("Tags to explicitly exclude"),
+  variationIndex: zod
+    .number()
+    .optional()
+    .describe("Which variation to generate (1 or 2)"),
+  feedbackContext: zod
+    .string()
+    .optional()
+    .describe("Learning context derived from the user's past template ratings"),
+  isInstrumental: zod
+    .boolean()
+    .optional()
+    .describe("When true, generate as a fully instrumental track"),
+  confirmedStructure: zod
+    .array(
+      zod.object({
+        label: zod.string(),
+        lines: zod.array(zod.string()),
+      }),
+    )
+    .optional()
+    .describe("User-confirmed lyrics structure"),
+  noCache: zod
+    .boolean()
+    .optional()
+    .describe("When true, bypass the template cache"),
+  sunoVersion: zod
+    .enum(["v4", "v5", "v5.5"])
+    .optional()
+    .describe("Target Suno AI version"),
 });
 
-const LyricsSectionSchema = zod.object({
-  label: zod.string(),
-  lines: zod.array(zod.string()),
-  rhymeScheme: zod.string(),
-  sentiment: zod.number(),
-  isHook: zod.boolean(),
-  repetitionKey: zod.string(),
-});
+export const generateSunoTemplateResponseFingerprintEnergyMin = 0;
+export const generateSunoTemplateResponseFingerprintEnergyMax = 10;
 
-const LyricsStructureSchema = zod.object({
-  sections: zod.array(LyricsSectionSchema),
-  hookRepetitions: zod.number(),
-  sentimentArc: zod.array(zod.number()),
-  hasTaggedStructure: zod.boolean(),
-  totalSections: zod.number(),
-  dominantScheme: zod.string(),
-});
+export const generateSunoTemplateResponseFingerprintTempoFeelMin = 0;
+export const generateSunoTemplateResponseFingerprintTempoFeelMax = 10;
 
-const SuggestedDefaultsSchema = zod.object({
-  energy: zod.string().optional(),
-  tempo: zod.string().optional(),
-  era: zod.string().optional(),
-  instrumentHints: zod.array(zod.string()).optional(),
-  languageGenreHint: zod.string().optional(),
-  sources: zod.record(zod.string()),
-});
+export const generateSunoTemplateResponseFingerprintVocalPresenceMin = 0;
+export const generateSunoTemplateResponseFingerprintVocalPresenceMax = 10;
 
-export const SongFingerprintSchema = zod.object({
-  energy: zod.number().min(0).max(10).describe("Energy level 0–10 derived from BPM and era"),
-  tempoFeel: zod.number().min(0).max(10).describe("Tempo feel 0–10 (slow=0, hyper=10)"),
-  vocalPresence: zod.number().min(0).max(10).describe("Vocal prominence 0–10"),
-  instrumentalComplexity: zod.number().min(0).max(10).describe("Arrangement/production complexity 0–10"),
-  eraAuthenticity: zod.number().min(0).max(10).describe("How strongly era-coded the track is 0–10"),
-  moodValence: zod.number().min(0).max(10).describe("Emotional valence 0=dark/sad, 10=bright/happy"),
-  genrePurity: zod.number().min(0).max(10).describe("How purely genre-focused vs. cross-genre 0–10"),
-  videoId: zod.string().optional(),
-  songTitle: zod.string().optional(),
-  artist: zod.string().optional(),
-  computedAt: zod.number().optional().describe("Unix ms timestamp"),
-});
+export const generateSunoTemplateResponseFingerprintInstrumentalComplexityMin = 0;
+export const generateSunoTemplateResponseFingerprintInstrumentalComplexityMax = 10;
+
+export const generateSunoTemplateResponseFingerprintEraAuthenticityMin = 0;
+export const generateSunoTemplateResponseFingerprintEraAuthenticityMax = 10;
+
+export const generateSunoTemplateResponseFingerprintMoodValenceMin = 0;
+export const generateSunoTemplateResponseFingerprintMoodValenceMax = 10;
+
+export const generateSunoTemplateResponseFingerprintGenrePurityMin = 0;
+export const generateSunoTemplateResponseFingerprintGenrePurityMax = 10;
 
 export const GenerateSunoTemplateResponse = zod.object({
   songTitle: zod.string(),
@@ -104,61 +139,522 @@ export const GenerateSunoTemplateResponse = zod.object({
   tags: zod
     .array(zod.string())
     .describe("Additional tags for mood, instruments, tempo"),
-  lyricsStructure: LyricsStructureSchema.optional().describe("Analyzed structure of the source lyrics"),
-  suggestedDefaults: SuggestedDefaultsSchema.optional().describe("Smart defaults computed from BPM, era, and language data"),
-  fromCache: zod.boolean().optional().describe("True when this result was served from the server-side cache"),
-  fingerprint: SongFingerprintSchema.optional().describe("Musical DNA fingerprint with normalized 0–10 scores"),
+  lyricsStructure: zod
+    .object({
+      sections: zod.array(
+        zod.object({
+          label: zod.string(),
+          lines: zod.array(zod.string()),
+          rhymeScheme: zod.string(),
+          sentiment: zod.number(),
+          isHook: zod.boolean(),
+          repetitionKey: zod.string(),
+        }),
+      ),
+      hookRepetitions: zod.number(),
+      sentimentArc: zod.array(zod.number()),
+      hasTaggedStructure: zod.boolean(),
+      totalSections: zod.number(),
+      dominantScheme: zod.string(),
+    })
+    .optional(),
+  suggestedDefaults: zod
+    .object({
+      energy: zod.string().optional(),
+      tempo: zod.string().optional(),
+      era: zod.string().optional(),
+      instrumentHints: zod.array(zod.string()).optional(),
+      languageGenreHint: zod.string().optional(),
+      sources: zod.record(zod.string(), zod.string()),
+    })
+    .optional(),
+  fromCache: zod.boolean().optional(),
+  fingerprint: zod
+    .object({
+      energy: zod
+        .number()
+        .min(generateSunoTemplateResponseFingerprintEnergyMin)
+        .max(generateSunoTemplateResponseFingerprintEnergyMax),
+      tempoFeel: zod
+        .number()
+        .min(generateSunoTemplateResponseFingerprintTempoFeelMin)
+        .max(generateSunoTemplateResponseFingerprintTempoFeelMax),
+      vocalPresence: zod
+        .number()
+        .min(generateSunoTemplateResponseFingerprintVocalPresenceMin)
+        .max(generateSunoTemplateResponseFingerprintVocalPresenceMax),
+      instrumentalComplexity: zod
+        .number()
+        .min(generateSunoTemplateResponseFingerprintInstrumentalComplexityMin)
+        .max(generateSunoTemplateResponseFingerprintInstrumentalComplexityMax),
+      eraAuthenticity: zod
+        .number()
+        .min(generateSunoTemplateResponseFingerprintEraAuthenticityMin)
+        .max(generateSunoTemplateResponseFingerprintEraAuthenticityMax),
+      moodValence: zod
+        .number()
+        .min(generateSunoTemplateResponseFingerprintMoodValenceMin)
+        .max(generateSunoTemplateResponseFingerprintMoodValenceMax),
+      genrePurity: zod
+        .number()
+        .min(generateSunoTemplateResponseFingerprintGenrePurityMin)
+        .max(generateSunoTemplateResponseFingerprintGenrePurityMax),
+      videoId: zod.string().optional(),
+      songTitle: zod.string().optional(),
+      artist: zod.string().optional(),
+      computedAt: zod.number().optional(),
+    })
+    .optional(),
 });
 
-export const GenerateVariationsBody = GenerateSunoTemplateBody.extend({
-  count: zod.number().int().min(1).max(4).optional().describe("Number of variations to generate (1–4, default 2)"),
+/**
+ * @summary Generate multiple Suno.ai template variations in parallel
+ */
+export const generateVariationsBodyTwoCountMax = 4;
+
+export const GenerateVariationsBody = zod
+  .object({
+    youtubeUrl: zod.string().describe("A YouTube video URL"),
+    manualLyrics: zod
+      .string()
+      .optional()
+      .describe(
+        "Optional manually provided lyrics to use instead of fetching from APIs",
+      ),
+    vocalGender: zod
+      .enum(["auto", "male", "female", "mixed", "duet", "no vocals"])
+      .optional(),
+    energyLevel: zod
+      .enum(["auto", "very chill", "chill", "medium", "high", "intense"])
+      .optional(),
+    era: zod
+      .enum([
+        "auto",
+        "50s",
+        "60s",
+        "70s",
+        "80s",
+        "90s",
+        "2000s",
+        "2010s",
+        "modern",
+      ])
+      .optional(),
+    genreNudge: zod
+      .string()
+      .optional()
+      .describe("Optional genre or style override"),
+    genres: zod
+      .array(zod.string())
+      .optional()
+      .describe("Selected genre tags to incorporate into the style prompt"),
+    moods: zod.array(zod.string()).optional().describe("Mood\/vibe tags"),
+    instruments: zod
+      .array(zod.string())
+      .optional()
+      .describe("Featured instrument hints"),
+    mode: zod.enum(["cover", "inspired"]).optional(),
+    tempo: zod
+      .enum(["ballad", "slow", "mid", "groove", "uptempo", "fast", "hyper"])
+      .optional(),
+    excludeTags: zod
+      .array(zod.string())
+      .optional()
+      .describe("Tags to explicitly exclude"),
+    variationIndex: zod
+      .number()
+      .optional()
+      .describe("Which variation to generate (1 or 2)"),
+    feedbackContext: zod
+      .string()
+      .optional()
+      .describe(
+        "Learning context derived from the user's past template ratings",
+      ),
+    isInstrumental: zod
+      .boolean()
+      .optional()
+      .describe("When true, generate as a fully instrumental track"),
+    confirmedStructure: zod
+      .array(
+        zod.object({
+          label: zod.string(),
+          lines: zod.array(zod.string()),
+        }),
+      )
+      .optional()
+      .describe("User-confirmed lyrics structure"),
+    noCache: zod
+      .boolean()
+      .optional()
+      .describe("When true, bypass the template cache"),
+    sunoVersion: zod
+      .enum(["v4", "v5", "v5.5"])
+      .optional()
+      .describe("Target Suno AI version"),
+  })
+  .and(
+    zod.object({
+      count: zod
+        .number()
+        .min(1)
+        .max(generateVariationsBodyTwoCountMax)
+        .optional()
+        .describe("Number of variations to generate"),
+    }),
+  );
+
+export const generateVariationsResponseSlotsItemTemplateFingerprintEnergyMin = 0;
+export const generateVariationsResponseSlotsItemTemplateFingerprintEnergyMax = 10;
+
+export const generateVariationsResponseSlotsItemTemplateFingerprintTempoFeelMin = 0;
+export const generateVariationsResponseSlotsItemTemplateFingerprintTempoFeelMax = 10;
+
+export const generateVariationsResponseSlotsItemTemplateFingerprintVocalPresenceMin = 0;
+export const generateVariationsResponseSlotsItemTemplateFingerprintVocalPresenceMax = 10;
+
+export const generateVariationsResponseSlotsItemTemplateFingerprintInstrumentalComplexityMin = 0;
+export const generateVariationsResponseSlotsItemTemplateFingerprintInstrumentalComplexityMax = 10;
+
+export const generateVariationsResponseSlotsItemTemplateFingerprintEraAuthenticityMin = 0;
+export const generateVariationsResponseSlotsItemTemplateFingerprintEraAuthenticityMax = 10;
+
+export const generateVariationsResponseSlotsItemTemplateFingerprintMoodValenceMin = 0;
+export const generateVariationsResponseSlotsItemTemplateFingerprintMoodValenceMax = 10;
+
+export const generateVariationsResponseSlotsItemTemplateFingerprintGenrePurityMin = 0;
+export const generateVariationsResponseSlotsItemTemplateFingerprintGenrePurityMax = 10;
+
+export const generateVariationsResponseVariationsItemFingerprintEnergyMin = 0;
+export const generateVariationsResponseVariationsItemFingerprintEnergyMax = 10;
+
+export const generateVariationsResponseVariationsItemFingerprintTempoFeelMin = 0;
+export const generateVariationsResponseVariationsItemFingerprintTempoFeelMax = 10;
+
+export const generateVariationsResponseVariationsItemFingerprintVocalPresenceMin = 0;
+export const generateVariationsResponseVariationsItemFingerprintVocalPresenceMax = 10;
+
+export const generateVariationsResponseVariationsItemFingerprintInstrumentalComplexityMin = 0;
+export const generateVariationsResponseVariationsItemFingerprintInstrumentalComplexityMax = 10;
+
+export const generateVariationsResponseVariationsItemFingerprintEraAuthenticityMin = 0;
+export const generateVariationsResponseVariationsItemFingerprintEraAuthenticityMax = 10;
+
+export const generateVariationsResponseVariationsItemFingerprintMoodValenceMin = 0;
+export const generateVariationsResponseVariationsItemFingerprintMoodValenceMax = 10;
+
+export const generateVariationsResponseVariationsItemFingerprintGenrePurityMin = 0;
+export const generateVariationsResponseVariationsItemFingerprintGenrePurityMax = 10;
+
+export const GenerateVariationsResponse = zod.object({
+  slots: zod.array(
+    zod.object({
+      variationIndex: zod.number(),
+      template: zod
+        .object({
+          songTitle: zod.string(),
+          artist: zod.string(),
+          styleOfMusic: zod
+            .string()
+            .describe(
+              "Comma-separated genre and style tags for the Suno style field",
+            ),
+          title: zod.string().describe("Suggested title for the Suno creation"),
+          lyrics: zod
+            .string()
+            .describe(
+              "Structured lyrics\/metadata block with production header and Suno metatags",
+            ),
+          negativePrompt: zod
+            .string()
+            .describe(
+              "Comma-separated list of things Suno should NOT generate (no spaces after commas, 90-199 chars)",
+            ),
+          tags: zod
+            .array(zod.string())
+            .describe("Additional tags for mood, instruments, tempo"),
+          lyricsStructure: zod
+            .object({
+              sections: zod.array(
+                zod.object({
+                  label: zod.string(),
+                  lines: zod.array(zod.string()),
+                  rhymeScheme: zod.string(),
+                  sentiment: zod.number(),
+                  isHook: zod.boolean(),
+                  repetitionKey: zod.string(),
+                }),
+              ),
+              hookRepetitions: zod.number(),
+              sentimentArc: zod.array(zod.number()),
+              hasTaggedStructure: zod.boolean(),
+              totalSections: zod.number(),
+              dominantScheme: zod.string(),
+            })
+            .optional(),
+          suggestedDefaults: zod
+            .object({
+              energy: zod.string().optional(),
+              tempo: zod.string().optional(),
+              era: zod.string().optional(),
+              instrumentHints: zod.array(zod.string()).optional(),
+              languageGenreHint: zod.string().optional(),
+              sources: zod.record(zod.string(), zod.string()),
+            })
+            .optional(),
+          fromCache: zod.boolean().optional(),
+          fingerprint: zod
+            .object({
+              energy: zod
+                .number()
+                .min(
+                  generateVariationsResponseSlotsItemTemplateFingerprintEnergyMin,
+                )
+                .max(
+                  generateVariationsResponseSlotsItemTemplateFingerprintEnergyMax,
+                ),
+              tempoFeel: zod
+                .number()
+                .min(
+                  generateVariationsResponseSlotsItemTemplateFingerprintTempoFeelMin,
+                )
+                .max(
+                  generateVariationsResponseSlotsItemTemplateFingerprintTempoFeelMax,
+                ),
+              vocalPresence: zod
+                .number()
+                .min(
+                  generateVariationsResponseSlotsItemTemplateFingerprintVocalPresenceMin,
+                )
+                .max(
+                  generateVariationsResponseSlotsItemTemplateFingerprintVocalPresenceMax,
+                ),
+              instrumentalComplexity: zod
+                .number()
+                .min(
+                  generateVariationsResponseSlotsItemTemplateFingerprintInstrumentalComplexityMin,
+                )
+                .max(
+                  generateVariationsResponseSlotsItemTemplateFingerprintInstrumentalComplexityMax,
+                ),
+              eraAuthenticity: zod
+                .number()
+                .min(
+                  generateVariationsResponseSlotsItemTemplateFingerprintEraAuthenticityMin,
+                )
+                .max(
+                  generateVariationsResponseSlotsItemTemplateFingerprintEraAuthenticityMax,
+                ),
+              moodValence: zod
+                .number()
+                .min(
+                  generateVariationsResponseSlotsItemTemplateFingerprintMoodValenceMin,
+                )
+                .max(
+                  generateVariationsResponseSlotsItemTemplateFingerprintMoodValenceMax,
+                ),
+              genrePurity: zod
+                .number()
+                .min(
+                  generateVariationsResponseSlotsItemTemplateFingerprintGenrePurityMin,
+                )
+                .max(
+                  generateVariationsResponseSlotsItemTemplateFingerprintGenrePurityMax,
+                ),
+              videoId: zod.string().optional(),
+              songTitle: zod.string().optional(),
+              artist: zod.string().optional(),
+              computedAt: zod.number().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
+      error: zod.string().optional(),
+    }),
+  ),
+  variations: zod.array(
+    zod.object({
+      songTitle: zod.string(),
+      artist: zod.string(),
+      styleOfMusic: zod
+        .string()
+        .describe(
+          "Comma-separated genre and style tags for the Suno style field",
+        ),
+      title: zod.string().describe("Suggested title for the Suno creation"),
+      lyrics: zod
+        .string()
+        .describe(
+          "Structured lyrics\/metadata block with production header and Suno metatags",
+        ),
+      negativePrompt: zod
+        .string()
+        .describe(
+          "Comma-separated list of things Suno should NOT generate (no spaces after commas, 90-199 chars)",
+        ),
+      tags: zod
+        .array(zod.string())
+        .describe("Additional tags for mood, instruments, tempo"),
+      lyricsStructure: zod
+        .object({
+          sections: zod.array(
+            zod.object({
+              label: zod.string(),
+              lines: zod.array(zod.string()),
+              rhymeScheme: zod.string(),
+              sentiment: zod.number(),
+              isHook: zod.boolean(),
+              repetitionKey: zod.string(),
+            }),
+          ),
+          hookRepetitions: zod.number(),
+          sentimentArc: zod.array(zod.number()),
+          hasTaggedStructure: zod.boolean(),
+          totalSections: zod.number(),
+          dominantScheme: zod.string(),
+        })
+        .optional(),
+      suggestedDefaults: zod
+        .object({
+          energy: zod.string().optional(),
+          tempo: zod.string().optional(),
+          era: zod.string().optional(),
+          instrumentHints: zod.array(zod.string()).optional(),
+          languageGenreHint: zod.string().optional(),
+          sources: zod.record(zod.string(), zod.string()),
+        })
+        .optional(),
+      fromCache: zod.boolean().optional(),
+      fingerprint: zod
+        .object({
+          energy: zod
+            .number()
+            .min(generateVariationsResponseVariationsItemFingerprintEnergyMin)
+            .max(generateVariationsResponseVariationsItemFingerprintEnergyMax),
+          tempoFeel: zod
+            .number()
+            .min(
+              generateVariationsResponseVariationsItemFingerprintTempoFeelMin,
+            )
+            .max(
+              generateVariationsResponseVariationsItemFingerprintTempoFeelMax,
+            ),
+          vocalPresence: zod
+            .number()
+            .min(
+              generateVariationsResponseVariationsItemFingerprintVocalPresenceMin,
+            )
+            .max(
+              generateVariationsResponseVariationsItemFingerprintVocalPresenceMax,
+            ),
+          instrumentalComplexity: zod
+            .number()
+            .min(
+              generateVariationsResponseVariationsItemFingerprintInstrumentalComplexityMin,
+            )
+            .max(
+              generateVariationsResponseVariationsItemFingerprintInstrumentalComplexityMax,
+            ),
+          eraAuthenticity: zod
+            .number()
+            .min(
+              generateVariationsResponseVariationsItemFingerprintEraAuthenticityMin,
+            )
+            .max(
+              generateVariationsResponseVariationsItemFingerprintEraAuthenticityMax,
+            ),
+          moodValence: zod
+            .number()
+            .min(
+              generateVariationsResponseVariationsItemFingerprintMoodValenceMin,
+            )
+            .max(
+              generateVariationsResponseVariationsItemFingerprintMoodValenceMax,
+            ),
+          genrePurity: zod
+            .number()
+            .min(
+              generateVariationsResponseVariationsItemFingerprintGenrePurityMin,
+            )
+            .max(
+              generateVariationsResponseVariationsItemFingerprintGenrePurityMax,
+            ),
+          videoId: zod.string().optional(),
+          songTitle: zod.string().optional(),
+          artist: zod.string().optional(),
+          computedAt: zod.number().optional(),
+        })
+        .optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get metadata for a YouTube playlist
+ */
+export const PlaylistInfoQueryParams = zod.object({
+  url: zod.coerce.string(),
 });
 
 export const PlaylistInfoResponse = zod.object({
   playlistId: zod.string(),
   playlistTitle: zod.string().optional(),
-  tracks: zod.array(zod.object({
-    videoId: zod.string(),
-    title: zod.string(),
-    url: zod.string(),
-    thumbnail: zod.string().optional(),
-  })),
-  totalCount: zod.number().int(),
-  capped: zod.boolean().describe("True if the playlist was truncated to 20 entries"),
+  tracks: zod.array(
+    zod.object({
+      videoId: zod.string(),
+      title: zod.string(),
+      url: zod.string(),
+      thumbnail: zod.string().optional(),
+    }),
+  ),
+  totalCount: zod.number(),
+  capped: zod.boolean(),
 });
 
+/**
+ * @summary Generate templates for multiple URLs in batch
+ */
+export const batchGenerateBodyUrlsMax = 20;
+
+export const BatchGenerateBody = zod.object({
+  urls: zod.array(zod.string()).min(1).max(batchGenerateBodyUrlsMax),
+  vocalGender: zod
+    .enum(["auto", "male", "female", "mixed", "duet", "no vocals"])
+    .optional(),
+  energyLevel: zod
+    .enum(["auto", "very chill", "chill", "medium", "high", "intense"])
+    .optional(),
+  era: zod
+    .enum([
+      "auto",
+      "50s",
+      "60s",
+      "70s",
+      "80s",
+      "90s",
+      "2000s",
+      "2010s",
+      "modern",
+    ])
+    .optional(),
+  mode: zod.enum(["cover", "inspired"]).optional(),
+  genres: zod.array(zod.string()).optional(),
+  moods: zod.array(zod.string()).optional(),
+  instruments: zod.array(zod.string()).optional(),
+  excludeTags: zod.array(zod.string()).optional(),
+  genreNudge: zod.string().optional(),
+});
+
+/**
+ * @summary Apply a style transformation to a template
+ */
 export const TransformTemplateBody = zod.object({
-  styleOfMusic: zod.string().describe("Current style prompt to transform"),
-  negativePrompt: zod.string().describe("Current negative prompt to transform"),
-  transformId: zod.string().describe("ID of the transformation preset to apply"),
+  styleOfMusic: zod.string(),
+  negativePrompt: zod.string(),
+  transformId: zod.string(),
 });
 
 export const TransformTemplateResponse = zod.object({
-  styleOfMusic: zod.string().describe("Updated style prompt after transformation"),
-  negativePrompt: zod.string().describe("Updated negative prompt after transformation"),
+  styleOfMusic: zod.string(),
+  negativePrompt: zod.string(),
 });
-
-export const BatchGenerateBody = zod.object({
-  urls: zod.array(zod.string()).min(1).max(20).describe("List of YouTube video URLs to process"),
-  vocalGender: GenerateSunoTemplateBody.shape.vocalGender,
-  energyLevel: GenerateSunoTemplateBody.shape.energyLevel,
-  era: GenerateSunoTemplateBody.shape.era,
-  mode: GenerateSunoTemplateBody.shape.mode,
-  genres: GenerateSunoTemplateBody.shape.genres,
-  moods: GenerateSunoTemplateBody.shape.moods,
-  instruments: GenerateSunoTemplateBody.shape.instruments,
-  excludeTags: GenerateSunoTemplateBody.shape.excludeTags,
-  genreNudge: GenerateSunoTemplateBody.shape.genreNudge,
-});
-
-export const VariationSlot = zod.object({
-  variationIndex: zod.number().int().describe("1-based slot index, stable even if generation failed"),
-  template: GenerateSunoTemplateResponse.optional().describe("The generated template, present when the slot succeeded"),
-  error: zod.string().optional().describe("Error message for this slot, present when generation failed"),
-});
-
-export const GenerateVariationsResponse = zod.object({
-  slots: zod.array(VariationSlot).describe("One entry per requested variation, in slot order"),
-  variations: zod.array(GenerateSunoTemplateResponse).describe("Successful variations only (for backwards compat)"),
-});
-

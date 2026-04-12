@@ -1116,8 +1116,8 @@ interface GenerateInput {
   isInstrumental?: boolean;
   confirmedStructure?: Array<{ label: string; lines: string[] }>;
   noCache?: boolean;
-  /** Target Suno model version. v5 supports longer style prompts and denser cue notation. */
-  sunoVersion?: "v4" | "v5";
+  /** Target Suno model version. v5/v5.5 support longer style prompts and denser cue notation. */
+  sunoVersion?: "v4" | "v5" | "v5.5";
 }
 
 type AiOutput = { styleOfMusic: string; title: string; lyrics: string; negativePrompt: string };
@@ -1261,8 +1261,8 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
     ? `\n\nUSER-CONFIRMED LYRICS STRUCTURE — The user has reviewed and confirmed the following section layout. Use EXACTLY these section labels and line groupings when building Section 2 (lyrics). Do not reorder sections. You may add production cue lines and performance directions within each section, but the section labels and lyric lines must match the confirmed structure:\n${confirmedStructure.map((s) => `[${s.label}]\n${s.lines.join("\n")}`).join("\n\n")}`
     : "";
 
-  const sunoVersionHint = sunoVersion === "v5"
-    ? "\n\n🎛️ TARGET MODEL: Suno v5. This model supports denser cue notation, longer section headers with compound descriptors, and responds better to expanded Synthesis Topology chains. Push the production detail ceiling — add extra [Automation:] sub-lines, secondary [Neural Floor:] activations per section, and compound hardware routing chains in THE RACK."
+  const sunoVersionHint = (sunoVersion === "v5" || sunoVersion === "v5.5")
+    ? `\n\n🎛️ TARGET MODEL: Suno ${sunoVersion}. This model supports denser cue notation, longer section headers with compound descriptors, and responds better to expanded Synthesis Topology chains. Push the production detail ceiling — add extra [Automation:] sub-lines, secondary [Neural Floor:] activations per section, and compound hardware routing chains in THE RACK.`
     : "";
 
   // Template cache (keyed by videoId + params; feedbackContext excluded; user-override not cached; noCache bypasses)

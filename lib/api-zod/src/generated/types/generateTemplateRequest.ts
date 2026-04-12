@@ -5,12 +5,44 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ConfirmedStructureSection } from "./confirmedStructureSection";
+import type { EnergyLevel } from "./energyLevel";
+import type { Era } from "./era";
+import type { GenerateTemplateRequestSunoVersion } from "./generateTemplateRequestSunoVersion";
+import type { Mode } from "./mode";
+import type { Tempo } from "./tempo";
+import type { VocalGender } from "./vocalGender";
 
 export interface GenerateTemplateRequest {
   /** A YouTube video URL */
   youtubeUrl: string;
-  /** When true, bypass the template cache and always run a fresh AI generation */
+  /** Optional manually provided lyrics to use instead of fetching from APIs */
+  manualLyrics?: string;
+  vocalGender?: VocalGender;
+  energyLevel?: EnergyLevel;
+  era?: Era;
+  /** Optional genre or style override */
+  genreNudge?: string;
+  /** Selected genre tags to incorporate into the style prompt */
+  genres?: string[];
+  /** Mood/vibe tags */
+  moods?: string[];
+  /** Featured instrument hints */
+  instruments?: string[];
+  mode?: Mode;
+  tempo?: Tempo;
+  /** Tags to explicitly exclude */
+  excludeTags?: string[];
+  /** Which variation to generate (1 or 2) */
+  variationIndex?: number;
+  /** Learning context derived from the user's past template ratings */
+  feedbackContext?: string;
+  /** When true, generate as a fully instrumental track */
+  isInstrumental?: boolean;
+  /** User-confirmed lyrics structure */
+  confirmedStructure?: ConfirmedStructureSection[];
+  /** When true, bypass the template cache */
   noCache?: boolean;
-  /** Target Suno AI version — v4 (default) or v5 */
-  sunoVersion?: "v4" | "v5";
+  /** Target Suno AI version */
+  sunoVersion?: GenerateTemplateRequestSunoVersion;
 }

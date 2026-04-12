@@ -5,6 +5,9 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { LyricsStructure } from "./lyricsStructure";
+import type { SongFingerprint } from "./songFingerprint";
+import type { SuggestedDefaults } from "./suggestedDefaults";
 
 export interface SunoTemplate {
   songTitle: string;
@@ -19,4 +22,8 @@ export interface SunoTemplate {
   negativePrompt: string;
   /** Additional tags for mood, instruments, tempo */
   tags: string[];
+  lyricsStructure?: LyricsStructure;
+  suggestedDefaults?: SuggestedDefaults;
+  fromCache?: boolean;
+  fingerprint?: SongFingerprint;
 }

@@ -6,7 +6,30 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./batchGenerateRequest";
+export * from "./batchTrackResult";
+export * from "./batchTrackStatus";
+export * from "./confirmedStructureSection";
+export * from "./energyLevel";
+export * from "./era";
 export * from "./errorResponse";
 export * from "./generateTemplateRequest";
+export * from "./generateTemplateRequestSunoVersion";
+export * from "./generateVariationsRequest";
 export * from "./healthStatus";
+export * from "./lyricsSection";
+export * from "./lyricsStructure";
+export * from "./mode";
+export * from "./playlistInfo";
+export * from "./playlistInfoParams";
+export * from "./playlistTrack";
+export * from "./songFingerprint";
+export * from "./suggestedDefaults";
+export * from "./suggestedDefaultsSources";
 export * from "./sunoTemplate";
+export * from "./tempo";
+export * from "./transformedTemplate";
+export * from "./transformTemplateRequest";
+export * from "./variationSlot";
+export * from "./variationsResponse";
+export * from "./vocalGender";

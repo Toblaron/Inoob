@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "build:prod": "BASE_PATH=/ PORT=3000 pnpm --filter @workspace/suno-generator run build && pnpm --filter @workspace/api-server run build",
     "start:prod": "NODE_ENV=production node --env-file=.env artifacts/api-server/dist/index.cjs",

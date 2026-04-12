@@ -17,11 +17,16 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  BatchGenerateRequest,
   ErrorResponse,
   GenerateTemplateRequest,
   GenerateVariationsRequest,
   HealthStatus,
+  PlaylistInfo,
+  PlaylistInfoParams,
   SunoTemplate,
+  TransformTemplateRequest,
+  TransformedTemplate,
   VariationsResponse,
 } from "./api.schemas";
 
@@ -176,58 +181,6 @@ export type GenerateSunoTemplateMutationBody =
 export type GenerateSunoTemplateMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Generate multiple Suno.ai template variations in parallel
- */
-export const getGenerateVariationsUrl = () => `/api/generate-variations`;
-
-export const generateVariations = async (
-  body: GenerateVariationsRequest,
-  options?: RequestInit,
-): Promise<VariationsResponse> => {
-  return customFetch<VariationsResponse>(getGenerateVariationsUrl(), {
-    ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(body),
-  });
-};
-
-export const useGenerateVariations = <
-  TError = ErrorType<ErrorResponse>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof generateVariations>>,
-    TError,
-    { data: BodyType<GenerateVariationsRequest> },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationResult<
-  Awaited<ReturnType<typeof generateVariations>>,
-  TError,
-  { data: BodyType<GenerateVariationsRequest> },
-  TContext
-> => {
-  const mutationKey = ["generateVariations"];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof generateVariations>>,
-    { data: BodyType<GenerateVariationsRequest> }
-  > = (props) => {
-    const { data } = props ?? {};
-    return generateVariations(data, requestOptions);
-  };
-
-  return useMutation({ mutationFn, ...mutationOptions });
-};
-
-/**
  * @summary Generate a Suno.ai template from a YouTube URL
  */
 export const useGenerateSunoTemplate = <
@@ -248,4 +201,357 @@ export const useGenerateSunoTemplate = <
   TContext
 > => {
   return useMutation(getGenerateSunoTemplateMutationOptions(options));
+};
+
+/**
+ * @summary Generate multiple Suno.ai template variations in parallel
+ */
+export const getGenerateVariationsUrl = () => {
+  return `/api/generate-variations`;
+};
+
+export const generateVariations = async (
+  generateVariationsRequest: GenerateVariationsRequest,
+  options?: RequestInit,
+): Promise<VariationsResponse> => {
+  return customFetch<VariationsResponse>(getGenerateVariationsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateVariationsRequest),
+  });
+};
+
+export const getGenerateVariationsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateVariations>>,
+    TError,
+    { data: BodyType<GenerateVariationsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateVariations>>,
+  TError,
+  { data: BodyType<GenerateVariationsRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateVariations"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateVariations>>,
+    { data: BodyType<GenerateVariationsRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateVariations(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateVariationsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateVariations>>
+>;
+export type GenerateVariationsMutationBody =
+  BodyType<GenerateVariationsRequest>;
+export type GenerateVariationsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate multiple Suno.ai template variations in parallel
+ */
+export const useGenerateVariations = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateVariations>>,
+    TError,
+    { data: BodyType<GenerateVariationsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateVariations>>,
+  TError,
+  { data: BodyType<GenerateVariationsRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateVariationsMutationOptions(options));
+};
+
+/**
+ * @summary Get metadata for a YouTube playlist
+ */
+export const getPlaylistInfoUrl = (params: PlaylistInfoParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/playlist-info?${stringifiedParams}`
+    : `/api/playlist-info`;
+};
+
+export const playlistInfo = async (
+  params: PlaylistInfoParams,
+  options?: RequestInit,
+): Promise<PlaylistInfo> => {
+  return customFetch<PlaylistInfo>(getPlaylistInfoUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getPlaylistInfoQueryKey = (params?: PlaylistInfoParams) => {
+  return [`/api/playlist-info`, ...(params ? [params] : [])] as const;
+};
+
+export const getPlaylistInfoQueryOptions = <
+  TData = Awaited<ReturnType<typeof playlistInfo>>,
+  TError = ErrorType<unknown>,
+>(
+  params: PlaylistInfoParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof playlistInfo>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getPlaylistInfoQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof playlistInfo>>> = ({
+    signal,
+  }) => playlistInfo(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof playlistInfo>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type PlaylistInfoQueryResult = NonNullable<
+  Awaited<ReturnType<typeof playlistInfo>>
+>;
+export type PlaylistInfoQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get metadata for a YouTube playlist
+ */
+
+export function usePlaylistInfo<
+  TData = Awaited<ReturnType<typeof playlistInfo>>,
+  TError = ErrorType<unknown>,
+>(
+  params: PlaylistInfoParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof playlistInfo>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getPlaylistInfoQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Generate templates for multiple URLs in batch
+ */
+export const getBatchGenerateUrl = () => {
+  return `/api/batch`;
+};
+
+export const batchGenerate = async (
+  batchGenerateRequest: BatchGenerateRequest,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getBatchGenerateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(batchGenerateRequest),
+  });
+};
+
+export const getBatchGenerateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof batchGenerate>>,
+    TError,
+    { data: BodyType<BatchGenerateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof batchGenerate>>,
+  TError,
+  { data: BodyType<BatchGenerateRequest> },
+  TContext
+> => {
+  const mutationKey = ["batchGenerate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof batchGenerate>>,
+    { data: BodyType<BatchGenerateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return batchGenerate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BatchGenerateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof batchGenerate>>
+>;
+export type BatchGenerateMutationBody = BodyType<BatchGenerateRequest>;
+export type BatchGenerateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate templates for multiple URLs in batch
+ */
+export const useBatchGenerate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof batchGenerate>>,
+    TError,
+    { data: BodyType<BatchGenerateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof batchGenerate>>,
+  TError,
+  { data: BodyType<BatchGenerateRequest> },
+  TContext
+> => {
+  return useMutation(getBatchGenerateMutationOptions(options));
+};
+
+/**
+ * @summary Apply a style transformation to a template
+ */
+export const getTransformTemplateUrl = () => {
+  return `/api/suno/transform`;
+};
+
+export const transformTemplate = async (
+  transformTemplateRequest: TransformTemplateRequest,
+  options?: RequestInit,
+): Promise<TransformedTemplate> => {
+  return customFetch<TransformedTemplate>(getTransformTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(transformTemplateRequest),
+  });
+};
+
+export const getTransformTemplateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transformTemplate>>,
+    TError,
+    { data: BodyType<TransformTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof transformTemplate>>,
+  TError,
+  { data: BodyType<TransformTemplateRequest> },
+  TContext
+> => {
+  const mutationKey = ["transformTemplate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof transformTemplate>>,
+    { data: BodyType<TransformTemplateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return transformTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TransformTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof transformTemplate>>
+>;
+export type TransformTemplateMutationBody = BodyType<TransformTemplateRequest>;
+export type TransformTemplateMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Apply a style transformation to a template
+ */
+export const useTransformTemplate = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof transformTemplate>>,
+    TError,
+    { data: BodyType<TransformTemplateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof transformTemplate>>,
+  TError,
+  { data: BodyType<TransformTemplateRequest> },
+  TContext
+> => {
+  return useMutation(getTransformTemplateMutationOptions(options));
 };

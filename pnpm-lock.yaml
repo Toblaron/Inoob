@@ -156,7 +156,14 @@ overrides:
 importers:
 
   .:
-    dependencies:
+    devDependencies:
+      prettier:
+        specifier: ^3.8.1
+        version: 3.8.1
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
+    optionalDependencies:
       '@rollup/rollup-win32-x64-msvc':
         specifier: ^4.60.1
         version: 4.60.1
@@ -166,13 +173,6 @@ importers:
       lightningcss-win32-x64-msvc:
         specifier: ^1.32.0
         version: 1.32.0
-    devDependencies:
-      prettier:
-        specifier: ^3.8.1
-        version: 3.8.1
-      typescript:
-        specifier: ~5.9.2
-        version: 5.9.3
 
   artifacts/api-server:
     dependencies:
@@ -6206,7 +6206,8 @@ snapshots:
   '@rollup/rollup-linux-x64-gnu@4.59.0':
     optional: true
 
-  '@rollup/rollup-win32-x64-msvc@4.60.1': {}
+  '@rollup/rollup-win32-x64-msvc@4.60.1':
+    optional: true
 
   '@scalar/helpers@0.2.18': {}
 
@@ -6290,7 +6291,8 @@ snapshots:
   '@tailwindcss/oxide-wasm32-wasi@4.2.1':
     optional: true
 
-  '@tailwindcss/oxide-win32-x64-msvc@4.2.2': {}
+  '@tailwindcss/oxide-win32-x64-msvc@4.2.2':
+    optional: true
 
   '@tailwindcss/oxide@4.2.1':
     optionalDependencies:
@@ -7519,7 +7521,8 @@ snapshots:
   lightningcss-linux-x64-gnu@1.31.1:
     optional: true
 
-  lightningcss-win32-x64-msvc@1.32.0: {}
+  lightningcss-win32-x64-msvc@1.32.0:
+    optional: true
 
   lightningcss@1.31.1:
     dependencies:

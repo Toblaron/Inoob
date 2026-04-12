@@ -9,47 +9,16 @@ export interface HealthStatus {
   status: string;
 }
 
-export interface ConfirmedStructureSection {
-  label: string;
-  lines: string[];
-}
+export type BatchTrackStatus =
+  (typeof BatchTrackStatus)[keyof typeof BatchTrackStatus];
 
-export interface GenerateTemplateRequest {
-  /** A YouTube video URL */
-  youtubeUrl: string;
-  /** Optional manually provided lyrics to use instead of fetching from APIs */
-  manualLyrics?: string;
-  /** Preferred vocal type for the style prompt */
-  vocalGender?: "auto" | "male" | "female" | "mixed" | "duet" | "no vocals";
-  /** Energy level of the track */
-  energyLevel?: "auto" | "very chill" | "chill" | "medium" | "high" | "intense";
-  /** Target musical era or decade */
-  era?: "auto" | "50s" | "60s" | "70s" | "80s" | "90s" | "2000s" | "2010s" | "modern";
-  /** Optional genre or style override */
-  genreNudge?: string;
-  /** Selected genre tags to incorporate into the style prompt */
-  genres?: string[];
-  /** Mood/vibe tags (e.g. Dark, Nostalgic, Euphoric) */
-  moods?: string[];
-  /** Featured instrument hints (e.g. Piano, Guitar, Synth) */
-  instruments?: string[];
-  /** Generation mode — faithful cover or creative inspiration */
-  mode?: "cover" | "inspired";
-  /** Target BPM range */
-  tempo?: "ballad" | "slow" | "mid" | "groove" | "uptempo" | "fast" | "hyper";
-  /** Tags to explicitly exclude from the negative prompt */
-  excludeTags?: string[];
-  /** Which variation to generate (1 or 2) */
-  variationIndex?: number;
-  /** Learning context derived from the user's past template ratings */
-  feedbackContext?: string;
-  /** When true, generate as a fully instrumental track — no lyrics, only structural cues */
-  isInstrumental?: boolean;
-  /** User-confirmed lyrics structure to use as a constraint in generation */
-  confirmedStructure?: ConfirmedStructureSection[];
-  /** When true, bypass the template cache and always run a fresh AI generation */
-  noCache?: boolean;
-}
+export const BatchTrackStatus = {
+  queued: "queued",
+  analyzing: "analyzing",
+  generating: "generating",
+  done: "done",
+  failed: "failed",
+} as const;
 
 export interface LyricsSection {
   label: string;
@@ -69,34 +38,56 @@ export interface LyricsStructure {
   dominantScheme: string;
 }
 
+export type SuggestedDefaultsSources = { [key: string]: string };
+
 export interface SuggestedDefaults {
   energy?: string;
   tempo?: string;
   era?: string;
   instrumentHints?: string[];
   languageGenreHint?: string;
-  sources: Record<string, string>;
+  sources: SuggestedDefaultsSources;
 }
 
 export interface SongFingerprint {
-  /** Energy level 0–10 derived from BPM and era */
+  /**
+   * @minimum 0
+   * @maximum 10
+   */
   energy: number;
-  /** Tempo feel 0–10 (slow=0, hyper=10) */
+  /**
+   * @minimum 0
+   * @maximum 10
+   */
   tempoFeel: number;
-  /** Vocal prominence 0–10 */
+  /**
+   * @minimum 0
+   * @maximum 10
+   */
   vocalPresence: number;
-  /** Arrangement/production complexity 0–10 */
+  /**
+   * @minimum 0
+   * @maximum 10
+   */
   instrumentalComplexity: number;
-  /** How strongly era-coded the track is 0–10 */
+  /**
+   * @minimum 0
+   * @maximum 10
+   */
   eraAuthenticity: number;
-  /** Emotional valence 0=dark/sad, 10=bright/happy */
+  /**
+   * @minimum 0
+   * @maximum 10
+   */
   moodValence: number;
-  /** How purely genre-focused vs. cross-genre 0–10 */
+  /**
+   * @minimum 0
+   * @maximum 10
+   */
   genrePurity: number;
   videoId?: string;
   songTitle?: string;
   artist?: string;
-  /** Unix ms timestamp */
   computedAt?: number;
 }
 
@@ -113,33 +104,21 @@ export interface SunoTemplate {
   negativePrompt: string;
   /** Additional tags for mood, instruments, tempo */
   tags: string[];
-  /** Analyzed structure of the source lyrics */
   lyricsStructure?: LyricsStructure;
-  /** Smart defaults computed from BPM, era, and language data */
   suggestedDefaults?: SuggestedDefaults;
-  /** True when this result was served from the server-side cache */
   fromCache?: boolean;
-  /** Musical DNA fingerprint with normalized 0–10 scores */
   fingerprint?: SongFingerprint;
 }
 
-export interface ErrorResponse {
-  error: string;
-}
-
-export interface GenerateVariationsRequest extends GenerateTemplateRequest {
-  count?: 1 | 2 | 3 | 4;
-}
-
-export interface VariationSlot {
-  variationIndex: number;
+export interface BatchTrackResult {
+  url: string;
+  videoId: string;
+  title?: string;
+  thumbnail?: string;
+  status: BatchTrackStatus;
   template?: SunoTemplate;
   error?: string;
-}
-
-export interface VariationsResponse {
-  slots: VariationSlot[];
-  variations: SunoTemplate[];
+  index: number;
 }
 
 export interface PlaylistTrack {
@@ -149,7 +128,7 @@ export interface PlaylistTrack {
   thumbnail?: string;
 }
 
-export interface PlaylistInfoResponse {
+export interface PlaylistInfo {
   playlistId: string;
   playlistTitle?: string;
   tracks: PlaylistTrack[];
@@ -157,12 +136,131 @@ export interface PlaylistInfoResponse {
   capped: boolean;
 }
 
+export type VocalGender = (typeof VocalGender)[keyof typeof VocalGender];
+
+export const VocalGender = {
+  auto: "auto",
+  male: "male",
+  female: "female",
+  mixed: "mixed",
+  duet: "duet",
+  no_vocals: "no vocals",
+} as const;
+
+export type EnergyLevel = (typeof EnergyLevel)[keyof typeof EnergyLevel];
+
+export const EnergyLevel = {
+  auto: "auto",
+  very_chill: "very chill",
+  chill: "chill",
+  medium: "medium",
+  high: "high",
+  intense: "intense",
+} as const;
+
+export type Era = (typeof Era)[keyof typeof Era];
+
+export const Era = {
+  auto: "auto",
+  "50s": "50s",
+  "60s": "60s",
+  "70s": "70s",
+  "80s": "80s",
+  "90s": "90s",
+  "2000s": "2000s",
+  "2010s": "2010s",
+  modern: "modern",
+} as const;
+
+export type Mode = (typeof Mode)[keyof typeof Mode];
+
+export const Mode = {
+  cover: "cover",
+  inspired: "inspired",
+} as const;
+
+export type Tempo = (typeof Tempo)[keyof typeof Tempo];
+
+export const Tempo = {
+  ballad: "ballad",
+  slow: "slow",
+  mid: "mid",
+  groove: "groove",
+  uptempo: "uptempo",
+  fast: "fast",
+  hyper: "hyper",
+} as const;
+
+export interface ConfirmedStructureSection {
+  label: string;
+  lines: string[];
+}
+
+/**
+ * Target Suno AI version
+ */
+export type GenerateTemplateRequestSunoVersion =
+  (typeof GenerateTemplateRequestSunoVersion)[keyof typeof GenerateTemplateRequestSunoVersion];
+
+export const GenerateTemplateRequestSunoVersion = {
+  v4: "v4",
+  v5: "v5",
+  v55: "v5.5",
+} as const;
+
+export interface GenerateTemplateRequest {
+  /** A YouTube video URL */
+  youtubeUrl: string;
+  /** Optional manually provided lyrics to use instead of fetching from APIs */
+  manualLyrics?: string;
+  vocalGender?: VocalGender;
+  energyLevel?: EnergyLevel;
+  era?: Era;
+  /** Optional genre or style override */
+  genreNudge?: string;
+  /** Selected genre tags to incorporate into the style prompt */
+  genres?: string[];
+  /** Mood/vibe tags */
+  moods?: string[];
+  /** Featured instrument hints */
+  instruments?: string[];
+  mode?: Mode;
+  tempo?: Tempo;
+  /** Tags to explicitly exclude */
+  excludeTags?: string[];
+  /** Which variation to generate (1 or 2) */
+  variationIndex?: number;
+  /** Learning context derived from the user's past template ratings */
+  feedbackContext?: string;
+  /** When true, generate as a fully instrumental track */
+  isInstrumental?: boolean;
+  /** User-confirmed lyrics structure */
+  confirmedStructure?: ConfirmedStructureSection[];
+  /** When true, bypass the template cache */
+  noCache?: boolean;
+  /** Target Suno AI version */
+  sunoVersion?: GenerateTemplateRequestSunoVersion;
+}
+
+export type GenerateVariationsRequest = GenerateTemplateRequest & {
+  /**
+   * Number of variations to generate
+   * @minimum 1
+   * @maximum 4
+   */
+  count?: number;
+};
+
 export interface BatchGenerateRequest {
+  /**
+   * @minItems 1
+   * @maxItems 20
+   */
   urls: string[];
-  vocalGender?: GenerateTemplateRequest["vocalGender"];
-  energyLevel?: GenerateTemplateRequest["energyLevel"];
-  era?: GenerateTemplateRequest["era"];
-  mode?: GenerateTemplateRequest["mode"];
+  vocalGender?: VocalGender;
+  energyLevel?: EnergyLevel;
+  era?: Era;
+  mode?: Mode;
   genres?: string[];
   moods?: string[];
   instruments?: string[];
@@ -176,51 +274,26 @@ export interface TransformTemplateRequest {
   transformId: string;
 }
 
-export interface TransformTemplateResponse {
+export interface TransformedTemplate {
   styleOfMusic: string;
   negativePrompt: string;
 }
 
-export type TransformCategory = "era" | "genre" | "mood" | "energy";
-
-export interface TransformPreset {
-  id: string;
-  name: string;
-  category: TransformCategory;
-}
-
-export const TRANSFORM_PRESETS: TransformPreset[] = [
-  { id: "era-1960s", name: "1960s", category: "era" },
-  { id: "era-1970s", name: "1970s", category: "era" },
-  { id: "era-1980s", name: "1980s", category: "era" },
-  { id: "era-1990s", name: "1990s", category: "era" },
-  { id: "era-2000s", name: "2000s", category: "era" },
-  { id: "era-modern", name: "Modern", category: "era" },
-  { id: "genre-lofi", name: "Lo-Fi", category: "genre" },
-  { id: "genre-orchestral", name: "Orchestral", category: "genre" },
-  { id: "genre-edm", name: "EDM", category: "genre" },
-  { id: "genre-jazz", name: "Jazz", category: "genre" },
-  { id: "genre-acoustic", name: "Acoustic", category: "genre" },
-  { id: "genre-hiphop", name: "Hip-Hop", category: "genre" },
-  { id: "genre-metal", name: "Metal", category: "genre" },
-  { id: "mood-darker", name: "Darker", category: "mood" },
-  { id: "mood-uplifting", name: "More Uplifting", category: "mood" },
-  { id: "mood-aggressive", name: "More Aggressive", category: "mood" },
-  { id: "mood-calmer", name: "Calmer", category: "mood" },
-  { id: "energy-ramp", name: "Ramp Up", category: "energy" },
-  { id: "energy-wind", name: "Wind Down", category: "energy" },
-];
-
-export type BatchTrackStatus = "queued" | "analyzing" | "generating" | "done" | "failed";
-
-export interface BatchTrackResult {
-  url: string;
-  videoId: string;
-  title?: string;
-  thumbnail?: string;
-  status: BatchTrackStatus;
+export interface VariationSlot {
+  variationIndex: number;
   template?: SunoTemplate;
   error?: string;
-  index: number;
 }
 
+export interface VariationsResponse {
+  slots: VariationSlot[];
+  variations: SunoTemplate[];
+}
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export type PlaylistInfoParams = {
+  url: string;
+};
