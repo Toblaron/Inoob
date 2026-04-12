@@ -1,0 +1,167 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: suno
+    description: Suno template generation
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /generate-template:
+    post:
+      operationId: generateSunoTemplate
+      tags: [suno]
+      summary: Generate a Suno.ai template from a YouTube URL
+      description: Fetches song metadata from YouTube and uses AI to generate a structured Suno.ai prompt template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateTemplateRequest"
+      responses:
+        "200":
+          description: Successfully generated template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SunoTemplate"
+        "400":
+          description: Invalid YouTube URL or request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    GenerateTemplateRequest:
+      type: object
+      properties:
+        youtubeUrl:
+          type: string
+          description: A YouTube video URL
+        manualLyrics:
+          type: string
+          description: Optional manually provided lyrics to use instead of fetching from APIs
+        vocalGender:
+          type: string
+          enum: [auto, male, female]
+          description: Preferred vocal gender for the style prompt
+        energyLevel:
+          type: string
+          enum: [chill, medium, high]
+          description: Energy level of the track
+        era:
+          type: string
+          enum: [auto, "70s", "80s", "90s", "2000s", modern]
+          description: Target musical era or decade
+        genreNudge:
+          type: string
+          description: Optional genre or style override (e.g. "more trap", "jazz influence")
+        genres:
+          type: array
+          items:
+            type: string
+          description: Selected genre tags to incorporate into the style prompt
+        moods:
+          type: array
+          items:
+            type: string
+          description: Mood/vibe tags (e.g. Dark, Nostalgic, Euphoric)
+        instruments:
+          type: array
+          items:
+            type: string
+          description: Featured instrument hints (e.g. Piano, Guitar, Synth)
+        mode:
+          type: string
+          enum: [cover, inspired]
+          description: Generation mode — faithful cover or creative inspiration
+        tempo:
+          type: string
+          enum: [slow, mid, uptempo, fast]
+          description: Target BPM range
+        excludeTags:
+          type: array
+          items:
+            type: string
+          description: Tags to explicitly exclude from the negative prompt
+        variationIndex:
+          type: integer
+          description: Which variation to generate (1 or 2). When 2, AI takes a fresh creative angle.
+        feedbackContext:
+          type: string
+          description: Learning context derived from the user's past template ratings
+      required:
+        - youtubeUrl
+    SunoTemplate:
+      type: object
+      properties:
+        songTitle:
+          type: string
+        artist:
+          type: string
+        styleOfMusic:
+          type: string
+          description: Comma-separated genre and style tags for the Suno style field
+        title:
+          type: string
+          description: Suggested title for the Suno creation
+        lyrics:
+          type: string
+          description: Structured lyrics/metadata block with production header and Suno metatags
+        negativePrompt:
+          type: string
+          description: Comma-separated list of things Suno should NOT generate (no spaces after commas, 90-199 chars)
+        tags:
+          type: array
+          items:
+            type: string
+          description: Additional tags for mood, instruments, tempo
+      required:
+        - songTitle
+        - artist
+        - styleOfMusic
+        - title
+        - lyrics
+        - negativePrompt
+        - tags
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

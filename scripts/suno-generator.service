@@ -1,0 +1,18 @@
+[Unit]
+Description=Track → Template (Suno Generator)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dietpi
+WorkingDirectory=/opt/suno-generator
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node --env-file=/opt/suno-generator/.env artifacts/api-server/dist/index.cjs
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

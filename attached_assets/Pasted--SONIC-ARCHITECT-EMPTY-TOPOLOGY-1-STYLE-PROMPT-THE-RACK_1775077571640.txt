@@ -1,0 +1,65 @@
+[SONIC ARCHITECT: EMPTY TOPOLOGY]
+1. STYLE PROMPT (THE RACK)
+Target: 900 Characters | Purpose: Latent Space Navigation
+
+[Era/Year], [PRIMARY GENRE], [Sub-Genre/Regional Style], [BPM], [Key/Camelot Scale], Neural Floor: [e.g., Analog tape hiss -20dB / Vinyl crackle / Pink noise floor], Vocal Identity: [e.g., Skarre-R Bergensk / Husky American Mezzo-Soprano / Phonetic Scansion], Rhythm: [e.g., 58% MPC-60 Swing / Asymmetrical 7/8 Meter / Metric Modulation], Synthesis Stacks: [e.g., Korg MS-20 resonant HPF + Juno-106 PWM pads / Bessel-function FM Sidebands], Signal Chain: [e.g., Neve 1073 EQ, LA-2A transparent compression, Lexicon 480L Hall Reverb], Mix Topology: [Owsinski 6-Element strategy], Mastering: [SSL Bus Compression, -9 LUFS for Club / -14 LUFS for Streaming], Interest Catalyst: [e.g., Glitch microsound artifacts / Filter sweeps / 0.5s Silence Trick].
+
+2. LYRICS & METADATA (THE SCRIPT)
+Target: 4,950 Characters | Purpose: Structural Programming
+
+///*****///
+[TECHNICAL BUFFER MODULE]
+
+Protocol: Produced by Lyrikk v10.0 // Neural Steering: Chirp v4.5/v5
+
+Mix Architecture: [Tall, Deep, and Wide dimension strategy]
+
+Spectral Engineering: [EDM Scoop: -3dB @ 250-500Hz // Sub-bass Mono <60Hz]
+
+Synthesis Topology: [Source/Modifier/Controller routing: Noise-driven rhythmic clock]
+
+Linguistic Profile: [Phonetic Scansion / Dialectical Isolate]
+///*****///
+
+[Intro - Atmospheric/Acousmatic setup]
+(Production Note // [Technical instruction: e.g., Sidechain pads to kick fundamental at 50Hz])
+[Neural Floor: Activated]
+[Instrumental: Sparse texture, 12kHz frosty air]
+
+[Verse 1 - Narrative Context]
+[Vocal Identity: Establish texture]
+[Vocal Layer: Tube-preamp warmth, U87 emulation, wide stereo field]
+(Performance: [raspy], [vocal fry], (whispered))
+[Lyrics Here]
+
+[Pre-Chorus - Tension Builder: Subtractive Arranging]
+[Automation: Filter Cutoff rising, Granular density increasing]
+[Rhythm: Introduce ghost snare hits, 1176 Peak Limiting]
+[Lyrics Here]
+
+[Chorus - The Spectacular Hook: Interest Catalyst]
+[Production: Full frequency activation, +6.7dB energy jump]
+[Vocal: (belted), (soaring), [stacked harmonies]]
+[Signal Chain: SSL 4000G saturation, 1kHz presence boost]
+[Lyrics Here]
+
+[Instrumental Break - Microsound/Glitch Showcase]
+[Granular Block: Grain duration 20ms, High density, Pitch jitter]
+[Synthesis: FM Sideband distribution via Bessel functions]
+[Solo | heavy distortion] // [Beat Drop]
+
+[Bridge - Contrast: The Silence Trick]
+[Breakdown: Remove drums/bass, focus on ethereal pads]
+(Musical Event: 0.5s total digital silence before the final transition)
+[Vocal: (breathy falsetto), [melismatic runs]]
+[Lyrics Here]
+
+[Outro - Fission: Elements Separating and Fading]
+[Atmosphere: Fading into field recording / White noise floor]
+[Deconstruction: Lead synthesis de-tuning, decay expansion]
+[End: Hard stop without artifacts]
+
+3. NEGATIVE PROMPT (PROFESSIONAL EXCLUSIONS)
+Target: 200 Characters | Purpose: Neural Search Refinement
+
+amateur, mediocre, predictable, thin, perfectly-quantized, plastic, silent-background, [Banned Tokens: neon, shivers, tapestry, generic ai garbage], I-V-vi-IV chords, 4/4 grid-lock, clinical, dry.

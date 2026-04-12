@@ -1,0 +1,20 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "TNmVIlYAGZyF1w1IgpfN-"
+uri = "file://DEPLOY.md"
+type = "text"
+title = "DietPi Deployment Guide"
+
+[[outputs]]
+id = "lOTeXGmx4D0OiooQq9XEd"
+uri = "file://track-template.tar.gz"
+type = "unspecified"
+title = "track-template (full project)"
+
+[[outputs]]
+id = "K8ooSnbxwT1icVrdAegst"
+uri = "file://track-template-src.zip"
+type = "unspecified"
+title = "track-template (source code)"

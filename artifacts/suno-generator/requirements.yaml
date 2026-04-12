@@ -1,0 +1,15 @@
+packages:
+  "framer-motion": "For fluid, staggered reveals of the generated template and loading animations"
+  "react-hook-form": "For robust form handling and state management"
+  "@hookform/resolvers": "For Zod schema integration with forms"
+  "clsx": "For merging tailwind classes conditionally"
+  "tailwind-merge": "For merging tailwind classes safely"
+
+images:
+  - path: "artifacts/suno-generator/public/images/hero-bg.png"
+    description: "Abstract modern music production environment, dark with glowing neon cyan and magenta waveform lines, subtle smoke, bokeh, highly polished 3D render, dark background"
+    aspect_ratio: "16:9"
+
+notes:
+  - "The app uses a forced dark mode aesthetic by configuring the root CSS variables directly to dark shades."
+  - "Using useGenerateSunoTemplate from @workspace/api-client-react for the mutation."
