@@ -2165,43 +2165,50 @@ router.get("/suggest", async (req, res) => {
       (async () => {
         try {
           const completion = await openai.chat.completions.create({
-            model: AI_MINI_MODEL,
-            max_tokens: 500,
+            model: AI_MODEL,
+            max_tokens: 1200,
             response_format: { type: "json_object" },
             messages: [
               {
                 role: "system",
-                content: `You are an expert music analyst. Given a song title and artist, return a JSON object with ALL of these fields:
-- "genres": array of 1–3 genre names from this list ONLY: Pop, Dance Pop, Indie Pop, Synth-Pop, Dream Pop, Art Pop, Electropop, Britpop, Rock, Alternative Rock, Indie Rock, Hard Rock, Classic Rock, Punk, Post-Punk, Grunge, Shoegaze, Psychedelic Rock, Progressive Rock, Garage Rock, Folk Rock, Arena Rock, New Wave, Emo, Post-Rock, Stoner Rock, Hip-Hop, Trap, Rap, Drill, Boom Bap, Gangsta Rap, G-Funk, Grime, Cloud Rap, Phonk, R&B, Soul, Neo-Soul, Funk, Disco, Motown, Gospel, Contemporary R&B, Jazz, Smooth Jazz, Bebop, Swing, Jazz Fusion, Big Band, Acid Jazz, Cool Jazz, Latin Jazz, Free Jazz, Metal, Heavy Metal, Black Metal, Death Metal, Thrash Metal, Nu Metal, Metalcore, Power Metal, Doom Metal, Symphonic Metal, Djent, Country, Americana, Bluegrass, Folk, Indie Folk, Outlaw Country, Country Rock, Country Pop, Alt-Country, Classical, Orchestral, Baroque, Cinematic, Film Score, Opera, Minimalist, Reggae, Dancehall, Reggaeton, Latin Pop, Bossa Nova, Flamenco, Salsa, K-Pop, J-Pop, Afrobeats, Blues, Delta Blues, Chicago Blues, Electric Blues, House, Deep House, Tech House, Progressive House, Acid House, Melodic House, Afro House, Soulful House, Chicago House, Nu Disco, Techno, Berlin Techno, Detroit Techno, Minimal Techno, Hard Techno, Dub Techno, Trance, Progressive Trance, Uplifting Trance, Psytrance, Goa Trance, Vocal Trance, Future Rave, Drum & Bass, Liquid DnB, Neurofunk, Darkstep, Jump Up, Jungle, Dubstep, Post-Dubstep, Brostep, Riddim, Future Bass, Breakbeat, Big Beat, Glitch Hop, Synthwave, Darksynth, Outrun, Retrowave, Chillwave, Hi-NRG, Italo Disco, Futurepop, Electro, EBM, Industrial, Darkwave, Cold Wave, EDM, Big Room, Electro House, Ambient, Dark Ambient, IDM, Glitch, Space Music, Drone Ambient, New Age, Trip-Hop, Downtempo, Chillhop, Lo-Fi, Vaporwave, Future Funk, Hardcore, Gabber, Hardstyle, UK Garage, 2-Step, Grime, UK Bass, Phonk, Memphis Phonk, Hyperpop, Amapiano, Gqom, Baile Funk, Footwork
-- "era": one of: 50s, 60s, 70s, 80s, 90s, 2000s, 2010s, modern
-- "energy": one of: very chill, chill, medium, high, intense
-- "tempo": one of: ballad, slow, mid, groove, uptempo, fast, hyper
-- "vocals": one of: male, female, mixed, duet, no vocals
-- "moods": array of 1–3 mood tags from ONLY: Dark, Euphoric, Nostalgic, Melancholic, Aggressive, Romantic, Dreamy, Rebellious, Playful, Mysterious, Cinematic, Hopeful, Angry, Tender, Haunted, Triumphant, Vulnerable, Defiant, Serene, Intense, Wistful, Bittersweet, Groovy, Frantic, Ethereal, Hypnotic, Brooding, Raw, Gritty, Majestic, Eerie, Sensual, Savage, Soulful, Cathartic, Blissful, Chaotic, Anxious, Desolate, Primal, Lush, Fierce, Longing, Psychedelic, Icy, Dusty, Tense, Laid-back, Transcendent, Unsettling, Festive, Intimate, Epic, Punchy, Stormy, Quirky
-- "instruments": array of 2–4 primary instruments from ONLY: Piano, Guitar, Synth, Strings, Bass, Choir, Brass, Drums, Violin, Flute, Organ, Sitar, Cello, Saxophone, Trumpet, Harp, Banjo, Ukulele, Mandolin, Marimba, Theremin, Mellotron, Pedal Steel, Dulcimer, 808, Acoustic Guitar, Electric Guitar, Harmonica, Accordion, Vibraphone, Rhodes, Clarinet, Oboe, French Horn, Tabla, Congas, Sub Bass, Pad, Wurlitzer, Harpsichord, Moog, Steel Drums, Trombone, Lap Steel
-- "bpm": estimated BPM as integer (e.g. 120)
-- "key": musical key (e.g. "A minor", "C major", "F# minor")
-- "chordProgression": the likely main chord progression (e.g. "Am - F - C - G")
-- "vocalPersona": a 1-sentence description of the lead vocalist's voice character (e.g. "Male baritone, weathered and raspy with emotional dynamic range from gritty whisper to soaring belt")
-- "sonicDna": a 1-sentence description of the artist's signature sonic traits WITHOUT using the artist name (e.g. "Vintage synths, punchy 808s, ethereal falsetto, dark atmospheric tension, neon-lit melancholy")
-- "metaTags": array of structural section tags that fit this song (e.g. ["Intro","Verse","Pre-Chorus","Chorus","Verse","Pre-Chorus","Chorus","Bridge","Chorus","Outro"])
+                content: `You are an expert music analyst. Given a song, return a JSON object. Every field is REQUIRED — never omit any.
 
-Be accurate and specific to the actual song. Use your knowledge of the real recording.`,
+{
+  "genres": ["genre1","genre2"],           // 1-3 from: Pop, Dance Pop, Indie Pop, Synth-Pop, Dream Pop, Art Pop, Electropop, Britpop, Rock, Alternative Rock, Indie Rock, Hard Rock, Classic Rock, Punk, Post-Punk, Grunge, Shoegaze, Psychedelic Rock, Progressive Rock, Garage Rock, Folk Rock, Arena Rock, New Wave, Emo, Post-Rock, Hip-Hop, Trap, Rap, Boom Bap, G-Funk, Cloud Rap, Phonk, R&B, Soul, Neo-Soul, Funk, Disco, Motown, Gospel, Contemporary R&B, Jazz, Smooth Jazz, Jazz Fusion, Metal, Heavy Metal, Nu Metal, Metalcore, Thrash Metal, Country, Americana, Bluegrass, Folk, Indie Folk, Classical, Orchestral, Cinematic, Film Score, Reggae, Dancehall, Reggaeton, Latin Pop, K-Pop, J-Pop, Afrobeats, Blues, House, Deep House, Tech House, Progressive House, Techno, Trance, Psytrance, Drum & Bass, Dubstep, Future Bass, Synthwave, Darksynth, Ambient, IDM, Trip-Hop, Downtempo, Lo-Fi, Vaporwave, Hardcore, Hardstyle, UK Garage, Hyperpop, EDM, Big Room
+  "era": "modern",                         // one of: 50s, 60s, 70s, 80s, 90s, 2000s, 2010s, modern
+  "energy": "high",                        // one of: very chill, chill, medium, high, intense
+  "tempo": "uptempo",                      // one of: ballad, slow, mid, groove, uptempo, fast, hyper
+  "vocals": "male",                        // one of: male, female, mixed, duet, no vocals
+  "moods": ["Dark","Intense","Brooding"],  // 1-3 from: Dark, Euphoric, Nostalgic, Melancholic, Aggressive, Romantic, Dreamy, Rebellious, Playful, Mysterious, Cinematic, Hopeful, Angry, Tender, Haunted, Triumphant, Vulnerable, Defiant, Serene, Intense, Wistful, Bittersweet, Groovy, Frantic, Ethereal, Hypnotic, Brooding, Raw, Gritty, Majestic, Eerie, Sensual, Soulful, Cathartic, Blissful, Longing, Psychedelic, Tense, Laid-back, Intimate, Epic, Punchy, Stormy, Quirky
+  "instruments": ["Electric Guitar","Drums","Bass","Synth"],  // 2-4 from: Piano, Guitar, Synth, Strings, Bass, Drums, Violin, Flute, Organ, Cello, Saxophone, Trumpet, Harp, Banjo, Ukulele, 808, Acoustic Guitar, Electric Guitar, Harmonica, Rhodes, Moog, Pad, Sub Bass, Pedal Steel, Mellotron, Lap Steel
+  "bpm": 128,                              // integer 40-300
+  "key": "A minor",                        // e.g. "C major", "F# minor"
+  "chordProgression": "Am - F - C - G",    // main chord progression
+  "vocalPersona": "Male tenor with breathy intimacy, smooth falsetto transitions, and vulnerable emotional delivery",
+  "sonicDna": "Pulsing vintage synths, crisp electronic drums, atmospheric pads, dark melodic tension with neon-lit production",
+  "metaTags": ["Intro","Verse","Pre-Chorus","Chorus","Verse","Pre-Chorus","Chorus","Bridge","Chorus","Outro"],
+  "vibeDescription": "late night city drive, neon-soaked melancholy, bittersweet nostalgia with pulsing electronic energy"
+}
+
+Be accurate to the REAL recording. Use your music knowledge.`,
               },
               {
                 role: "user",
-                content: `Song: "${title}" by ${artist}`,
+                content: `Analyze: "${title}" by ${artist}`,
               },
             ],
           });
           const raw = completion.choices[0]?.message?.content ?? "{}";
+          console.log(`[suggest] AI raw response (${raw.length} chars): ${raw.slice(0, 300)}...`);
           return JSON.parse(raw) as {
             genres?: string[]; era?: string; energy?: string; tempo?: string;
             vocals?: string; moods?: string[]; instruments?: string[];
             bpm?: number; key?: string; chordProgression?: string;
             vocalPersona?: string; sonicDna?: string; metaTags?: string[];
+            vibeDescription?: string;
           };
-        } catch {
+        } catch (err) {
+          console.error("[suggest] AI call failed:", (err as Error).message?.slice(0, 200));
           return {};
         }
       })(),
@@ -2226,6 +2233,7 @@ Be accurate and specific to the actual song. Use your knowledge of the real reco
     const vocalPersona = typeof aiSuggestion.vocalPersona === "string" ? aiSuggestion.vocalPersona : null;
     const sonicDna = typeof aiSuggestion.sonicDna === "string" ? aiSuggestion.sonicDna : null;
     const metaTags = (aiSuggestion.metaTags ?? []).filter((t) => typeof t === "string");
+    const vibeDescription = typeof aiSuggestion.vibeDescription === "string" ? aiSuggestion.vibeDescription : null;
 
     // Compute slider heuristics based on genre characteristics
     const isComplex = genres.some((g) => /Progressive|Jazz|Classical|Orchestral|Film Score|IDM|Experimental/i.test(g));
@@ -2239,6 +2247,7 @@ Be accurate and specific to the actual song. Use your knowledge of the real reco
     res.json({
       genres, era, energy, tempo, vocals, moods, instruments,
       bpm, key, chordProgression, vocalPersona, sonicDna, metaTags,
+      vibeDescription,
       weirdness: suggestedWeirdness, styleInfluence: suggestedStyleInfluence, audioInfluence: suggestedAudioInfluence,
       songTitle: title, artist, mbTags,
     });

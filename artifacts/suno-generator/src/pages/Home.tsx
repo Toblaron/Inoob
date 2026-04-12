@@ -368,6 +368,7 @@ interface SuggestedControls {
   vocalPersona: string | null;
   sonicDna: string | null;
   metaTags: string[];
+  vibeDescription: string | null;
   weirdness: number | null;
   styleInfluence: number | null;
   audioInfluence: number | null;
@@ -893,7 +894,19 @@ export default function Home() {
         signal: AbortSignal.timeout(12000),
       });
       if (!resp.ok) return;
-      const data = await resp.json() as SuggestedControls;
+      const raw = await resp.json();
+      const data: SuggestedControls = {
+        genres: raw.genres ?? [], era: raw.era ?? null, energy: raw.energy ?? null,
+        tempo: raw.tempo ?? null, vocals: raw.vocals ?? null,
+        moods: raw.moods ?? [], instruments: raw.instruments ?? [],
+        bpm: raw.bpm ?? null, key: raw.key ?? null,
+        chordProgression: raw.chordProgression ?? null,
+        vocalPersona: raw.vocalPersona ?? null, sonicDna: raw.sonicDna ?? null,
+        metaTags: raw.metaTags ?? [], vibeDescription: raw.vibeDescription ?? null,
+        weirdness: raw.weirdness ?? null, styleInfluence: raw.styleInfluence ?? null,
+        audioInfluence: raw.audioInfluence ?? null,
+        songTitle: raw.songTitle ?? "", artist: raw.artist ?? "", mbTags: raw.mbTags ?? [],
+      };
       const hasAny = data.genres.length > 0 || data.era || data.energy || data.tempo || data.vocals;
       if (!hasAny) return;
       setSuggestions(data);
@@ -2626,6 +2639,7 @@ export default function Home() {
 
                   {/* Mood Board — vibe to settings */}
                   <MoodBoard
+                    externalVibe={suggestions?.vibeDescription ?? null}
                     onApplySettings={(settings) => {
                       if (settings.genres?.length) setSelectedGenres(settings.genres.slice(0, MAX_GENRES));
                       if (settings.moods?.length) setSelectedMoods(settings.moods.slice(0, MAX_MOODS));

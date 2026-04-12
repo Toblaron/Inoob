@@ -48,6 +48,7 @@ interface ApplySettings {
 interface MoodBoardProps {
   onApplySettings?: (settings: ApplySettings) => void;
   className?: string;
+  externalVibe?: string | null;
 }
 
 function Chip({ label, color = "default" }: { label: string; color?: "default" | "purple" | "cyan" | "green" | "orange" }) {
@@ -65,15 +66,22 @@ function Chip({ label, color = "default" }: { label: string; color?: "default" |
   );
 }
 
-export function MoodBoard({ onApplySettings, className }: MoodBoardProps) {
+export function MoodBoard({ onApplySettings, className, externalVibe }: MoodBoardProps) {
   const [expanded, setExpanded] = useState(false);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<MoodSettings | null>(null);
   const [applied, setApplied] = useState(false);
+  const [prevExternalVibe, setPrevExternalVibe] = useState<string | null>(null);
 
   const apiBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  // Auto-fill vibe description from song analysis
+  if (externalVibe && externalVibe !== prevExternalVibe) {
+    setPrevExternalVibe(externalVibe);
+    setDescription(externalVibe);
+  }
 
   const handleTranslate = async () => {
     if (description.trim().length < 5) return;
