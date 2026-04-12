@@ -360,6 +360,17 @@ interface SuggestedControls {
   energy: string | null;
   tempo: string | null;
   vocals: string | null;
+  moods: string[];
+  instruments: string[];
+  bpm: number | null;
+  key: string | null;
+  chordProgression: string | null;
+  vocalPersona: string | null;
+  sonicDna: string | null;
+  metaTags: string[];
+  weirdness: number | null;
+  styleInfluence: number | null;
+  audioInfluence: number | null;
   songTitle: string;
   artist: string;
   mbTags: string[];
@@ -888,11 +899,23 @@ export default function Home() {
       setSuggestions(data);
       const autoFilled = new Set<string>();
       const savedValues: Record<string, string> = {};
+      // Style Controls tab
       if (data.genres.length > 0) { setSelectedGenres(data.genres); autoFilled.add("genres"); }
       if (data.era) { setEra(data.era as typeof era); autoFilled.add("era"); savedValues["era"] = data.era; }
       if (data.energy) { setEnergyLevel(data.energy as typeof energyLevel); autoFilled.add("energy"); savedValues["energy"] = data.energy; }
       if (data.tempo) { setTempo(data.tempo as typeof tempo); autoFilled.add("tempo"); savedValues["tempo"] = data.tempo; }
       if (data.vocals) { setVocalGender(data.vocals as typeof vocalGender); autoFilled.add("vocals"); savedValues["vocals"] = data.vocals; }
+      if (data.moods && data.moods.length > 0) { setSelectedMoods(data.moods); autoFilled.add("moods"); }
+      if (data.instruments && data.instruments.length > 0) { setSelectedInstruments(data.instruments); autoFilled.add("instruments"); }
+      // Suno Lab tab
+      if (data.bpm) { setBpmTarget(String(data.bpm)); autoFilled.add("bpmTarget"); }
+      if (data.chordProgression) { setChordProgression(data.chordProgression); autoFilled.add("chordProgression"); }
+      if (data.vocalPersona) { setVocalPersona(data.vocalPersona); autoFilled.add("vocalPersona"); }
+      if (data.sonicDna) { setSonicDna(data.sonicDna); autoFilled.add("sonicDna"); }
+      if (data.metaTags && data.metaTags.length > 0) { setMetaTagsText(data.metaTags.join(",")); autoFilled.add("metaTags"); }
+      if (data.weirdness != null) { setWeirdness(data.weirdness); autoFilled.add("weirdness"); }
+      if (data.styleInfluence != null) { setStyleInfluence(data.styleInfluence); autoFilled.add("styleInfluence"); }
+      if (data.audioInfluence != null) { setAudioInfluence(data.audioInfluence); autoFilled.add("audioInfluence"); }
       setAutoFilledFields(autoFilled);
       setAutoFillValues(savedValues);
     } catch {}

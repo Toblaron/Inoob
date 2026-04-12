@@ -2166,16 +2166,27 @@ router.get("/suggest", async (req, res) => {
         try {
           const completion = await openai.chat.completions.create({
             model: AI_MINI_MODEL,
-            max_tokens: 120,
+            max_tokens: 500,
             response_format: { type: "json_object" },
             messages: [
               {
                 role: "system",
-                content: `You are a music genre expert. Given a song title and artist, return a JSON object with ONLY these fields:
+                content: `You are an expert music analyst. Given a song title and artist, return a JSON object with ALL of these fields:
 - "genres": array of 1–3 genre names from this list ONLY: Pop, Dance Pop, Indie Pop, Synth-Pop, Dream Pop, Art Pop, Electropop, Britpop, Rock, Alternative Rock, Indie Rock, Hard Rock, Classic Rock, Punk, Post-Punk, Grunge, Shoegaze, Psychedelic Rock, Progressive Rock, Garage Rock, Folk Rock, Arena Rock, New Wave, Emo, Post-Rock, Stoner Rock, Hip-Hop, Trap, Rap, Drill, Boom Bap, Gangsta Rap, G-Funk, Grime, Cloud Rap, Phonk, R&B, Soul, Neo-Soul, Funk, Disco, Motown, Gospel, Contemporary R&B, Jazz, Smooth Jazz, Bebop, Swing, Jazz Fusion, Big Band, Acid Jazz, Cool Jazz, Latin Jazz, Free Jazz, Metal, Heavy Metal, Black Metal, Death Metal, Thrash Metal, Nu Metal, Metalcore, Power Metal, Doom Metal, Symphonic Metal, Djent, Country, Americana, Bluegrass, Folk, Indie Folk, Outlaw Country, Country Rock, Country Pop, Alt-Country, Classical, Orchestral, Baroque, Cinematic, Film Score, Opera, Minimalist, Reggae, Dancehall, Reggaeton, Latin Pop, Bossa Nova, Flamenco, Salsa, K-Pop, J-Pop, Afrobeats, Blues, Delta Blues, Chicago Blues, Electric Blues, House, Deep House, Tech House, Progressive House, Acid House, Melodic House, Afro House, Soulful House, Chicago House, Nu Disco, Techno, Berlin Techno, Detroit Techno, Minimal Techno, Hard Techno, Dub Techno, Trance, Progressive Trance, Uplifting Trance, Psytrance, Goa Trance, Vocal Trance, Future Rave, Drum & Bass, Liquid DnB, Neurofunk, Darkstep, Jump Up, Jungle, Dubstep, Post-Dubstep, Brostep, Riddim, Future Bass, Breakbeat, Big Beat, Glitch Hop, Synthwave, Darksynth, Outrun, Retrowave, Chillwave, Hi-NRG, Italo Disco, Futurepop, Electro, EBM, Industrial, Darkwave, Cold Wave, EDM, Big Room, Electro House, Ambient, Dark Ambient, IDM, Glitch, Space Music, Drone Ambient, New Age, Trip-Hop, Downtempo, Chillhop, Lo-Fi, Vaporwave, Future Funk, Hardcore, Gabber, Hardstyle, UK Garage, 2-Step, Grime, UK Bass, Phonk, Memphis Phonk, Hyperpop, Amapiano, Gqom, Baile Funk, Footwork
 - "era": one of: 50s, 60s, 70s, 80s, 90s, 2000s, 2010s, modern
 - "energy": one of: very chill, chill, medium, high, intense
-- "tempo": one of: ballad, slow, mid, groove, uptempo, fast, hyper`,
+- "tempo": one of: ballad, slow, mid, groove, uptempo, fast, hyper
+- "vocals": one of: male, female, mixed, duet, no vocals
+- "moods": array of 1–3 mood tags from ONLY: Dark, Euphoric, Nostalgic, Melancholic, Aggressive, Romantic, Dreamy, Rebellious, Playful, Mysterious, Cinematic, Hopeful, Angry, Tender, Haunted, Triumphant, Vulnerable, Defiant, Serene, Intense, Wistful, Bittersweet, Groovy, Frantic, Ethereal, Hypnotic, Brooding, Raw, Gritty, Majestic, Eerie, Sensual, Savage, Soulful, Cathartic, Blissful, Chaotic, Anxious, Desolate, Primal, Lush, Fierce, Longing, Psychedelic, Icy, Dusty, Tense, Laid-back, Transcendent, Unsettling, Festive, Intimate, Epic, Punchy, Stormy, Quirky
+- "instruments": array of 2–4 primary instruments from ONLY: Piano, Guitar, Synth, Strings, Bass, Choir, Brass, Drums, Violin, Flute, Organ, Sitar, Cello, Saxophone, Trumpet, Harp, Banjo, Ukulele, Mandolin, Marimba, Theremin, Mellotron, Pedal Steel, Dulcimer, 808, Acoustic Guitar, Electric Guitar, Harmonica, Accordion, Vibraphone, Rhodes, Clarinet, Oboe, French Horn, Tabla, Congas, Sub Bass, Pad, Wurlitzer, Harpsichord, Moog, Steel Drums, Trombone, Lap Steel
+- "bpm": estimated BPM as integer (e.g. 120)
+- "key": musical key (e.g. "A minor", "C major", "F# minor")
+- "chordProgression": the likely main chord progression (e.g. "Am - F - C - G")
+- "vocalPersona": a 1-sentence description of the lead vocalist's voice character (e.g. "Male baritone, weathered and raspy with emotional dynamic range from gritty whisper to soaring belt")
+- "sonicDna": a 1-sentence description of the artist's signature sonic traits WITHOUT using the artist name (e.g. "Vintage synths, punchy 808s, ethereal falsetto, dark atmospheric tension, neon-lit melancholy")
+- "metaTags": array of structural section tags that fit this song (e.g. ["Intro","Verse","Pre-Chorus","Chorus","Verse","Pre-Chorus","Chorus","Bridge","Chorus","Outro"])
+
+Be accurate and specific to the actual song. Use your knowledge of the real recording.`,
               },
               {
                 role: "user",
@@ -2184,7 +2195,12 @@ router.get("/suggest", async (req, res) => {
             ],
           });
           const raw = completion.choices[0]?.message?.content ?? "{}";
-          return JSON.parse(raw) as { genres?: string[]; era?: string; energy?: string; tempo?: string };
+          return JSON.parse(raw) as {
+            genres?: string[]; era?: string; energy?: string; tempo?: string;
+            vocals?: string; moods?: string[]; instruments?: string[];
+            bpm?: number; key?: string; chordProgression?: string;
+            vocalPersona?: string; sonicDna?: string; metaTags?: string[];
+          };
         } catch {
           return {};
         }
@@ -2201,10 +2217,31 @@ router.get("/suggest", async (req, res) => {
     const era = mbEra ?? (aiSuggestion.era as string | null) ?? null;
     const energy = (aiSuggestion.energy as string | null) ?? inferEnergy(genres);
     const tempo = (aiSuggestion.tempo as string | null) ?? inferTempo(genres);
+    const vocals = (aiSuggestion.vocals as string | null) ?? null;
+    const moods = (aiSuggestion.moods ?? []).filter((m) => typeof m === "string").slice(0, 3);
+    const instruments = (aiSuggestion.instruments ?? []).filter((i) => typeof i === "string").slice(0, 4);
+    const bpm = typeof aiSuggestion.bpm === "number" && aiSuggestion.bpm >= 40 && aiSuggestion.bpm <= 300 ? aiSuggestion.bpm : null;
+    const key = typeof aiSuggestion.key === "string" ? aiSuggestion.key : null;
+    const chordProgression = typeof aiSuggestion.chordProgression === "string" ? aiSuggestion.chordProgression : null;
+    const vocalPersona = typeof aiSuggestion.vocalPersona === "string" ? aiSuggestion.vocalPersona : null;
+    const sonicDna = typeof aiSuggestion.sonicDna === "string" ? aiSuggestion.sonicDna : null;
+    const metaTags = (aiSuggestion.metaTags ?? []).filter((t) => typeof t === "string");
 
-    console.log(`[suggest] ${artist} – ${title} → AI genres:[${genres.join(",")}] MB era:${mbEra} AI era:${aiSuggestion.era} energy:${energy} tempo:${tempo}`);
+    // Compute slider heuristics based on genre characteristics
+    const isComplex = genres.some((g) => /Progressive|Jazz|Classical|Orchestral|Film Score|IDM|Experimental/i.test(g));
+    const isElectronic = genres.some((g) => /House|Techno|Trance|EDM|Dubstep|Drum & Bass|Breakbeat|Synthwave|Electro|Ambient/i.test(g));
+    const suggestedWeirdness = isComplex ? 55 : isElectronic ? 60 : 62;
+    const suggestedStyleInfluence = 80;
+    const suggestedAudioInfluence = 25;
 
-    res.json({ genres, era, energy, tempo, vocals: null, songTitle: title, artist, mbTags });
+    console.log(`[suggest] ${artist} – ${title} → AI genres:[${genres.join(",")}] MB era:${mbEra} AI era:${aiSuggestion.era} energy:${energy} tempo:${tempo} vocals:${vocals} moods:[${moods.join(",")}] bpm:${bpm}`);
+
+    res.json({
+      genres, era, energy, tempo, vocals, moods, instruments,
+      bpm, key, chordProgression, vocalPersona, sonicDna, metaTags,
+      weirdness: suggestedWeirdness, styleInfluence: suggestedStyleInfluence, audioInfluence: suggestedAudioInfluence,
+      songTitle: title, artist, mbTags,
+    });
   } catch (err) {
     console.error("suggest error:", err);
     res.status(500).json({ error: "Could not fetch suggestions" });
