@@ -22,7 +22,7 @@ fi
 # ── 2. System dependencies ────────────────────────────────────────────────────
 info "Installing system packages..."
 apt-get update -qq
-apt-get install -y -qq curl git build-essential python3
+apt-get install -y -qq curl git build-essential python3 ffmpeg
 
 # ── 3. Node.js (via NodeSource) ───────────────────────────────────────────────
 if command -v node &>/dev/null && [[ $(node -v) == v${NODE_VERSION}* ]]; then

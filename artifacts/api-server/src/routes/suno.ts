@@ -6,12 +6,19 @@ import { parse as parseHtml } from "node-html-parser";
 import { detectAudioFeatures, type AudioFeatures } from "../lib/audioFeatures.js";
 import { analyzeLyricsStructure } from "../lib/lyricsStructure.js";
 import { computeSuggestedDefaults } from "../lib/suggestedDefaults.js";
-import { cacheGet, cacheSet, cacheStats, hashParams, TTL } from "../lib/cache.js";
+import { cacheGet, cacheSet, cacheStats, hashParams, TTL, dedup } from "../lib/cache.js";
 import { computeFingerprint } from "../lib/fingerprint.js";
 import { validateWithPython } from "../lib/pythonValidator.js";
 
-const AI_MODEL      = process.env.AI_MODEL      ?? "llama-3.3-70b-versatile";
-const AI_MINI_MODEL = process.env.AI_MINI_MODEL ?? "llama-3.1-8b-instant";
+const AI_MODEL      = process.env.AI_MODEL      ?? "gemini-flash-latest";
+const AI_MINI_MODEL = process.env.AI_MINI_MODEL ?? "gemini-flash-lite-latest";
+
+if (!process.env.AI_MODEL) {
+  console.warn("[config] AI_MODEL not set — falling back to gemini-flash-latest. Set AI_MODEL in .env for explicit control.");
+}
+if (!process.env.AI_MINI_MODEL) {
+  console.warn("[config] AI_MINI_MODEL not set — falling back to gemini-flash-lite-latest. Set AI_MINI_MODEL in .env for explicit control.");
+}
 
 const router: IRouter = Router();
 
@@ -1188,9 +1195,22 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
     throw new Error("Invalid URL. Please provide a valid YouTube (youtube.com / youtu.be) or Deezer (deezer.com/track/...) link.");
   }
 
+  // Input validation: cap manualLyrics to prevent DoS via oversized payloads
+  if (manualLyrics && manualLyrics.length > 15000) {
+    throw new Error("Manual lyrics too long (max 15,000 characters).");
+  }
+
+  // Sanitize confirmedStructure labels to prevent prompt injection
+  if (confirmedStructure) {
+    for (const section of confirmedStructure) {
+      section.label = section.label.slice(0, 50).replace(/[^\w\s\-()[\]]/g, "");
+      section.lines = section.lines.map((l) => l.slice(0, 500));
+    }
+  }
+
   const videoId = sourceIdFromUrl(youtubeUrl);
 
-  // Stage 1: base metadata (7d cache)
+  // Stage 1: base metadata (7d cache, deduplicated across concurrent requests)
   let base: BaseVideoMetadata;
   let baseFromCache = false;
   if (videoId) {
@@ -1201,9 +1221,12 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
       console.log(`[cache] metadata HIT for ${videoId}`);
     } else {
       try {
-        base = isDeezerUrl(youtubeUrl) ? await fetchBaseMetadataFromDeezer(youtubeUrl) : await fetchBaseMetadata(youtubeUrl);
-        cacheSet(`metadata:${videoId}`, base, TTL.METADATA);
-        console.log(`[cache] metadata SET for ${videoId}`);
+        base = await dedup(`metadata:${videoId}`, async () => {
+          const result = isDeezerUrl(youtubeUrl) ? await fetchBaseMetadataFromDeezer(youtubeUrl) : await fetchBaseMetadata(youtubeUrl);
+          cacheSet(`metadata:${videoId}`, result, TTL.METADATA);
+          console.log(`[cache] metadata SET for ${videoId}`);
+          return result;
+        });
       } catch (fetchErr) {
         console.error("Failed to fetch metadata:", fetchErr);
         throw new Error("Could not fetch track metadata. Make sure the URL is a valid public YouTube video or Deezer track.");
@@ -1228,16 +1251,19 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
       featuresFromCache = true;
       console.log(`[cache] features HIT for ${videoId}`);
     } else {
-      const result = await detectAudioFeatures({
-        artist: base.cleanArtist,
-        title: base.cleanTitle,
-        youtubeUrl,
-        descriptionBpm: base.descriptionData?.bpm,
-        descriptionKey: base.descriptionData?.key,
+      const result = await dedup(`features:${videoId}`, async () => {
+        const feat = await detectAudioFeatures({
+          artist: base.cleanArtist,
+          title: base.cleanTitle,
+          youtubeUrl,
+          descriptionBpm: base.descriptionData?.bpm,
+          descriptionKey: base.descriptionData?.key,
+        });
+        cacheSet<CachedAudioFeatures>(`features:${videoId}`, { features: feat }, TTL.FEATURES);
+        console.log(`[cache] features SET for ${videoId} (permanent)`);
+        return feat;
       });
       audioFeatures = result ?? undefined;
-      cacheSet<CachedAudioFeatures>(`features:${videoId}`, { features: result }, TTL.FEATURES);
-      console.log(`[cache] features SET for ${videoId} (permanent)`);
     }
   } else {
     const result = await detectAudioFeatures({
@@ -1260,9 +1286,12 @@ async function generateOneTemplate(data: GenerateInput): Promise<ReturnType<type
       lyricsFromCache = true;
       console.log(`[cache] lyrics HIT for ${videoId}`);
     } else {
-      cachedLyrics = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);
-      cacheSet(`lyrics:${videoId}`, cachedLyrics, TTL.LYRICS);
-      console.log(`[cache] lyrics SET for ${videoId}`);
+      cachedLyrics = await dedup(`lyrics:${videoId}`, async () => {
+        const result = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);
+        cacheSet(`lyrics:${videoId}`, result, TTL.LYRICS);
+        console.log(`[cache] lyrics SET for ${videoId}`);
+        return result;
+      });
     }
   } else {
     cachedLyrics = await fetchLyricsData(base.cleanArtist, base.cleanTitle, base.durationSeconds, base.captionText);

@@ -33,3 +33,4 @@ export * from "./transformTemplateRequest";
 export * from "./variationSlot";
 export * from "./variationsResponse";
 export * from "./vocalGender";
+export * from "./sunoVersion";

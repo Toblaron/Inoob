@@ -66,6 +66,15 @@ const insertShareStmt = db.prepare<[string, number, string | null, string]>(`
 
 const getShareStmt = db.prepare<[string]>(`SELECT * FROM shared_templates WHERE hash = ?`);
 
+// Purge shared links older than 90 days to prevent unbounded table growth
+const SHARE_TTL_MS = 90 * 24 * 3600 * 1000;
+const purgeSharesStmt = db.prepare<[number]>(`DELETE FROM shared_templates WHERE created_at < ?`);
+setInterval(() => {
+  try { purgeSharesStmt.run(Date.now() - SHARE_TTL_MS); } catch { /* non-critical */ }
+}, 6 * 3600 * 1000).unref(); // every 6 hours
+// Also run once at startup
+try { purgeSharesStmt.run(Date.now() - SHARE_TTL_MS); } catch { /* non-critical */ }
+
 export function saveEntry(entry: HistoryEntry): void {
   insertStmt.run(
     entry.id,

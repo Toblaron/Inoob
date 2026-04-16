@@ -35,6 +35,24 @@ const sizeStmt = db.prepare<[]>(`SELECT page_count * page_size as size FROM prag
 let hits = 0;
 let misses = 0;
 
+// ── In-flight deduplication queue ───────────────────────────────────────────
+// Prevents concurrent requests with the same key from triggering duplicate
+// external API calls.  The first caller creates a promise; subsequent callers
+// await the same promise.
+const inflight = new Map<string, Promise<unknown>>();
+
+/**
+ * Run `fn` only once per unique `key` at a time. Concurrent callers with the
+ * same key will await the result of the first invocation.
+ */
+export async function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const existing = inflight.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+  const promise = fn().finally(() => { inflight.delete(key); });
+  inflight.set(key, promise);
+  return promise;
+}
+
 export function cacheGet<T>(key: string): T | null {
   const now = Date.now();
   const row = getStmt.get(key) as StmtRow | undefined;
@@ -85,10 +103,10 @@ function stableStringify(val: unknown): string {
  * Create a deterministic cache key from a set of parameters.
  * Uses a deep stable-sort stringify so nested objects (e.g. confirmedStructure)
  * always hash consistently regardless of key insertion order.
- * SHA-1 (first 12 chars) — collisions are harmless (just a cache miss).
+ * SHA-256 (first 20 chars) — long enough to avoid meaningful collision risk.
  */
 export function hashParams(params: Record<string, unknown>): string {
-  return createHash("sha1").update(stableStringify(params)).digest("hex").slice(0, 12);
+  return createHash("sha256").update(stableStringify(params)).digest("hex").slice(0, 20);
 }
 
 /** TTL constants (seconds). undefined = permanent (no expiry). */

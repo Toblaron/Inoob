@@ -283,7 +283,7 @@ function saveArtistStyle(artist: string, style: ArtistStyle) {
     all[key] = style;
     const keys = Object.keys(all);
     if (keys.length > 50) delete all[keys[0]];
-    localStorage.setItem(ARTIST_STYLES_KEY, JSON.stringify(all));
+    safeLsSet(ARTIST_STYLES_KEY, JSON.stringify(all));
   } catch {}
 }
 
@@ -428,10 +428,31 @@ function loadHistory(): HistoryEntry[] {
   }
 }
 
-function saveHistory(entries: HistoryEntry[]) {
+/** Safe localStorage write — evicts oldest history entries on QuotaExceededError. */
+function safeLsSet(key: string, value: string): boolean {
   try {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_HISTORY)));
-  } catch {}
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "QuotaExceededError") {
+      // Try to free space by trimming history first
+      try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (raw) {
+          const trimmed = (JSON.parse(raw) as unknown[]).slice(0, Math.max(3, MAX_HISTORY / 2));
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(trimmed));
+          localStorage.setItem(key, value);
+          return true;
+        }
+      } catch { /* give up */ }
+      console.warn("[storage] QuotaExceededError — could not save", key);
+    }
+    return false;
+  }
+}
+
+function saveHistory(entries: HistoryEntry[]) {
+  safeLsSet(HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_HISTORY)));
 }
 
 function loadProfiles(): SavedProfile[] {
@@ -444,9 +465,7 @@ function loadProfiles(): SavedProfile[] {
 }
 
 function saveProfiles(profiles: SavedProfile[]) {
-  try {
-    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles.slice(0, 50)));
-  } catch {}
+  safeLsSet(PROFILES_KEY, JSON.stringify(profiles.slice(0, 50)));
 }
 
 function loadFavorites(): string[] {
@@ -459,9 +478,7 @@ function loadFavorites(): string[] {
 }
 
 function saveFavorites(ids: string[]) {
-  try {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(ids));
-  } catch {}
+  safeLsSet(FAVORITES_KEY, JSON.stringify(ids));
 }
 
 /** Fire-and-forget: persist a history entry to the server SQLite store. */
@@ -785,17 +802,15 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(PANEL_STATE_KEY, JSON.stringify({
-        showStyleControls,
-        showManualLyrics,
-        showNegBuilder,
-        showSunoLab,
-        showHistory,
-        showProfiles,
-        showDebug,
-      }));
-    } catch {}
+    safeLsSet(PANEL_STATE_KEY, JSON.stringify({
+      showStyleControls,
+      showManualLyrics,
+      showNegBuilder,
+      showSunoLab,
+      showHistory,
+      showProfiles,
+      showDebug,
+    }));
   }, [showStyleControls, showManualLyrics, showNegBuilder, showSunoLab, showHistory, showProfiles, showDebug]);
 
   useEffect(() => { saveProfiles(profiles); }, [profiles]);
@@ -1666,12 +1681,33 @@ export default function Home() {
               setBatchTracks((prev) => {
                 if (!prev) return prev;
                 const next = [...prev];
-                next[msg.track!.index] = msg.track!;
+                if (msg.track!.index >= 0 && msg.track!.index < next.length) {
+                  next[msg.track!.index] = msg.track!;
+                }
                 return next;
               });
             }
-          } catch {}
+          } catch (e) { console.warn("[batch-sse] malformed event:", e); }
         }
+      }
+      // Flush any remaining data in the buffer after stream ends
+      if (buf.trim()) {
+        try {
+          const line = buf.replace(/^data: /, "").trim();
+          if (line) {
+            const msg = JSON.parse(line) as { type: string; track?: BatchTrackResult };
+            if (msg.type === "progress" && msg.track) {
+              setBatchTracks((prev) => {
+                if (!prev) return prev;
+                const next = [...prev];
+                if (msg.track!.index >= 0 && msg.track!.index < next.length) {
+                  next[msg.track!.index] = msg.track!;
+                }
+                return next;
+              });
+            }
+          }
+        } catch (e) { console.warn("[batch-sse] malformed final event:", e); }
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
@@ -1732,8 +1768,23 @@ export default function Home() {
                   prev ? prev.map((t) => t.index === track.index ? updatedTrack : t) : prev
                 );
               }
-            } catch {}
+            } catch (e) { console.warn("[retry-sse] malformed event:", e); }
           }
+        }
+        // Flush remaining buffer
+        if (buf.trim()) {
+          try {
+            const line = buf.replace(/^data: /, "").trim();
+            if (line) {
+              const msg = JSON.parse(line) as { type: string; track?: BatchTrackResult };
+              if (msg.type === "progress" && msg.track) {
+                const updatedTrack = { ...msg.track, index: track.index };
+                setBatchTracks((prev) =>
+                  prev ? prev.map((t) => t.index === track.index ? updatedTrack : t) : prev
+                );
+              }
+            }
+          } catch (e) { console.warn("[retry-sse] malformed final event:", e); }
         }
       })
       .catch(() => {
