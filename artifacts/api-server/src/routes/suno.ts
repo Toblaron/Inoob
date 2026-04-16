@@ -2256,7 +2256,7 @@ interface SuggestPayload {
   mbTags: string[];
 }
 
-const AI_SUGGEST_SYSTEM_PROMPT = `Return a JSON object analyzing the given song. Every array field MUST be a JSON array, not a string. Example: {"genres":["Synth-Pop","Dance Pop"],"era":"modern","energy":"high","tempo":"uptempo","vocals":"male","moods":["Euphoric","Nostalgic"],"instruments":["Synth","Drums","Bass"],"genreNudge":"neon-lit synth-pop pulse, glossy night-drive atmosphere, punchier electronic drums","bpm":171,"key":"F minor","chordProgression":"Fm - Db - Ab - Eb","vocalPersona":"Male tenor with ethereal falsetto","sonicDna":"Vintage 80s synths, punchy electronic drums","metaTags":["Intro","Verse","Pre-Chorus","Chorus","Verse","Chorus","Bridge","Chorus","Outro"],"pronunciationGuide":"M83 = em-eighty-three","negativeHints":["no muddy mix","no generic edm","no cheesy risers"],"vibeDescription":"neon-lit midnight drive with 80s nostalgia"}. Fields: genres(1-3 array), era(50s|60s|70s|80s|90s|2000s|2010s|modern), energy(very chill|chill|medium|high|intense), tempo(ballad|slow|mid|groove|uptempo|fast|hyper), vocals(male|female|mixed|duet|no vocals), moods(1-3 array from: Dark,Euphoric,Nostalgic,Melancholic,Aggressive,Romantic,Dreamy,Rebellious,Playful,Mysterious,Cinematic,Hopeful,Angry,Tender,Intense,Brooding,Raw,Gritty,Soulful,Ethereal,Groovy,Intimate,Epic,Haunted,Triumphant,Vulnerable,Defiant,Serene,Wistful,Bittersweet,Frantic,Hypnotic,Majestic,Eerie,Sensual,Cathartic,Blissful,Longing,Psychedelic,Tense,Laid-back,Punchy,Stormy,Quirky), instruments(2-4 array from: Piano,Guitar,Synth,Strings,Bass,Drums,Violin,Flute,Organ,Cello,Saxophone,Trumpet,808,Acoustic Guitar,Electric Guitar,Harmonica,Rhodes,Moog,Pad,Sub Bass,Pedal Steel,Mellotron,Lap Steel,Harp,Banjo,Ukulele), genreNudge(1 short sentence or comma-separated phrase for the custom nudge box, no artist names), bpm(int 40-300), key(e.g. "A minor"), chordProgression(e.g. "Am - F - C - G"), vocalPersona(1 sentence), sonicDna(1 sentence, no artist names), metaTags(array of section names), pronunciationGuide(short optional phonetic guide only when genuinely useful for uncommon names/words, else empty string), negativeHints(0-5 short exclusion phrases for the negative prompt custom terms box), vibeDescription(1 sentence atmospheric vibe). Be accurate to the real recording.`;
+const AI_SUGGEST_SYSTEM_PROMPT = `Return a JSON object analyzing the given song. Every array field MUST be a JSON array, not a string. Example: {"genres":["Synth-Pop","Dance Pop","Electro"],"era":"modern","energy":"high","tempo":"uptempo","vocals":"male","moods":["Euphoric","Nostalgic","Dreamy","Intense"],"instruments":["Synth","Drums","Bass","Pad","Rhodes"],"genreNudge":"neon-lit synth-pop pulse, glossy night-drive atmosphere, punchier electronic drums","bpm":171,"key":"F minor","chordProgression":"Fm - Db - Ab - Eb","vocalPersona":"Male tenor with ethereal falsetto","sonicDna":"Vintage 80s synths, punchy electronic drums","metaTags":["Intro","Verse","Pre-Chorus","Chorus","Verse","Chorus","Bridge","Chorus","Outro"],"pronunciationGuide":"M83 = em-eighty-three","negativeHints":["no muddy mix","no generic edm","no cheesy risers"],"vibeDescription":"neon-lit midnight drive with 80s nostalgia"}. Fields: genres(2-5 array), era(50s|60s|70s|80s|90s|2000s|2010s|modern), energy(very chill|chill|medium|high|intense), tempo(ballad|slow|mid|groove|uptempo|fast|hyper), vocals(male|female|mixed|duet|no vocals), moods(2-4 array from: Dark,Euphoric,Nostalgic,Melancholic,Aggressive,Romantic,Dreamy,Rebellious,Playful,Mysterious,Cinematic,Hopeful,Angry,Tender,Intense,Brooding,Raw,Gritty,Soulful,Ethereal,Groovy,Intimate,Epic,Haunted,Triumphant,Vulnerable,Defiant,Serene,Wistful,Bittersweet,Frantic,Hypnotic,Majestic,Eerie,Sensual,Cathartic,Blissful,Longing,Psychedelic,Tense,Laid-back,Punchy,Stormy,Quirky), instruments(3-5 array from: Piano,Guitar,Synth,Strings,Bass,Drums,Violin,Flute,Organ,Cello,Saxophone,Trumpet,808,Acoustic Guitar,Electric Guitar,Harmonica,Rhodes,Moog,Pad,Sub Bass,Pedal Steel,Mellotron,Lap Steel,Harp,Banjo,Ukulele), genreNudge(1 short sentence or comma-separated phrase for the custom nudge box, no artist names), bpm(int 40-300), key(e.g. "A minor"), chordProgression(e.g. "Am - F - C - G"), vocalPersona(1 sentence describing the singer's voice character), sonicDna(1 sentence describing the sonic palette, no artist names), metaTags(array of song section names like Intro,Verse,Chorus,Bridge,Outro), pronunciationGuide(short optional phonetic guide only when genuinely useful for uncommon names/words, else empty string), negativeHints(3-5 short exclusion phrases for the negative prompt custom terms box), vibeDescription(1 evocative sentence capturing the overall atmosphere and mood of the track — ALWAYS provide this). IMPORTANT: Always provide ALL fields, especially vibeDescription, bpm, chordProgression, vocalPersona, sonicDna, and metaTags. Be accurate to the real recording.`;
 
 function parseAiSuggestionJson(raw: string): AiSongSuggestion | null {
   const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
@@ -2352,14 +2352,14 @@ async function buildSuggestionPayload(params: {
   const mbTags = mbData.genres ?? [];
   const mbGenres = mapMbTagsToGenres(mbTags);
   const mbEra = yearToEra(mbData.releaseYear ?? descriptionData?.releaseYear);
-  const aiGenres = (aiSuggestion.genres ?? []).filter((g) => typeof g === "string").slice(0, 3);
+  const aiGenres = (aiSuggestion.genres ?? []).filter((g) => typeof g === "string").slice(0, 5);
   const genres = aiGenres.length > 0 ? aiGenres : mbGenres;
   const era = mbEra ?? (aiSuggestion.era as string | null) ?? null;
   const energy = (aiSuggestion.energy as string | null) ?? inferEnergy(genres);
   const tempo = (aiSuggestion.tempo as string | null) ?? inferTempo(genres);
   const vocals = (aiSuggestion.vocals as string | null) ?? null;
-  const moods = (aiSuggestion.moods ?? []).filter((m) => typeof m === "string").slice(0, 3);
-  const instruments = (aiSuggestion.instruments ?? []).filter((i) => typeof i === "string").slice(0, 4);
+  const moods = (aiSuggestion.moods ?? []).filter((m) => typeof m === "string").slice(0, 4);
+  const instruments = (aiSuggestion.instruments ?? []).filter((i) => typeof i === "string").slice(0, 5);
   const genreNudge = typeof aiSuggestion.genreNudge === "string" && aiSuggestion.genreNudge.trim()
     ? aiSuggestion.genreNudge.trim().slice(0, 180)
     : null;
@@ -2421,46 +2421,7 @@ router.get("/suggest", async (req, res) => {
         fetchMusicBrainzData(artist, title),
         new Promise<MusicBrainzData>((resolve) => setTimeout(() => resolve({}), 7000)),
       ]),
-      (async () => {
-        try {
-          const completion = await openai.chat.completions.create({
-            model: AI_MODEL,
-            max_tokens: 1200,
-            response_format: { type: "json_object" },
-            messages: [
-              {
-                role: "system",
-                content: `Return a JSON object analyzing the given song. Every array field MUST be a JSON array, not a string. Example: {"genres":["Synth-Pop","Dance Pop"],"era":"modern","energy":"high","tempo":"uptempo","vocals":"male","moods":["Euphoric","Nostalgic"],"instruments":["Synth","Drums","Bass"],"genreNudge":"neon-lit synth-pop pulse, glossy night-drive atmosphere, punchier electronic drums","bpm":171,"key":"F minor","chordProgression":"Fm - Db - Ab - Eb","vocalPersona":"Male tenor with ethereal falsetto","sonicDna":"Vintage 80s synths, punchy electronic drums","metaTags":["Intro","Verse","Pre-Chorus","Chorus","Verse","Chorus","Bridge","Chorus","Outro"],"pronunciationGuide":"M83 = em-eighty-three","negativeHints":["no muddy mix","no generic edm","no cheesy risers"],"vibeDescription":"neon-lit midnight drive with 80s nostalgia"}. Fields: genres(1-3 array), era(50s|60s|70s|80s|90s|2000s|2010s|modern), energy(very chill|chill|medium|high|intense), tempo(ballad|slow|mid|groove|uptempo|fast|hyper), vocals(male|female|mixed|duet|no vocals), moods(1-3 array from: Dark,Euphoric,Nostalgic,Melancholic,Aggressive,Romantic,Dreamy,Rebellious,Playful,Mysterious,Cinematic,Hopeful,Angry,Tender,Intense,Brooding,Raw,Gritty,Soulful,Ethereal,Groovy,Intimate,Epic,Haunted,Triumphant,Vulnerable,Defiant,Serene,Wistful,Bittersweet,Frantic,Hypnotic,Majestic,Eerie,Sensual,Cathartic,Blissful,Longing,Psychedelic,Tense,Laid-back,Punchy,Stormy,Quirky), instruments(2-4 array from: Piano,Guitar,Synth,Strings,Bass,Drums,Violin,Flute,Organ,Cello,Saxophone,Trumpet,808,Acoustic Guitar,Electric Guitar,Harmonica,Rhodes,Moog,Pad,Sub Bass,Pedal Steel,Mellotron,Lap Steel,Harp,Banjo,Ukulele), genreNudge(1 short sentence or comma-separated phrase for the custom nudge box, no artist names), bpm(int 40-300), key(e.g. "A minor"), chordProgression(e.g. "Am - F - C - G"), vocalPersona(1 sentence), sonicDna(1 sentence, no artist names), metaTags(array of section names), pronunciationGuide(short optional phonetic guide only when genuinely useful for uncommon names/words, else empty string), negativeHints(0-5 short exclusion phrases for the negative prompt custom terms box), vibeDescription(1 sentence atmospheric vibe). Be accurate to the real recording.`,
-              },
-              {
-                role: "user",
-                content: `{"song":"${title}","artist":"${artist}"}`,
-              },
-            ],
-          });
-          const raw = (completion.choices[0]?.message?.content ?? "").trim();
-          console.log(`[suggest] AI raw (${raw.length} chars): ${raw.slice(0, 400)}`);
-          const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-          const jsonStart = cleaned.indexOf("{");
-          const jsonEnd = cleaned.lastIndexOf("}");
-          if (jsonStart === -1 || jsonEnd === -1) {
-            console.error("[suggest] No JSON object in AI response");
-            return {};
-          }
-          const parsed = JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1));
-          console.log(`[suggest] Parsed fields: ${Object.keys(parsed).join(", ")}`);
-          return parsed as {
-            genres?: string[]; era?: string; energy?: string; tempo?: string;
-            vocals?: string; moods?: string[]; instruments?: string[];
-            genreNudge?: string; bpm?: number; key?: string; chordProgression?: string;
-            vocalPersona?: string; sonicDna?: string; metaTags?: string[];
-            pronunciationGuide?: string; negativeHints?: string[]; vibeDescription?: string;
-          };
-        } catch (err) {
-          console.error("[suggest] AI call failed:", (err as Error).message?.slice(0, 300));
-          return {};
-        }
-      })(),
+      fetchAiSongSuggestion(title, artist),
     ]);
 
     const mbTags = mbData.genres ?? [];
@@ -2468,14 +2429,14 @@ router.get("/suggest", async (req, res) => {
 
     // Merge: AI provides genres/energy/tempo, MusicBrainz provides era (more accurate release year)
     const mbEra = yearToEra(mbData.releaseYear);
-    const aiGenres = (aiSuggestion.genres ?? []).filter((g) => typeof g === "string").slice(0, 3);
+    const aiGenres = (aiSuggestion.genres ?? []).filter((g) => typeof g === "string").slice(0, 5);
     const genres = aiGenres.length > 0 ? aiGenres : mbGenres;
     const era = mbEra ?? (aiSuggestion.era as string | null) ?? null;
     const energy = (aiSuggestion.energy as string | null) ?? inferEnergy(genres);
     const tempo = (aiSuggestion.tempo as string | null) ?? inferTempo(genres);
     const vocals = (aiSuggestion.vocals as string | null) ?? null;
-    const moods = (aiSuggestion.moods ?? []).filter((m) => typeof m === "string").slice(0, 3);
-    const instruments = (aiSuggestion.instruments ?? []).filter((i) => typeof i === "string").slice(0, 4);
+    const moods = (aiSuggestion.moods ?? []).filter((m) => typeof m === "string").slice(0, 4);
+    const instruments = (aiSuggestion.instruments ?? []).filter((i) => typeof i === "string").slice(0, 5);
     const genreNudge = typeof aiSuggestion.genreNudge === "string" && aiSuggestion.genreNudge.trim()
       ? aiSuggestion.genreNudge.trim().slice(0, 180)
       : null;
