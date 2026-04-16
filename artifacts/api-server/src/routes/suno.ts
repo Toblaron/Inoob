@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import { GenerateSunoTemplateBody, GenerateSunoTemplateResponse, GenerateVariationsBody, BatchGenerateBody, TransformTemplateBody } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import ytdl from "@distube/ytdl-core";
+import { existsSync, readFileSync } from "fs";
+import path from "path";
 import { parse as parseHtml } from "node-html-parser";
 import { detectAudioFeatures, type AudioFeatures } from "../lib/audioFeatures.js";
 import { analyzeLyricsStructure } from "../lib/lyricsStructure.js";
@@ -21,6 +23,44 @@ if (!process.env.AI_MINI_MODEL) {
 }
 
 const router: IRouter = Router();
+
+// ── YouTube cookie agent ────────────────────────────────────────────────────
+// Bypasses "Sign in to confirm you're not a bot" by using cookies from a
+// logged-in YouTube session. Place a Netscape-format cookies.txt next to .env.
+// Falls back to no-cookie requests if the file is missing.
+let ytAgent: ReturnType<typeof ytdl.createAgent> | undefined;
+const cookiePaths = [
+  path.resolve(process.cwd(), "cookies.txt"),
+  path.resolve(process.cwd(), "youtube-cookies.txt"),
+];
+for (const cp of cookiePaths) {
+  if (existsSync(cp)) {
+    try {
+      ytAgent = ytdl.createAgent(JSON.parse(readFileSync(cp, "utf-8")));
+      console.log(`[ytdl] Cookie agent loaded from ${cp}`);
+    } catch {
+      // Try Netscape cookie format: parse manually into the shape ytdl expects
+      try {
+        const lines = readFileSync(cp, "utf-8").split("\n").filter(l => l.trim() && !l.startsWith("#"));
+        const cookies = lines.map(line => {
+          const parts = line.split("\t");
+          if (parts.length < 7) return null;
+          return { domain: parts[0], name: parts[5], value: parts[6]?.trim() };
+        }).filter(Boolean) as Array<{ domain: string; name: string; value: string }>;
+        if (cookies.length > 0) {
+          ytAgent = ytdl.createAgent(cookies);
+          console.log(`[ytdl] Cookie agent loaded from ${cp} (${cookies.length} cookies)`);
+        }
+      } catch (e2) {
+        console.warn(`[ytdl] Failed to parse cookies from ${cp}:`, (e2 as Error).message);
+      }
+    }
+    if (ytAgent) break;
+  }
+}
+if (!ytAgent) {
+  console.warn("[ytdl] No cookies.txt found — YouTube may block requests. See .env.example for instructions.");
+}
 
 interface MusicBrainzData {
   releaseYear?: string;
@@ -544,7 +584,7 @@ async function fetchBaseMetadata(url: string): Promise<BaseVideoMetadata> {
 
   // Step 2: Enrich with ytdl-core (description, keywords, captions, duration) — best-effort
   try {
-    const info = await ytdl.getInfo(url);
+    const info = await ytdl.getInfo(url, ytAgent ? { agent: ytAgent } : undefined);
     const details = info.videoDetails;
     durationSeconds = parseInt(details.lengthSeconds, 10);
     description = details.description ?? "";
@@ -2532,6 +2572,7 @@ router.get("/youtube-preview", async (req, res) => {
   // ── Strategy 2: ytdl-core (has richer data but often blocked on RPi) ──
   try {
     const info = await ytdl.getBasicInfo(url, {
+      ...(ytAgent ? { agent: ytAgent } : {}),
       requestOptions: { headers: { "User-Agent": "Mozilla/5.0", "Accept-Language": "en-US,en;q=0.9" } },
     });
     const vd = info.videoDetails;
