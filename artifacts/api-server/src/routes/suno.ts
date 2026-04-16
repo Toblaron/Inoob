@@ -2256,37 +2256,81 @@ interface SuggestPayload {
   mbTags: string[];
 }
 
-async function fetchAiSongSuggestion(title: string, artist: string): Promise<AiSongSuggestion> {
-  try {
-    const completion = await openai.chat.completions.create({
-      model: AI_MODEL,
-      max_tokens: 1200,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content: `Return a JSON object analyzing the given song. Every array field MUST be a JSON array, not a string. Example: {"genres":["Synth-Pop","Dance Pop"],"era":"modern","energy":"high","tempo":"uptempo","vocals":"male","moods":["Euphoric","Nostalgic"],"instruments":["Synth","Drums","Bass"],"genreNudge":"neon-lit synth-pop pulse, glossy night-drive atmosphere, punchier electronic drums","bpm":171,"key":"F minor","chordProgression":"Fm - Db - Ab - Eb","vocalPersona":"Male tenor with ethereal falsetto","sonicDna":"Vintage 80s synths, punchy electronic drums","metaTags":["Intro","Verse","Pre-Chorus","Chorus","Verse","Chorus","Bridge","Chorus","Outro"],"pronunciationGuide":"M83 = em-eighty-three","negativeHints":["no muddy mix","no generic edm","no cheesy risers"],"vibeDescription":"neon-lit midnight drive with 80s nostalgia"}. Fields: genres(1-3 array), era(50s|60s|70s|80s|90s|2000s|2010s|modern), energy(very chill|chill|medium|high|intense), tempo(ballad|slow|mid|groove|uptempo|fast|hyper), vocals(male|female|mixed|duet|no vocals), moods(1-3 array from: Dark,Euphoric,Nostalgic,Melancholic,Aggressive,Romantic,Dreamy,Rebellious,Playful,Mysterious,Cinematic,Hopeful,Angry,Tender,Intense,Brooding,Raw,Gritty,Soulful,Ethereal,Groovy,Intimate,Epic,Haunted,Triumphant,Vulnerable,Defiant,Serene,Wistful,Bittersweet,Frantic,Hypnotic,Majestic,Eerie,Sensual,Cathartic,Blissful,Longing,Psychedelic,Tense,Laid-back,Punchy,Stormy,Quirky), instruments(2-4 array from: Piano,Guitar,Synth,Strings,Bass,Drums,Violin,Flute,Organ,Cello,Saxophone,Trumpet,808,Acoustic Guitar,Electric Guitar,Harmonica,Rhodes,Moog,Pad,Sub Bass,Pedal Steel,Mellotron,Lap Steel,Harp,Banjo,Ukulele), genreNudge(1 short sentence or comma-separated phrase for the custom nudge box, no artist names), bpm(int 40-300), key(e.g. "A minor"), chordProgression(e.g. "Am - F - C - G"), vocalPersona(1 sentence), sonicDna(1 sentence, no artist names), metaTags(array of section names), pronunciationGuide(short optional phonetic guide only when genuinely useful for uncommon names/words, else empty string), negativeHints(0-5 short exclusion phrases for the negative prompt custom terms box), vibeDescription(1 sentence atmospheric vibe). Be accurate to the real recording.`,
-        },
-        {
-          role: "user",
-          content: `{"song":"${title}","artist":"${artist}"}`,
-        },
-      ],
-    });
-    const raw = (completion.choices[0]?.message?.content ?? "").trim();
-    console.log(`[suggest] AI raw (${raw.length} chars): ${raw.slice(0, 400)}`);
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-    const jsonStart = cleaned.indexOf("{");
-    const jsonEnd = cleaned.lastIndexOf("}");
-    if (jsonStart === -1 || jsonEnd === -1) {
-      console.error("[suggest] No JSON object in AI response");
-      return {};
+const AI_SUGGEST_SYSTEM_PROMPT = `Return a JSON object analyzing the given song. Every array field MUST be a JSON array, not a string. Example: {"genres":["Synth-Pop","Dance Pop"],"era":"modern","energy":"high","tempo":"uptempo","vocals":"male","moods":["Euphoric","Nostalgic"],"instruments":["Synth","Drums","Bass"],"genreNudge":"neon-lit synth-pop pulse, glossy night-drive atmosphere, punchier electronic drums","bpm":171,"key":"F minor","chordProgression":"Fm - Db - Ab - Eb","vocalPersona":"Male tenor with ethereal falsetto","sonicDna":"Vintage 80s synths, punchy electronic drums","metaTags":["Intro","Verse","Pre-Chorus","Chorus","Verse","Chorus","Bridge","Chorus","Outro"],"pronunciationGuide":"M83 = em-eighty-three","negativeHints":["no muddy mix","no generic edm","no cheesy risers"],"vibeDescription":"neon-lit midnight drive with 80s nostalgia"}. Fields: genres(1-3 array), era(50s|60s|70s|80s|90s|2000s|2010s|modern), energy(very chill|chill|medium|high|intense), tempo(ballad|slow|mid|groove|uptempo|fast|hyper), vocals(male|female|mixed|duet|no vocals), moods(1-3 array from: Dark,Euphoric,Nostalgic,Melancholic,Aggressive,Romantic,Dreamy,Rebellious,Playful,Mysterious,Cinematic,Hopeful,Angry,Tender,Intense,Brooding,Raw,Gritty,Soulful,Ethereal,Groovy,Intimate,Epic,Haunted,Triumphant,Vulnerable,Defiant,Serene,Wistful,Bittersweet,Frantic,Hypnotic,Majestic,Eerie,Sensual,Cathartic,Blissful,Longing,Psychedelic,Tense,Laid-back,Punchy,Stormy,Quirky), instruments(2-4 array from: Piano,Guitar,Synth,Strings,Bass,Drums,Violin,Flute,Organ,Cello,Saxophone,Trumpet,808,Acoustic Guitar,Electric Guitar,Harmonica,Rhodes,Moog,Pad,Sub Bass,Pedal Steel,Mellotron,Lap Steel,Harp,Banjo,Ukulele), genreNudge(1 short sentence or comma-separated phrase for the custom nudge box, no artist names), bpm(int 40-300), key(e.g. "A minor"), chordProgression(e.g. "Am - F - C - G"), vocalPersona(1 sentence), sonicDna(1 sentence, no artist names), metaTags(array of section names), pronunciationGuide(short optional phonetic guide only when genuinely useful for uncommon names/words, else empty string), negativeHints(0-5 short exclusion phrases for the negative prompt custom terms box), vibeDescription(1 sentence atmospheric vibe). Be accurate to the real recording.`;
+
+function parseAiSuggestionJson(raw: string): AiSongSuggestion | null {
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  const jsonStart = cleaned.indexOf("{");
+  const jsonEnd = cleaned.lastIndexOf("}");
+  if (jsonStart === -1 || jsonEnd === -1) return null;
+  return JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1)) as AiSongSuggestion;
+}
+
+async function callAiWithRetry(model: string, title: string, artist: string): Promise<AiSongSuggestion> {
+  const maxAttempts = 3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model,
+        max_tokens: 1200,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: AI_SUGGEST_SYSTEM_PROMPT },
+          { role: "user", content: `{"song":"${title}","artist":"${artist}"}` },
+        ],
+      });
+      const raw = (completion.choices[0]?.message?.content ?? "").trim();
+      console.log(`[suggest] AI raw (${model}, ${raw.length} chars): ${raw.slice(0, 400)}`);
+      const parsed = parseAiSuggestionJson(raw);
+      if (!parsed) {
+        console.error(`[suggest] No JSON object in AI response (${model})`);
+        return {};
+      }
+      console.log(`[suggest] Parsed fields: ${Object.keys(parsed).join(", ")}`);
+      return parsed;
+    } catch (err) {
+      const msg = (err as Error).message ?? "";
+      const is429 = msg.includes("429") || msg.includes("rate") || msg.includes("quota");
+      if (is429 && attempt < maxAttempts) {
+        const delay = attempt * 2000; // 2s, 4s
+        console.warn(`[suggest] ${model} 429 — retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw err;
     }
-    const parsed = JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1)) as AiSongSuggestion;
-    console.log(`[suggest] Parsed fields: ${Object.keys(parsed).join(", ")}`);
-    return parsed;
+  }
+  return {};
+}
+
+async function fetchAiSongSuggestion(title: string, artist: string): Promise<AiSongSuggestion> {
+  // Check cache first (AI suggestions cached for 24h)
+  const cacheKey = `ai-suggest:${hashParams({ title, artist })}`;
+  const cached = cacheGet<AiSongSuggestion>(cacheKey);
+  if (cached && Object.keys(cached).length > 0) {
+    console.log(`[suggest] AI cache hit for "${artist}" – "${title}"`);
+    return cached;
+  }
+
+  try {
+    const result = await callAiWithRetry(AI_MODEL, title, artist);
+    if (Object.keys(result).length > 0) {
+      cacheSet(cacheKey, result, 24 * 3600);
+    }
+    return result;
   } catch (err) {
-    console.error("[suggest] AI call failed:", (err as Error).message?.slice(0, 300));
+    console.warn(`[suggest] ${AI_MODEL} failed, falling back to ${AI_MINI_MODEL}:`, (err as Error).message?.slice(0, 150));
+  }
+
+  // Fallback: try the mini model
+  try {
+    const result = await callAiWithRetry(AI_MINI_MODEL, title, artist);
+    if (Object.keys(result).length > 0) {
+      cacheSet(cacheKey, result, 24 * 3600);
+    }
+    return result;
+  } catch (err) {
+    console.error("[suggest] All AI models failed:", (err as Error).message?.slice(0, 300));
     return {};
   }
 }
