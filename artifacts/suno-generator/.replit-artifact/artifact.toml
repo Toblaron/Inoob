@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "YouTube to Suno Template Generator"
+version = "1.0.0"
+id = "artifacts/suno-generator"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 24323
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/suno-generator run dev"
+
+[services.env]
+PORT = "24323"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/suno-generator", "run", "build"]
+publicDir = "artifacts/suno-generator/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"

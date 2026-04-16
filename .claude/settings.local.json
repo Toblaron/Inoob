@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(pnpm -r exec tsc --noEmit)",
+      "Bash(gh auth:*)",
+      "Bash(git:*)",
+      "Bash(where gh:*)"
+    ]
+  }
+}

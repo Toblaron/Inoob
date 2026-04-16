@@ -1,0 +1,621 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: suno
+    description: Suno template generation
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /generate-template:
+    post:
+      operationId: generateSunoTemplate
+      tags: [suno]
+      summary: Generate a Suno.ai template from a YouTube URL
+      description: Fetches song metadata from YouTube and uses AI to generate a structured Suno.ai prompt template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateTemplateRequest"
+      responses:
+        "200":
+          description: Successfully generated template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SunoTemplate"
+        "400":
+          description: Invalid YouTube URL or request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /generate-variations:
+    post:
+      operationId: generateVariations
+      tags: [suno]
+      summary: Generate multiple Suno.ai template variations in parallel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateVariationsRequest"
+      responses:
+        "200":
+          description: Successfully generated variations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VariationsResponse"
+  /playlist-info:
+    get:
+      operationId: playlistInfo
+      tags: [suno]
+      summary: Get metadata for a YouTube playlist
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Playlist metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaylistInfo"
+  /batch:
+    post:
+      operationId: batchGenerate
+      tags: [suno]
+      summary: Generate templates for multiple URLs in batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchGenerateRequest"
+      responses:
+        "200":
+          description: Batch started
+  /suno/transform:
+    post:
+      operationId: transformTemplate
+      tags: [suno]
+      summary: Apply a style transformation to a template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransformTemplateRequest"
+      responses:
+        "200":
+          description: Transformed template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransformedTemplate"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    BatchTrackStatus:
+      type: string
+      enum: [queued, analyzing, generating, done, failed]
+    BatchTrackResult:
+      type: object
+      properties:
+        url:
+          type: string
+        videoId:
+          type: string
+        title:
+          type: string
+        thumbnail:
+          type: string
+        status:
+          $ref: "#/components/schemas/BatchTrackStatus"
+        template:
+          $ref: "#/components/schemas/SunoTemplate"
+        error:
+          type: string
+        index:
+          type: integer
+      required:
+        - url
+        - videoId
+        - status
+        - index
+    PlaylistTrack:
+      type: object
+      properties:
+        videoId:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        thumbnail:
+          type: string
+      required:
+        - videoId
+        - title
+        - url
+    PlaylistInfo:
+      type: object
+      properties:
+        playlistId:
+          type: string
+        playlistTitle:
+          type: string
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaylistTrack"
+        totalCount:
+          type: integer
+        capped:
+          type: boolean
+      required:
+        - playlistId
+        - tracks
+        - totalCount
+        - capped
+    VocalGender:
+      type: string
+      enum: [auto, male, female, mixed, duet, "no vocals"]
+    EnergyLevel:
+      type: string
+      enum: [auto, "very chill", chill, medium, high, intense]
+    Era:
+      type: string
+      enum: [auto, "50s", "60s", "70s", "80s", "90s", "2000s", "2010s", modern]
+    Mode:
+      type: string
+      enum: [cover, inspired]
+    Tempo:
+      type: string
+      enum: [ballad, slow, mid, groove, uptempo, fast, hyper]
+    ConfirmedStructureSection:
+      type: object
+      properties:
+        label:
+          type: string
+        lines:
+          type: array
+          items:
+            type: string
+      required:
+        - label
+        - lines
+    GenerateTemplateRequest:
+      type: object
+      properties:
+        youtubeUrl:
+          type: string
+          description: A YouTube video URL
+        manualLyrics:
+          type: string
+          description: Optional manually provided lyrics to use instead of fetching from APIs
+        vocalGender:
+          $ref: "#/components/schemas/VocalGender"
+        energyLevel:
+          $ref: "#/components/schemas/EnergyLevel"
+        era:
+          $ref: "#/components/schemas/Era"
+        genreNudge:
+          type: string
+          description: Optional genre or style override
+        genres:
+          type: array
+          items:
+            type: string
+          description: Selected genre tags to incorporate into the style prompt
+        moods:
+          type: array
+          items:
+            type: string
+          description: Mood/vibe tags
+        instruments:
+          type: array
+          items:
+            type: string
+          description: Featured instrument hints
+        mode:
+          $ref: "#/components/schemas/Mode"
+        tempo:
+          $ref: "#/components/schemas/Tempo"
+        excludeTags:
+          type: array
+          items:
+            type: string
+          description: Tags to explicitly exclude
+        variationIndex:
+          type: integer
+          description: Which variation to generate (1 or 2)
+        feedbackContext:
+          type: string
+          description: Learning context derived from the user's past template ratings
+        isInstrumental:
+          type: boolean
+          description: When true, generate as a fully instrumental track
+        confirmedStructure:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfirmedStructureSection"
+          description: User-confirmed lyrics structure
+        noCache:
+          type: boolean
+          description: When true, bypass the template cache
+        sunoVersion:
+          type: string
+          enum: [v4, v5, v5.5]
+          description: Target Suno AI version
+        bpmTarget:
+          type: integer
+          minimum: 40
+          maximum: 240
+          description: Explicit BPM anchor for Suno prompt generation
+        chordProgression:
+          type: string
+          description: Explicit chord progression or harmonic instruction
+        vocalPersona:
+          type: string
+          description: Detailed vocal identity or stacked persona descriptor
+        sonicDna:
+          type: string
+          description: Artist-like sonic DNA phrased as legal descriptive traits
+        metaTags:
+          type: array
+          items:
+            type: string
+          description: Structural or production meta-tags to inject into the lyrics blueprint
+        pronunciationGuide:
+          type: string
+          description: IPA or phonetic guidance for difficult words
+        weirdness:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Heuristic Suno weirdness slider target
+        styleInfluence:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Heuristic Suno style influence slider target
+        audioInfluence:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Heuristic Suno audio influence slider target
+      required:
+        - youtubeUrl
+    GenerateVariationsRequest:
+      allOf:
+        - $ref: "#/components/schemas/GenerateTemplateRequest"
+        - type: object
+          properties:
+            count:
+              type: integer
+              minimum: 1
+              maximum: 4
+              description: Number of variations to generate
+    BatchGenerateRequest:
+      type: object
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 20
+        vocalGender:
+          $ref: "#/components/schemas/VocalGender"
+        energyLevel:
+          $ref: "#/components/schemas/EnergyLevel"
+        era:
+          $ref: "#/components/schemas/Era"
+        mode:
+          $ref: "#/components/schemas/Mode"
+        tempo:
+          $ref: "#/components/schemas/Tempo"
+        isInstrumental:
+          type: boolean
+        sunoVersion:
+          $ref: "#/components/schemas/SunoVersion"
+        genres:
+          type: array
+          items:
+            type: string
+        moods:
+          type: array
+          items:
+            type: string
+        instruments:
+          type: array
+          items:
+            type: string
+        excludeTags:
+          type: array
+          items:
+            type: string
+        genreNudge:
+          type: string
+        bpmTarget:
+          type: integer
+          minimum: 40
+          maximum: 240
+        chordProgression:
+          type: string
+        vocalPersona:
+          type: string
+        sonicDna:
+          type: string
+        metaTags:
+          type: array
+          items:
+            type: string
+        pronunciationGuide:
+          type: string
+        weirdness:
+          type: integer
+          minimum: 0
+          maximum: 100
+        styleInfluence:
+          type: integer
+          minimum: 0
+          maximum: 100
+        audioInfluence:
+          type: integer
+          minimum: 0
+          maximum: 100
+      required:
+        - urls
+    TransformTemplateRequest:
+      type: object
+      properties:
+        styleOfMusic:
+          type: string
+        negativePrompt:
+          type: string
+        transformId:
+          type: string
+      required:
+        - styleOfMusic
+        - negativePrompt
+        - transformId
+    TransformedTemplate:
+      type: object
+      properties:
+        styleOfMusic:
+          type: string
+        negativePrompt:
+          type: string
+      required:
+        - styleOfMusic
+        - negativePrompt
+    SunoTemplate:
+      type: object
+      properties:
+        songTitle:
+          type: string
+        artist:
+          type: string
+        styleOfMusic:
+          type: string
+          description: Comma-separated genre and style tags for the Suno style field
+        title:
+          type: string
+          description: Suggested title for the Suno creation
+        lyrics:
+          type: string
+          description: Structured lyrics/metadata block with production header and Suno metatags
+        negativePrompt:
+          type: string
+          description: Comma-separated list of things Suno should NOT generate (no spaces after commas, 90-199 chars)
+        tags:
+          type: array
+          items:
+            type: string
+          description: Additional tags for mood, instruments, tempo
+        lyricsStructure:
+          $ref: "#/components/schemas/LyricsStructure"
+        suggestedDefaults:
+          $ref: "#/components/schemas/SuggestedDefaults"
+        fromCache:
+          type: boolean
+        fingerprint:
+          $ref: "#/components/schemas/SongFingerprint"
+      required:
+        - songTitle
+        - artist
+        - styleOfMusic
+        - title
+        - lyrics
+        - negativePrompt
+        - tags
+    LyricsSection:
+      type: object
+      properties:
+        label:
+          type: string
+        lines:
+          type: array
+          items:
+            type: string
+        rhymeScheme:
+          type: string
+        sentiment:
+          type: number
+        isHook:
+          type: boolean
+        repetitionKey:
+          type: string
+      required:
+        - label
+        - lines
+        - rhymeScheme
+        - sentiment
+        - isHook
+        - repetitionKey
+    LyricsStructure:
+      type: object
+      properties:
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/LyricsSection"
+        hookRepetitions:
+          type: integer
+        sentimentArc:
+          type: array
+          items:
+            type: number
+        hasTaggedStructure:
+          type: boolean
+        totalSections:
+          type: integer
+        dominantScheme:
+          type: string
+      required:
+        - sections
+        - hookRepetitions
+        - sentimentArc
+        - hasTaggedStructure
+        - totalSections
+        - dominantScheme
+    SuggestedDefaults:
+      type: object
+      properties:
+        energy:
+          type: string
+        tempo:
+          type: string
+        era:
+          type: string
+        instrumentHints:
+          type: array
+          items:
+            type: string
+        languageGenreHint:
+          type: string
+        sources:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - sources
+    SongFingerprint:
+      type: object
+      properties:
+        energy:
+          type: number
+          minimum: 0
+          maximum: 10
+        tempoFeel:
+          type: number
+          minimum: 0
+          maximum: 10
+        vocalPresence:
+          type: number
+          minimum: 0
+          maximum: 10
+        instrumentalComplexity:
+          type: number
+          minimum: 0
+          maximum: 10
+        eraAuthenticity:
+          type: number
+          minimum: 0
+          maximum: 10
+        moodValence:
+          type: number
+          minimum: 0
+          maximum: 10
+        genrePurity:
+          type: number
+          minimum: 0
+          maximum: 10
+        videoId:
+          type: string
+        songTitle:
+          type: string
+        artist:
+          type: string
+        computedAt:
+          type: number
+      required:
+        - energy
+        - tempoFeel
+        - vocalPresence
+        - instrumentalComplexity
+        - eraAuthenticity
+        - moodValence
+        - genrePurity
+    VariationSlot:
+      type: object
+      properties:
+        variationIndex:
+          type: integer
+        template:
+          $ref: "#/components/schemas/SunoTemplate"
+        error:
+          type: string
+      required:
+        - variationIndex
+    VariationsResponse:
+      type: object
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/VariationSlot"
+        variations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SunoTemplate"
+      required:
+        - slots
+        - variations
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
